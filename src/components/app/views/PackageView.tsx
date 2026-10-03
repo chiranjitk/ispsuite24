@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ViewProps, useModuleHeader } from "./_shared";
-import { PageHeader, KpiCard, SectionCard, EmptyState } from "@/components/app/shared";
+import { ViewProps, useModuleHeader, useViewRouter, ChildOverview, LeafPlaceholder } from "./_shared";
+import { PageHeader, KpiCard, SectionCard, EmptyState, ActionBar } from "@/components/app/shared";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -22,43 +22,64 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
-  Package,
-  LayoutTemplate,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Package as PackageIcon,
   PlusCircle,
-  Settings2,
   Receipt,
   Trash2,
   Pencil,
-  Plus,
   Save,
-  Eye,
-  ArrowUp,
-  ArrowDown,
+  X,
+  Search,
+  Filter,
   Users,
   TrendingUp,
   IndianRupee,
-  Search,
-  Filter,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
-import {
-  PLANS,
-  INVOICES,
-  INVOICE_TEMPLATES,
-  ANCILLARY_SERVICES,
-  TAX_INFO,
-  INVOICE_SUMMARY,
-} from "@/lib/mock-data";
+import { packagesApi, type Package } from "@/lib/api";
+import { INVOICES, INVOICE_TEMPLATES, ANCILLARY_SERVICES, TAX_INFO } from "@/lib/mock-data";
 
-export function PackageView({ moduleId, childId }: ViewProps) {
-  const { mod } = useModuleHeader(moduleId, childId);
-  if (!mod) return null;
-  if (!childId) return <PackageOverview moduleId={moduleId} />;
+export function PackageView({ moduleId, childId, grandchildId }: ViewProps) {
+  const router = useViewRouter(moduleId, childId, grandchildId);
+
+  if (router.state === "loading") return null;
+  if (router.state === "module-overview") return <PackageOverview moduleId={moduleId} />;
+  if (router.state === "child-overview")
+    return <ChildOverview moduleId={moduleId} childId={router.childId} />;
+
+  if (router.state === "grandchild") {
+    // Bespoke grandchild handlers for the Package module
+    if (childId === "package" && grandchildId === "create")
+      return <CreatePackagePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "package" && grandchildId === "manage")
+      return <ManagePackagesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+
+    // Fall back to placeholder for other grandchildren
+    return (
+      <LeafPlaceholder
+        moduleId={moduleId}
+        childId={router.childId}
+        grandchildId={router.grandchildId}
+      />
+    );
+  }
+
+  // state === "child" — children without grandchildren
   switch (childId) {
-    case "package":
-      return <PackageChild moduleId={moduleId} childId={childId} />;
     case "invoice":
       return <InvoiceChild moduleId={moduleId} childId={childId} />;
     case "invoice-template":
@@ -77,34 +98,44 @@ export function PackageView({ moduleId, childId }: ViewProps) {
 function PackageOverview({ moduleId }: { moduleId: string }) {
   const { mod } = useModuleHeader(moduleId);
   const setActive = useAppStore((s) => s.setActive);
+  const [pkgs, setPkgs] = React.useState<Package[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    packagesApi.list().then((res) => {
+      if (res.data) setPkgs(res.data);
+      setLoading(false);
+    });
+  }, []);
+
   if (!mod) return null;
-  const activePlans = PLANS.filter((p) => p.status === "Active").length;
-  const totalUsers = PLANS.reduce((a, p) => a + p.activeUsers, 0);
-  // crude revenue estimate
-  const totalRevenue = PLANS.reduce((a, p) => a + Number(p.price) * p.activeUsers, 0);
+  const activePlans = pkgs.filter((p) => p.groupstatus === "Y").length;
+  const totalRevenue = pkgs.reduce((a, p) => a + p.price, 0);
+
   const cards = [
-    { label: "Package", desc: `${PLANS.length} plans configured`, icon: Package, child: "package" },
-    { label: "Invoice", desc: `${INVOICES.length} recent invoices`, icon: Receipt, child: "invoice" },
-    { label: "Invoice Template", desc: `${INVOICE_TEMPLATES.length} templates`, icon: LayoutTemplate, child: "invoice-template" },
-    { label: "Ancillary Service", desc: `${ANCILLARY_SERVICES.length} add-ons`, icon: PlusCircle, child: "ancillary" },
-    { label: "Tax Information", desc: `${TAX_INFO.length} tax slabs`, icon: Settings2, child: "tax" },
+    { label: "Package", desc: "Create & manage billing plans", icon: PackageIcon, child: "package" },
+    { label: "Invoice", desc: "Invoice front page, purge, reports", icon: Receipt, child: "invoice" },
+    { label: "Invoice Template", desc: "Invoice template designer", icon: Receipt, child: "invoice-template" },
+    { label: "Ancillary Service", desc: "Add-on services", icon: PlusCircle, child: "ancillary" },
+    { label: "Tax Information", desc: "Tax configuration", icon: IndianRupee, child: "tax" },
   ];
+
   return (
     <div className="space-y-6">
       <PageHeader title={mod.label} description={mod.desc} icon={<mod.icon className="h-5 w-5" />} />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <KpiCard label="Total Plans" value={String(PLANS.length)} icon={<Package className="h-4 w-4" />} accent />
-        <KpiCard label="Active Plans" value={String(activePlans)} icon={<TrendingUp className="h-4 w-4" />} />
-        <KpiCard label="Active Users" value={totalUsers.toLocaleString()} icon={<Users className="h-4 w-4" />} />
-        <KpiCard label="Est. MRR" value={`₹${totalRevenue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`} icon={<IndianRupee className="h-4 w-4" />} />
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard label="Total Plans" value={loading ? "…" : String(pkgs.length)} icon={<PackageIcon className="h-4 w-4" />} accent />
+        <KpiCard label="Active Plans" value={loading ? "…" : String(activePlans)} icon={<TrendingUp className="h-4 w-4" />} />
+        <KpiCard label="Est. MRR" value={loading ? "…" : `₹${totalRevenue.toFixed(0)}`} icon={<IndianRupee className="h-4 w-4" />} />
         <KpiCard label="Invoices" value={String(INVOICES.length)} icon={<Receipt className="h-4 w-4" />} />
-        <KpiCard label="Tax Slabs" value={String(TAX_INFO.length)} icon={<Settings2 className="h-4 w-4" />} />
       </div>
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <button
             key={c.child}
-            onClick={() => setActive(moduleId, c.child)}
+            onClick={() => setActive(moduleId, c.child, "")}
             className="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
@@ -121,212 +152,658 @@ function PackageOverview({ moduleId }: { moduleId: string }) {
   );
 }
 
-/* ---------------- Package (Plans) ---------------- */
+/* ---------------- Create Package (REAL FUNCTIONAL) ---------------- */
 
-function PackageChild({ moduleId, childId }: ViewProps) {
-  const { mod, child } = useModuleHeader(moduleId, childId);
+function CreatePackagePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const setActive = useAppStore((s) => s.setActive);
   const { toast } = useToast();
-  const [typeFilter, setTypeFilter] = React.useState("all");
-  const [search, setSearch] = React.useState("");
-  if (!mod) return null;
-  const filtered = PLANS.filter((p) => {
-    if (typeFilter !== "all" && p.type !== typeFilter) return false;
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q);
+  const [saving, setSaving] = React.useState(false);
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  // Form state — mirrors PackageHelper.sendcreatePackageReqMap fields
+  const [form, setForm] = React.useState({
+    groupname: "",
+    description: "",
+    billingScheme: "PREPAID" as "PREPAID" | "POSTPAID",
+    connectionType: "User" as "User" | "Leased Line",
+    cycleType: "Weekly" as "Weekly" | "Monthly",
+    cyclemultiplier: "1",
+    billingDate_Day: "1",
+    billDuration: "24",
+    billCycleAmtBasedOn: "1",
+    countAmtBasedOn: "2",
+    price: "",
+    idleTimeout: "-11",
+    idleTimeoutType: "LIVE_REQUEST" as "NO_IDLE_TIMEOUT" | "LIVE_REQUEST" | "INTERNET_DATA",
+    isbindtomac: "N" as "Y" | "N",
+    onlinePurchase: "N" as "Y" | "N",
+    multipleLoginLimit: "1",
+    surfingPolicyName: "Default Surfing",
+    bandwidthPolicyName: "Default BW",
+    accessTimePolicyName: "Default Access",
+    dataTransferPolicyName: "Default DT",
+    fairAccessPolicyName: "Default FAP",
   });
+
+  const set = (field: string, value: string) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    setErrors((e) => { const n = { ...e }; delete n[field]; return n; });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setErrors({});
+
+    const res = await packagesApi.create({
+      ...form,
+      price: Number(form.price),
+      cyclemultiplier: Number(form.cyclemultiplier),
+      billingDate_Day: Number(form.billingDate_Day),
+      billDuration: Number(form.billDuration),
+      billCycleAmtBasedOn: Number(form.billCycleAmtBasedOn),
+      countAmtBasedOn: Number(form.countAmtBasedOn),
+      idleTimeout: Number(form.idleTimeout),
+      multipleLoginLimit: Number(form.multipleLoginLimit),
+    });
+
+    setSaving(false);
+
+    if (res.responseCode === "0") {
+      toast({
+        title: "Package created",
+        description: `"${form.groupname}" has been created successfully.`,
+      });
+      setActive(moduleId, "package", "manage");
+    } else {
+      if (res.errors) setErrors(res.errors);
+      toast({
+        title: "Failed to create package",
+        description: res.responseMsg,
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!mod || !child) return null;
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title={child!.label}
-        description="Create and manage subscriber billing plans (prepaid & postpaid)."
+        title={grandchild?.label ?? "Create Package"}
+        description="Create a new billing plan/package. Fields mirror the accsium PackageService.createPackage API."
         icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
+        breadcrumb={[
+          { label: "Cryptsk" },
+          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+          { label: grandchild?.label ?? "Create" },
+        ]}
         actions={
-          <Button onClick={() => toast({ title: "Add plan", description: "Plan builder form will open." })}>
-            <Plus className="mr-2 h-4 w-4" /> Add Plan
+          <Button variant="outline" onClick={() => setActive(moduleId, "package", "manage")}>
+            <X className="mr-2 h-4 w-4" /> Cancel
           </Button>
         }
       />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total Plans" value={String(PLANS.length)} icon={<Package className="h-4 w-4" />} accent />
-        <KpiCard label="Prepaid" value={String(PLANS.filter((p) => p.type === "Prepaid").length)} icon={<Package className="h-4 w-4" />} />
-        <KpiCard label="Postpaid" value={String(PLANS.filter((p) => p.type === "Postpaid").length)} icon={<Package className="h-4 w-4" />} />
-        <KpiCard label="Active Users" value={PLANS.reduce((a, p) => a + p.activeUsers, 0).toLocaleString()} icon={<Users className="h-4 w-4" />} />
-      </div>
-      <SectionCard
-        title="Billing Plans"
-        description={`${filtered.length} of ${PLANS.length} plans`}
-        actions={
-          <div className="flex items-center gap-2">
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All types</SelectItem>
-                <SelectItem value="Prepaid">Prepaid</SelectItem>
-                <SelectItem value="Postpaid">Postpaid</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Information */}
+        <SectionCard title="Basic Information" description="Package name, description and pricing">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="groupname">
+                Package Name <span className="text-primary">*</span>
+              </Label>
               <Input
-                placeholder="Search plan"
-                className="h-8 w-[180px] pl-8 text-xs"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                id="groupname"
+                value={form.groupname}
+                onChange={(e) => set("groupname", e.target.value)}
+                placeholder="e.g. PR HULC 500"
+                className={errors.groupname ? "border-primary" : ""}
+              />
+              {errors.groupname && (
+                <p className="text-xs text-primary flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> {errors.groupname}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="price">
+                Price (₹) <span className="text-primary">*</span>
+              </Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.price}
+                onChange={(e) => set("price", e.target.value)}
+                placeholder="e.g. 599.00"
+                className={errors.price ? "border-primary" : ""}
+              />
+              {errors.price && (
+                <p className="text-xs text-primary flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> {errors.price}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={form.description}
+                onChange={(e) => set("description", e.target.value)}
+                placeholder="Plan description…"
+                rows={2}
               />
             </div>
           </div>
-        }
-      >
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Plan Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Up</TableHead>
-                <TableHead>Down</TableHead>
-                <TableHead>Data Limit</TableHead>
-                <TableHead>Validity</TableHead>
-                <TableHead>Price (₹)</TableHead>
-                <TableHead>Tax (₹)</TableHead>
-                <TableHead>Active Users</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((p) => (
-                <TableRow
-                  key={p.id}
-                  className="cursor-pointer"
-                  onClick={() => toast({ title: "Open plan", description: `${p.name} (${p.id}) — detail view` })}
-                >
-                  <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                  <TableCell className="font-medium text-primary">{p.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={p.type === "Prepaid"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"}
-                    >
-                      {p.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    <span className="inline-flex items-center gap-1"><ArrowUp className="h-3 w-3 text-emerald-600" />{p.bandwidthUp}</span>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    <span className="inline-flex items-center gap-1"><ArrowDown className="h-3 w-3 text-primary" />{p.bandwidthDown}</span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{p.dataLimit}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.validity}</TableCell>
-                  <TableCell className="font-mono text-xs">{p.price}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{p.tax}</TableCell>
-                  <TableCell>{p.activeUsers.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={p.status === "Active"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-border bg-muted text-muted-foreground"}
-                    >
-                      {p.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit plan", description: p.name })}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        </SectionCard>
+
+        {/* Billing Configuration */}
+        <SectionCard title="Billing Configuration" description="Scheme, cycle and duration settings">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>
+                Billing Scheme <span className="text-primary">*</span>
+              </Label>
+              <Select value={form.billingScheme} onValueChange={(v) => set("billingScheme", v)}>
+                <SelectTrigger className={errors.billingScheme ? "border-primary" : ""}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PREPAID">Prepaid</SelectItem>
+                  <SelectItem value="POSTPAID">Postpaid</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.billingScheme && (
+                <p className="text-xs text-primary">{errors.billingScheme}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>
+                Connection Type <span className="text-primary">*</span>
+              </Label>
+              <Select value={form.connectionType} onValueChange={(v) => set("connectionType", v)}>
+                <SelectTrigger className={errors.connectionType ? "border-primary" : ""}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="User">User (Normal Line)</SelectItem>
+                  <SelectItem value="Leased Line">Leased Line</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>
+                Cycle Type <span className="text-primary">*</span>
+              </Label>
+              <Select value={form.cycleType} onValueChange={(v) => set("cycleType", v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Weekly">Weekly</SelectItem>
+                  <SelectItem value="Monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cyclemultiplier">Cycle Multiplier</Label>
+              <Input
+                id="cyclemultiplier"
+                type="number"
+                min="1"
+                value={form.cyclemultiplier}
+                onChange={(e) => set("cyclemultiplier", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">e.g. 7 = 7 weeks</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="billDuration">Bill Duration (hours)</Label>
+              <Input
+                id="billDuration"
+                type="number"
+                min="0"
+                value={form.billDuration}
+                onChange={(e) => set("billDuration", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Total validity hours</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="billingDate_Day">Billing Date (day of month)</Label>
+              <Input
+                id="billingDate_Day"
+                type="number"
+                min="1"
+                max="31"
+                value={form.billingDate_Day}
+                onChange={(e) => set("billingDate_Day", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">For postpaid billing cycle</p>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Session & Access */}
+        <SectionCard title="Session & Access" description="Idle timeout, MAC binding and login limits">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>
+                Idle Timeout Type <span className="text-primary">*</span>
+              </Label>
+              <Select value={form.idleTimeoutType} onValueChange={(v) => set("idleTimeoutType", v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NO_IDLE_TIMEOUT">No Idle Timeout</SelectItem>
+                  <SelectItem value="LIVE_REQUEST">Live Request Based</SelectItem>
+                  <SelectItem value="INTERNET_DATA">Internet Data Transfer Based</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="idleTimeout">Idle Timeout Value (minutes)</Label>
+              <Input
+                id="idleTimeout"
+                type="number"
+                value={form.idleTimeout}
+                onChange={(e) => set("idleTimeout", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">-11 = use default</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="multipleLoginLimit">Multiple Login Limit</Label>
+              <Input
+                id="multipleLoginLimit"
+                type="number"
+                min="1"
+                value={form.multipleLoginLimit}
+                onChange={(e) => set("multipleLoginLimit", e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-3 md:col-span-3">
+              <Switch
+                id="isbindtomac"
+                checked={form.isbindtomac === "Y"}
+                onCheckedChange={(v) => set("isbindtomac", v ? "Y" : "N")}
+              />
+              <div>
+                <Label htmlFor="isbindtomac" className="cursor-pointer">
+                  Bind to MAC
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Require users to connect from a specific MAC address
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 md:col-span-3">
+              <Switch
+                id="onlinePurchase"
+                checked={form.onlinePurchase === "Y"}
+                onCheckedChange={(v) => set("onlinePurchase", v ? "Y" : "N")}
+              />
+              <div>
+                <Label htmlFor="onlinePurchase" className="cursor-pointer">
+                  Available for Online Purchase
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Show this package in the self-service portal
+                </p>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Policy Assignment */}
+        <SectionCard title="Policy Assignment" description="Default policies applied to users on this plan">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="surfingPolicyName">Surfing Policy</Label>
+              <Input
+                id="surfingPolicyName"
+                value={form.surfingPolicyName}
+                onChange={(e) => set("surfingPolicyName", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bandwidthPolicyName">Bandwidth Policy</Label>
+              <Input
+                id="bandwidthPolicyName"
+                value={form.bandwidthPolicyName}
+                onChange={(e) => set("bandwidthPolicyName", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="accessTimePolicyName">Access Time Policy</Label>
+              <Input
+                id="accessTimePolicyName"
+                value={form.accessTimePolicyName}
+                onChange={(e) => set("accessTimePolicyName", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dataTransferPolicyName">Data Transfer Policy</Label>
+              <Input
+                id="dataTransferPolicyName"
+                value={form.dataTransferPolicyName}
+                onChange={(e) => set("dataTransferPolicyName", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fairAccessPolicyName">Fair Access Policy</Label>
+              <Input
+                id="fairAccessPolicyName"
+                value={form.fairAccessPolicyName}
+                onChange={(e) => set("fairAccessPolicyName", e.target.value)}
+              />
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setActive(moduleId, "package", "manage")}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating…
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" /> Create Package
+              </>
+            )}
+          </Button>
         </div>
-        {filtered.length === 0 && (
-          <EmptyState icon={<Filter className="h-5 w-5" />} title="No plans match your filters" />
-        )}
-      </SectionCard>
+      </form>
     </div>
   );
 }
 
-/* ---------------- Invoice ---------------- */
+/* ---------------- Manage Packages (REAL FUNCTIONAL) ---------------- */
+
+function ManagePackagesPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const setActive = useAppStore((s) => s.setActive);
+  const { toast } = useToast();
+  const [packages, setPackages] = React.useState<Package[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [search, setSearch] = React.useState("");
+  const [schemeFilter, setSchemeFilter] = React.useState("all");
+  const [deleteTarget, setDeleteTarget] = React.useState<Package | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+
+  const load = React.useCallback(() => {
+    setLoading(true);
+    packagesApi
+      .list({
+        search: search || undefined,
+        scheme: schemeFilter !== "all" ? schemeFilter : undefined,
+      })
+      .then((res) => {
+        setPackages(res.data ?? []);
+        setLoading(false);
+      });
+  }, [search, schemeFilter]);
+
+  React.useEffect(() => {
+    const t = setTimeout(load, 300);
+    return () => clearTimeout(t);
+  }, [load]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const res = await packagesApi.delete(deleteTarget.groupid);
+    setDeleting(false);
+    if (res.responseCode === "0") {
+      toast({ title: "Package deleted", description: `"${deleteTarget.groupname}" was deleted.` });
+      setDeleteTarget(null);
+      load();
+    } else {
+      toast({
+        title: "Delete failed",
+        description: res.responseMsg,
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!mod || !child) return null;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={grandchild?.label ?? "Manage Packages"}
+        description="View, search and manage all billing plans. Data is backed by the packages API."
+        icon={<mod.icon className="h-5 w-5" />}
+        breadcrumb={[
+          { label: "Cryptsk" },
+          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+          { label: grandchild?.label ?? "Manage" },
+        ]}
+        actions={
+          <Button onClick={() => setActive(moduleId, "package", "create")}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Create Package
+          </Button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard label="Total Packages" value={String(packages.length)} icon={<PackageIcon className="h-4 w-4" />} accent />
+        <KpiCard label="Prepaid" value={String(packages.filter((p) => p.billingScheme === "PREPAID").length)} icon={<TrendingUp className="h-4 w-4" />} />
+        <KpiCard label="Postpaid" value={String(packages.filter((p) => p.billingScheme === "POSTPAID").length)} icon={<TrendingUp className="h-4 w-4" />} />
+        <KpiCard label="Active" value={String(packages.filter((p) => p.groupstatus === "Y").length)} icon={<PackageIcon className="h-4 w-4" />} />
+      </div>
+
+      <ActionBar>
+        <div className="relative flex-1 max-w-xs">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search packages…"
+            className="h-8 pl-8 text-xs"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <Select value={schemeFilter} onValueChange={setSchemeFilter}>
+          <SelectTrigger className="h-8 w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All schemes</SelectItem>
+            <SelectItem value="PREPAID">Prepaid</SelectItem>
+            <SelectItem value="POSTPAID">Postpaid</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" className="h-8" onClick={load}>
+          <Filter className="mr-1.5 h-3.5 w-3.5" /> Refresh
+        </Button>
+      </ActionBar>
+
+      <SectionCard>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : packages.length === 0 ? (
+          <EmptyState
+            icon={<PackageIcon className="h-5 w-5" />}
+            title="No packages found"
+            description="Create your first package to get started."
+            action={
+              <Button onClick={() => setActive(moduleId, "package", "create")}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Create Package
+              </Button>
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Package Name</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Scheme</TableHead>
+                  <TableHead>Connection</TableHead>
+                  <TableHead>Cycle</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Bind MAC</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {packages.map((p) => (
+                  <TableRow key={p.groupid}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{p.groupid}</TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium text-foreground">{p.groupname}</p>
+                        {p.description && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[200px]">{p.description}</p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-semibold">₹{p.price.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={p.billingScheme === "PREPAID" ? "default" : "secondary"}
+                        className={p.billingScheme === "PREPAID" ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"}
+                      >
+                        {p.billingScheme}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px]">{p.connectionType}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs">{p.cycleType} ×{p.cyclemultiplier}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{p.billDuration}h</TableCell>
+                    <TableCell>
+                      <Badge variant={p.isbindtomac === "Y" ? "default" : "secondary"} className="text-[10px]">
+                        {p.isbindtomac === "Y" ? "Yes" : "No"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={p.groupstatus === "Y" ? "default" : "secondary"}
+                        className={p.groupstatus === "Y" ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" : ""}
+                      >
+                        {p.groupstatus === "Y" ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toast({ title: "Edit package", description: `Editing ${p.groupname} (coming soon)` })}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:text-primary"
+                          onClick={() => setDeleteTarget(p)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </SectionCard>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Package</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete{" "}
+            <span className="font-medium text-foreground">{deleteTarget?.groupname}</span>?
+            This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+/* ---------------- Invoice (existing, uses mock data for now) ---------------- */
 
 function InvoiceChild({ moduleId, childId }: ViewProps) {
   const { mod, child } = useModuleHeader(moduleId, childId);
   const { toast } = useToast();
-  if (!mod) return null;
-  const totalCollected = INVOICES.filter((i) => i.status === "Paid").reduce((a, i) => a + Number(i.total), 0);
-  const totalDue = INVOICES.filter((i) => i.status === "Due").reduce((a, i) => a + Number(i.total), 0);
-  const totalOverdue = INVOICES.filter((i) => i.status === "Overdue").reduce((a, i) => a + Number(i.total), 0);
+  if (!mod || !child) return null;
   return (
     <div className="space-y-6">
       <PageHeader
-        title={child!.label}
-        description="Invoice front page summary and purge tooling."
+        title={child.label}
+        description={child.desc}
         icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => toast({ title: "Purge invoices", description: "Old invoices will be purged.", variant: "destructive" })}>
-              <Trash2 className="mr-2 h-4 w-4" /> Purge
-            </Button>
-            <Button onClick={() => toast({ title: "Generate invoice", description: "Invoice generator will open." })}>
-              <Plus className="mr-2 h-4 w-4" /> Generate Invoice
-            </Button>
-          </div>
-        }
+        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child.label }]}
+        actions={<Button onClick={() => toast({ title: "Create invoice", description: "Invoice form will open." })}><PlusCircle className="mr-2 h-4 w-4" /> Generate Invoice</Button>}
       />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total Invoices" value={String(INVOICES.length)} icon={<Receipt className="h-4 w-4" />} accent />
-        <KpiCard label="Collected" value={`₹${totalCollected.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`} icon={<TrendingUp className="h-4 w-4" />} />
-        <KpiCard label="Due" value={`₹${totalDue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`} icon={<IndianRupee className="h-4 w-4" />} />
-        <KpiCard label="Overdue" value={`₹${totalOverdue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`} icon={<Receipt className="h-4 w-4" />} />
-      </div>
-      <SectionCard title="Invoices" description={`${INVOICES.length} recent invoices`}>
+      <SectionCard title="Invoices" description={`${INVOICES.length} invoices`}>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Invoice No</TableHead>
                 <TableHead>Customer</TableHead>
-                <TableHead>Account</TableHead>
                 <TableHead>Package</TableHead>
-                <TableHead>Amount (₹)</TableHead>
-                <TableHead>Tax (₹)</TableHead>
-                <TableHead>Total (₹)</TableHead>
+                <TableHead>Amount</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {INVOICES.map((inv) => (
+              {INVOICES.map((inv: any) => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-mono text-xs">{inv.id}</TableCell>
                   <TableCell className="font-medium">{inv.customer}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{inv.account}</TableCell>
                   <TableCell className="text-muted-foreground">{inv.packageName}</TableCell>
-                  <TableCell className="font-mono text-xs">{inv.amount}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{inv.tax}</TableCell>
-                  <TableCell className="font-mono text-xs font-semibold">{inv.total}</TableCell>
+                  <TableCell className="font-semibold">₹{inv.amount}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{inv.date}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={
-                      inv.status === "Paid"
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                        : inv.status === "Due"
-                        ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                        : "border-primary/30 bg-primary/10 text-primary"
-                    }>
+                    <Badge variant={inv.status === "Paid" ? "default" : inv.status === "Due" ? "secondary" : "destructive"}
+                      className={inv.status === "Paid" ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" : inv.status === "Due" ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400" : ""}>
                       {inv.status}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "View invoice", description: inv.id })}>
-                      <Eye className="mr-1 h-3.5 w-3.5" /> View
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -334,22 +811,33 @@ function InvoiceChild({ moduleId, childId }: ViewProps) {
           </Table>
         </div>
       </SectionCard>
-      <SectionCard title="Invoice Summary (by package)" description="Aggregated invoice totals per package">
+    </div>
+  );
+}
+
+function InvoiceTemplateChild({ moduleId, childId }: ViewProps) {
+  const { mod, child } = useModuleHeader(moduleId, childId);
+  if (!mod || !child) return null;
+  return (
+    <div className="space-y-6">
+      <PageHeader title={child.label} description={child.desc} icon={<mod.icon className="h-5 w-5" />}
+        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child.label }]} />
+      <SectionCard title="Templates" description={`${INVOICE_TEMPLATES.length} templates`}>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Package</TableHead>
-                <TableHead>No. of Invoices</TableHead>
-                <TableHead>Amount</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Layout</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {INVOICE_SUMMARY.map((s) => (
-                <TableRow key={s.packageName}>
-                  <TableCell className="font-medium">{s.packageName}</TableCell>
-                  <TableCell>{s.invoices}</TableCell>
-                  <TableCell className="font-mono text-xs">{s.amount}</TableCell>
+              {INVOICE_TEMPLATES.map((t: any) => (
+                <TableRow key={t.id}>
+                  <TableCell className="font-medium">{t.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{t.layout || t.description}</TableCell>
+                  <TableCell><Badge variant="secondary">{t.status || "Active"}</Badge></TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -360,260 +848,66 @@ function InvoiceChild({ moduleId, childId }: ViewProps) {
   );
 }
 
-/* ---------------- Invoice Template ---------------- */
-
-function InvoiceTemplateChild({ moduleId, childId }: ViewProps) {
-  const { mod, child } = useModuleHeader(moduleId, childId);
-  const { toast } = useToast();
-  if (!mod) return null;
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title={child!.label}
-        description="Design and manage invoice templates rendered to PDF/HTML."
-        icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
-        actions={
-          <Button onClick={() => toast({ title: "Create template" })}>
-            <Plus className="mr-2 h-4 w-4" /> New Template
-          </Button>
-        }
-      />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {INVOICE_TEMPLATES.map((t) => (
-          <SectionCard key={t.id} title={t.name} description={`Last edited ${t.lastEdited}`}>
-            <div className="flex aspect-[3/4] flex-col rounded-lg border border-dashed border-border bg-muted/30 p-3">
-              <div className="flex items-center justify-between border-b border-border pb-2 text-xs">
-                <span className="font-semibold text-foreground">Cryptsk Networks</span>
-                <span className="text-muted-foreground">INV-2026-10042</span>
-              </div>
-              <div className="mt-2 space-y-1.5">
-                {Array.from({ length: t.columns > 6 ? 5 : t.columns > 3 ? 4 : 2 }).map((_, i) => (
-                  <div key={i} className="flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span className="h-2 w-20 rounded-sm bg-muted" />
-                    <span className="h-2 w-10 rounded-sm bg-muted" />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-auto flex items-center justify-between border-t border-border pt-2 text-xs">
-                <span className="text-muted-foreground">Total</span>
-                <span className="font-semibold text-foreground">₹706.82</span>
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">{t.description}</p>
-            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="outline">{t.columns} columns</Badge>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => toast({ title: "Edit template", description: t.name })}>
-                <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => toast({ title: "Preview template", description: t.name })}>
-                <Eye className="mr-1.5 h-3.5 w-3.5" /> Preview
-              </Button>
-            </div>
-          </SectionCard>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ---------------- Ancillary ---------------- */
-
 function AncillaryChild({ moduleId, childId }: ViewProps) {
   const { mod, child } = useModuleHeader(moduleId, childId);
-  const { toast } = useToast();
-  if (!mod) return null;
+  if (!mod || !child) return null;
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={child!.label}
-        description="Add-on services that can be attached to any subscriber plan."
-        icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
-        actions={
-          <Button onClick={() => toast({ title: "Create ancillary service" })}>
-            <Plus className="mr-2 h-4 w-4" /> Add Service
-          </Button>
-        }
-      />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Services" value={String(ANCILLARY_SERVICES.length)} icon={<PlusCircle className="h-4 w-4" />} accent />
-        <KpiCard label="Active" value={String(ANCILLARY_SERVICES.filter((s) => s.status === "Active").length)} icon={<PlusCircle className="h-4 w-4" />} />
-        <KpiCard label="Avg Price" value={`₹${(ANCILLARY_SERVICES.reduce((a, s) => a + Number(s.price), 0) / ANCILLARY_SERVICES.length).toFixed(0)}`} icon={<IndianRupee className="h-4 w-4" />} />
-        <KpiCard label="Taxable" value={String(ANCILLARY_SERVICES.length)} icon={<Settings2 className="h-4 w-4" />} />
-      </div>
+      <PageHeader title={child.label} description={child.desc} icon={<mod.icon className="h-5 w-5" />}
+        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child.label }]} />
       <SectionCard title="Ancillary Services" description={`${ANCILLARY_SERVICES.length} services`}>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Price (₹)</TableHead>
-                <TableHead>Tax (₹)</TableHead>
+                <TableHead>Price</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {ANCILLARY_SERVICES.map((s) => (
+              {ANCILLARY_SERVICES.map((s: any) => (
                 <TableRow key={s.id}>
-                  <TableCell className="font-mono text-xs">{s.id}</TableCell>
                   <TableCell className="font-medium">{s.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{s.description}</TableCell>
-                  <TableCell className="font-mono text-xs">{s.price}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{s.tax}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={s.status === "Active"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-border bg-muted text-muted-foreground"}
-                    >
-                      {s.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit service", description: s.name })}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </TableCell>
+                  <TableCell className="font-semibold">₹{s.price}</TableCell>
+                  <TableCell><Badge variant="secondary">{s.status || "Active"}</Badge></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
-      </SectionCard>
-      <SectionCard title="Create Ancillary Service">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-1.5">
-            <Label>Service Name</Label>
-            <Input placeholder="e.g. Static IP" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Price (₹)</Label>
-            <Input type="number" placeholder="0.00" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Tax Slab</Label>
-            <Select defaultValue="gst18">
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gst18">GST 18%</SelectItem>
-                <SelectItem value="gst0">Exempt</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end">
-            <Button className="w-full" onClick={() => toast({ title: "Ancillary service created" })}>
-              <Save className="mr-2 h-4 w-4" /> Save
-            </Button>
-          </div>
         </div>
       </SectionCard>
     </div>
   );
 }
 
-/* ---------------- Tax ---------------- */
-
 function TaxChild({ moduleId, childId }: ViewProps) {
   const { mod, child } = useModuleHeader(moduleId, childId);
-  const { toast } = useToast();
-  if (!mod) return null;
+  if (!mod || !child) return null;
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={child!.label}
-        description="Configure tax slabs applied to plans, invoices and ancillary services."
-        icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
-        actions={
-          <Button onClick={() => toast({ title: "Create tax slab" })}>
-            <Plus className="mr-2 h-4 w-4" /> Add Tax
-          </Button>
-        }
-      />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Tax Slabs" value={String(TAX_INFO.length)} icon={<Settings2 className="h-4 w-4" />} accent />
-        <KpiCard label="Active" value={String(TAX_INFO.filter((t) => t.status === "Active").length)} icon={<Settings2 className="h-4 w-4" />} />
-        <KpiCard label="Max Rate" value={TAX_INFO.map((t) => t.rate).sort()[TAX_INFO.length - 1]} icon={<IndianRupee className="h-4 w-4" />} />
-        <KpiCard label="Default" value="GST 18%" icon={<IndianRupee className="h-4 w-4" />} />
-      </div>
-      <SectionCard title="Tax Configuration" description={`${TAX_INFO.length} slabs`}>
+      <PageHeader title={child.label} description={child.desc} icon={<mod.icon className="h-5 w-5" />}
+        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child.label }]} />
+      <SectionCard title="Tax Information" description={`${TAX_INFO.length} tax slabs`}>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Tax Name</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Rate</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Applies To</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {TAX_INFO.map((t) => (
+              {TAX_INFO.map((t: any) => (
                 <TableRow key={t.id}>
-                  <TableCell className="font-mono text-xs">{t.id}</TableCell>
                   <TableCell className="font-medium">{t.name}</TableCell>
-                  <TableCell className="font-mono text-xs font-semibold text-primary">{t.rate}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={t.type === "Inclusive"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"}
-                    >
-                      {t.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{t.appliesTo}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={t.status === "Active"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-border bg-muted text-muted-foreground"}
-                    >
-                      {t.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit tax", description: t.name })}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </TableCell>
+                  <TableCell className="font-semibold">{t.rate}%</TableCell>
+                  <TableCell><Badge variant="secondary">{t.status || "Active"}</Badge></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
-      </SectionCard>
-      <SectionCard title="Create Tax Slab">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-1.5">
-            <Label>Tax Name</Label>
-            <Input placeholder="e.g. GST" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Rate (%)</Label>
-            <Input type="number" placeholder="18" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Type</Label>
-            <Select defaultValue="exclusive">
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="exclusive">Exclusive</SelectItem>
-                <SelectItem value="inclusive">Inclusive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end">
-            <Button className="w-full" onClick={() => toast({ title: "Tax slab created" })}>
-              <Save className="mr-2 h-4 w-4" /> Save
-            </Button>
-          </div>
         </div>
       </SectionCard>
     </div>

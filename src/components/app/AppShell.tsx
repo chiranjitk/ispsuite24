@@ -5,7 +5,6 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { Footer } from "./Footer";
 import { useAppStore } from "@/lib/store";
-import { findChild } from "@/lib/nav";
 import { DashboardView } from "./views/DashboardView";
 import { SystemView } from "./views/SystemView";
 import { PolicyView } from "./views/PolicyView";
@@ -23,8 +22,8 @@ import { NetKaptureView } from "./views/NetKaptureView";
 import { ReportsView } from "./views/ReportsView";
 import { HelpView } from "./views/HelpView";
 import { ModuleOverview } from "./views/ModuleOverview";
-import { ChildOverview } from "./views/ChildOverview";
-import { LeafPlaceholder } from "./views/_shared";
+import { ChildOverview, LeafPlaceholder } from "./views/_shared";
+import { findChild } from "@/lib/nav";
 
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -43,28 +42,11 @@ export function AppShell() {
       grandchildId: activeGrandchild,
     };
 
-    // ── 3-level routing ──────────────────────────────────────────────
-    // If a child is selected AND that child has grandchildren, the
-    // grandchildren are routed centrally here (ChildOverview / LeafPlaceholder)
-    // so individual module views don't each need to handle grandchildren.
-    if (activeChild) {
-      const child = findChild(activeModule, activeChild);
-      if (child && child.grandchildren && child.grandchildren.length > 0) {
-        if (!activeGrandchild) {
-          return <ChildOverview moduleId={activeModule} childId={activeChild} />;
-        }
-        return (
-          <LeafPlaceholder
-            moduleId={activeModule}
-            childId={activeChild}
-            grandchildId={activeGrandchild}
-          />
-        );
-      }
-    }
-
-    // Otherwise delegate to the module view (handles module overview +
-    // children WITHOUT grandchildren).
+    // Delegate to module view. Each view handles:
+    //   - module overview (no childId)
+    //   - child overview (childId, no grandchildId, child has grandchildren)
+    //   - bespoke child/grandchild content
+    //   - LeafPlaceholder fallback for unhandled grandchildren
     switch (activeModule) {
       case "system":
         return <SystemView {...viewProps} />;
@@ -114,3 +96,6 @@ export function AppShell() {
     </div>
   );
 }
+
+/** Re-export for module views to use */
+export { ChildOverview, LeafPlaceholder, findChild };

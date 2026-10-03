@@ -1,10 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { findModule, findChild, findGrandchild } from "@/lib/nav";
+import { findModule, findChild, findGrandchild, type NavChild } from "@/lib/nav";
 import { useAppStore } from "@/lib/store";
 import { PageHeader, EmptyState, SectionCard } from "@/components/app/shared";
 import { Construction, FileText, ArrowRight } from "lucide-react";
+
+// Re-export ChildOverview from its own file
+export { ChildOverview } from "./ChildOverview";
 
 export interface ViewProps {
   moduleId: string;
@@ -148,3 +151,58 @@ export function ComingSoon({
     />
   );
 }
+
+/**
+ * Hook that handles the standard 3-level routing pattern for module views.
+ *
+ * Returns:
+ *   - { state: "loading" } if module not found
+ *   - { state: "module-overview" } if no childId selected
+ *   - { state: "child-overview" } if childId selected, child has grandchildren,
+ *     but no grandchildId → caller should render <ChildOverview>
+ *   - { state: "grandchild", grandchild } if a grandchild is selected →
+ *     caller checks their bespoke handler map; if not handled, render <LeafPlaceholder>
+ *   - { state: "child", child } if childId selected and child has NO grandchildren →
+ *     caller renders bespoke child content
+ *
+ * Usage in a module view:
+ *   const router = useViewRouter(moduleId, childId, grandchildId);
+ *   if (router.state === "module-overview") return <MyOverview ... />;
+ *   if (router.state === "child-overview") return <ChildOverview moduleId={moduleId} childId={childId!} />;
+ *   if (router.state === "grandchild") {
+ *     const Bespoke = GRANDCHILD_HANDLERS[router.grandchild!.id];
+ *     return Bespoke ? <Bespoke ... /> : <LeafPlaceholder moduleId={moduleId} childId={childId!} grandchildId={grandchildId} />;
+ *   }
+ *   // state === "child" → render bespoke child content via switch(childId)
+ */
+export function useViewRouter(
+  moduleId: string,
+  childId?: string,
+  grandchildId?: string
+):
+  | { state: "loading" }
+  | { state: "module-overview" }
+  | { state: "child-overview"; childId: string }
+  | { state: "child"; childId: string }
+  | { state: "grandchild"; childId: string; grandchildId: string } {
+  const mod = findModule(moduleId);
+  if (!mod) return { state: "loading" };
+
+  if (!childId) return { state: "module-overview" };
+
+  const child = findChild(moduleId, childId);
+  if (!child) return { state: "module-overview" };
+
+  const hasGrandchildren =
+    child.grandchildren && child.grandchildren.length > 0;
+
+  if (hasGrandchildren) {
+    if (!grandchildId) {
+      return { state: "child-overview", childId };
+    }
+    return { state: "grandchild", childId, grandchildId };
+  }
+
+  return { state: "child", childId };
+}
+
