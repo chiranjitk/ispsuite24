@@ -14,10 +14,11 @@ interface AppState {
   login: (username: string, password: string) => boolean;
   logout: () => void;
 
-  /* navigation */
+  /* navigation — 3 levels: module > child > grandchild */
   activeModule: string; // module id, or "home"/"dashboard"
   activeChild: string; // child id within module, or "" for module overview
-  setActive: (moduleId: string, childId?: string) => void;
+  activeGrandchild: string; // grandchild id within child, or "" for child overview
+  setActive: (moduleId: string, childId?: string, grandchildId?: string) => void;
 
   /* system meta (mirrors 24online header) */
   systemMeta: {
@@ -28,7 +29,7 @@ interface AppState {
   };
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>((set) => ({
   user: null,
   login: (username, password) => {
     // Demo authentication — accept any non-empty credentials.
@@ -48,15 +49,27 @@ export const useAppStore = create<AppState>((set, get) => ({
       },
       activeModule: "dashboard",
       activeChild: "",
+      activeGrandchild: "",
     });
     return true;
   },
-  logout: () => set({ user: null, activeModule: "dashboard", activeChild: "" }),
+  logout: () =>
+    set({
+      user: null,
+      activeModule: "dashboard",
+      activeChild: "",
+      activeGrandchild: "",
+    }),
 
   activeModule: "dashboard",
   activeChild: "",
-  setActive: (moduleId, childId = "") =>
-    set({ activeModule: moduleId, activeChild: childId }),
+  activeGrandchild: "",
+  setActive: (moduleId, childId = "", grandchildId = "") =>
+    set({
+      activeModule: moduleId,
+      activeChild: childId,
+      activeGrandchild: grandchildId,
+    }),
 
   systemMeta: {
     version: "8.3.8",

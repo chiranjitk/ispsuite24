@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useAppStore } from "@/lib/store";
-import { findModule, findChild } from "@/lib/nav";
+import { findModule, findChild, findGrandchild } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 import {
@@ -40,6 +40,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const meta = useAppStore((s) => s.systemMeta);
   const activeModule = useAppStore((s) => s.activeModule);
   const activeChild = useAppStore((s) => s.activeChild);
+  const activeGrandchild = useAppStore((s) => s.activeGrandchild);
   const setActive = useAppStore((s) => s.setActive);
   const logout = useAppStore((s) => s.logout);
   const { theme, setTheme } = useTheme();
@@ -47,6 +48,10 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   const mod = findModule(activeModule);
   const child = activeChild ? findChild(activeModule, activeChild) : undefined;
+  const grandchild =
+    activeChild && activeGrandchild
+      ? findGrandchild(activeModule, activeChild, activeGrandchild)
+      : undefined;
 
   const topActions = [
     { id: "home", label: "Home", icon: Home, onClick: () => setActive("home") },
@@ -99,8 +104,23 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             {child && (
               <>
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
-                <span className="truncate font-medium text-foreground">
+                <button
+                  onClick={() => setActive(activeModule, activeChild, "")}
+                  className={
+                    grandchild
+                      ? "truncate text-muted-foreground hover:text-foreground"
+                      : "truncate font-medium text-foreground"
+                  }
+                >
                   {child.label}
+                </button>
+              </>
+            )}
+            {grandchild && (
+              <>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                <span className="truncate font-medium text-foreground">
+                  {grandchild.label}
                 </span>
               </>
             )}

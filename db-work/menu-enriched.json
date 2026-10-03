@@ -1,0 +1,1245 @@
+[
+  {
+    "id": "menu_1",
+    "name": "System",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_101",
+        "name": "Network",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10001",
+            "name": "Interface",
+            "url": "https://payment.link4data.com/24online/system/interfaceconfiguration.do"
+          },
+          {
+            "id": "menu_10002",
+            "name": "Gateway",
+            "url": "https://payment.link4data.com/24online/system/managegateway.do"
+          },
+          {
+            "id": "menu_10064",
+            "name": "Priorities",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/managepriorities.jsp"
+          },
+          {
+            "id": "menu_10003",
+            "name": "DNS",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/configuredns.jsp"
+          },
+          {
+            "id": "menu_10054",
+            "name": "Static Route",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/routeconfig/addroute.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_102",
+        "name": "Firewall",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10004",
+            "name": "Create",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/createfirewall.jsp"
+          },
+          {
+            "id": "menu_10005",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/managefirewall.jsp"
+          },
+          {
+            "id": "menu_10006",
+            "name": "DoS Settings",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/dosattacksconfiguration.jsp"
+          },
+          {
+            "id": "menu_10028",
+            "name": "DoS Bypass",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/dosattacksbypassmgt.jsp"
+          },
+          {
+            "id": "menu_10020",
+            "name": "Free Sites",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/managefreesites.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_103",
+        "name": "DHCP",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10048",
+            "name": "Manage DHCP",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/managedhcp.jsp"
+          },
+          {
+            "id": "menu_10049",
+            "name": "IP Leasing Report",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/dhcpleasereport.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_104",
+        "name": "Services",
+        "url": "https://payment.link4data.com/24online/webpages/sysmgt/controlservices.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_1031",
+        "name": "PPPoE",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_1032",
+            "name": "Manage PPPoE",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/managepppoe.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_105",
+        "name": "Console",
+        "url": "https://payment.link4data.com/24online/webpages/sysmgt/resetconsolepass.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_106",
+        "name": "Manage Data",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10007",
+            "name": "Backup",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/backupdata.jsp"
+          },
+          {
+            "id": "menu_10008",
+            "name": "Backup Schedule",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/backupschedule.jsp"
+          },
+          {
+            "id": "menu_10009",
+            "name": "Restore",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/restoredata.jsp"
+          },
+          {
+            "id": "menu_10010",
+            "name": "Auto Purge",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/autopurge.jsp"
+          },
+          {
+            "id": "menu_10011",
+            "name": "Manual Purge",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/purgedata.jsp"
+          },
+          {
+            "id": "menu_10021",
+            "name": "Migrate User",
+            "url": "https://payment.link4data.com/24online/system/migrateuser.do"
+          },
+          {
+            "id": "menu_10027",
+            "name": "Authentication Logs",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/radiusauthlog.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_107",
+        "name": "Client Services",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10013",
+            "name": "Parameters",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/clientservices.jsp"
+          },
+          {
+            "id": "menu_10014",
+            "name": "Customized Images",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/myaccountimages.jsp"
+          },
+          {
+            "id": "menu_10701",
+            "name": "Forgot Password",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/forgotpassword.jsp"
+          },
+          {
+            "id": "menu_10037",
+            "name": "ClientGUI URLs",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/manageclientguiurls.jsp"
+          },
+          {
+            "id": "menu_10042",
+            "name": "Webservice Config",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/webserviceconfig.jsp"
+          },
+          {
+            "id": "menu_10056",
+            "name": "Password Config",
+            "url": "https://payment.link4data.com/24online/system/passwordconfig.do"
+          },
+          {
+            "id": "menu_10138",
+            "name": "Configuration",
+            "url": "https://payment.link4data.com/24online/configuration/manageconfig.do"
+          }
+        ]
+      },
+      {
+        "id": "menu_108",
+        "name": "ACL",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10017",
+            "name": "Access Control",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/aclmoduledetail.jsp"
+          },
+          {
+            "id": "menu_10018",
+            "name": "User Type",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/aclrolemgt.jsp"
+          },
+          {
+            "id": "menu_10019",
+            "name": "User Access",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/aclsecuritymgt.jsp"
+          },
+          {
+            "id": "menu_600134",
+            "name": "Console ACL",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/consoleacl.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_109",
+        "name": "Dynamic DNS Service",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10022",
+            "name": "Register Host",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/adddynamicdnsservice.jsp"
+          },
+          {
+            "id": "menu_10023",
+            "name": "Manage Hosts",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/managedynamicdnsservices.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_110",
+        "name": "Captive Portal",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10024",
+            "name": "Create",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/createclientlogin.jsp"
+          },
+          {
+            "id": "menu_10025",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/manageclientlogin.jsp"
+          },
+          {
+            "id": "menu_10026",
+            "name": "Client Page",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/templatezonerel.jsp"
+          },
+          {
+            "id": "menu_10052",
+            "name": "Portal Networks",
+            "url": "https://payment.link4data.com/24online/webpages/dashboard/managedenynetwork.jsp"
+          },
+          {
+            "id": "menu_10057",
+            "name": "Leased Line Page",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/leasedlineusertemplate.jsp"
+          },
+          {
+            "id": "menu_10012",
+            "name": "Messages",
+            "url": "https://payment.link4data.com/24online/system/messagemanagement.do"
+          },
+          {
+            "id": "menu_10058",
+            "name": "Portal Config",
+            "url": "https://payment.link4data.com/24online/cpmgt/portalconfiguration.do"
+          },
+          {
+            "id": "menu_121305",
+            "name": "Configure Profile",
+            "url": "javascript:void(0)"
+          },
+          {
+            "id": "menu_121310",
+            "name": "Security Configuration",
+            "url": "https://payment.link4data.com/24online/cpmgt/securityconfiguration.do"
+          },
+          {
+            "id": "menu_10081",
+            "name": "Social Media Config",
+            "url": "https://payment.link4data.com/24online/cpmgt/socialmediaconfig.do"
+          },
+          {
+            "id": "menu_10069",
+            "name": "CP Registration Policy",
+            "url": "https://payment.link4data.com/24online/system/selfregistrationpolicy.do"
+          }
+        ]
+      },
+      {
+        "id": "menu_112",
+        "name": "NAS Management",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10032",
+            "name": "NAS IP Configuration",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/createnasconfig.jsp"
+          },
+          {
+            "id": "menu_10033",
+            "name": "Radius Configuration",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/manageglobalradiusconfig.jsp"
+          },
+          {
+            "id": "menu_10034",
+            "name": "NAS Configuration",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/manageradiusclientconfig.jsp"
+          },
+          {
+            "id": "menu_10035",
+            "name": "Preferences",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/createe24onlinenasreader.jsp"
+          },
+          {
+            "id": "menu_10036",
+            "name": "Connectivity",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/managenasconnectivity.jsp"
+          },
+          {
+            "id": "menu_10060",
+            "name": "NAS Client Config",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/managenasclientconfig.jsp"
+          },
+          {
+            "id": "menu_10063",
+            "name": "Attribute Mapping",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/attributemapping.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_117",
+        "name": "Status Tracker",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10050",
+            "name": "Add Device",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/editdevice.jsp"
+          },
+          {
+            "id": "menu_10051",
+            "name": "Manage Devices",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/managedevices.jsp"
+          },
+          {
+            "id": "menu_10062",
+            "name": "Device Logs Details",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/devicelogs.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_118",
+        "name": "System Settings",
+        "url": "https://payment.link4data.com/24online/webpages/dashboard/currentsystemsettings.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_10059",
+        "name": "Dashboard Conf",
+        "url": "https://payment.link4data.com/24online/webpages/sysmgt/dashboardconfig.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_119",
+        "name": "System Tools",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_120",
+            "name": "Packet Capture",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/packetcapture.jsp"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "menu_3",
+    "name": "Policy",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_301",
+        "name": "Surfing Quota",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_30001",
+            "name": "Create",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/createsurfpolicy.jsp"
+          },
+          {
+            "id": "menu_30002",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/managesurfpolicy.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_302",
+        "name": "Access Time",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_30003",
+            "name": "Create",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/createaccesspolicy.jsp"
+          },
+          {
+            "id": "menu_30004",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/manageaccesspolicy.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_303",
+        "name": "Bandwidth",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_30005",
+            "name": "Create",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/createbandwidthrestriction.jsp"
+          },
+          {
+            "id": "menu_30006",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/managebandwidthpolicy.jsp"
+          },
+          {
+            "id": "menu_30010",
+            "name": "Schedule",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/manageschedule.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_304",
+        "name": "Data Transfer Policy",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_30007",
+            "name": "Create",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/createdatatransferpolicy.jsp"
+          },
+          {
+            "id": "menu_30008",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/managedatatransferpolicy.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_306",
+        "name": "Fair Access Policy",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_30601",
+            "name": "Create FAP Details",
+            "url": "https://payment.link4data.com/24online/webpages/fap/createfapdetails.jsp"
+          },
+          {
+            "id": "menu_30602",
+            "name": "Manage FAP Details",
+            "url": "https://payment.link4data.com/24online/webpages/fap/managefapdetails.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_309",
+        "name": "QoS Policy",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_30901",
+            "name": "Create Cache Policy",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/createcachepolicy.jsp"
+          },
+          {
+            "id": "menu_30902",
+            "name": "Manage Cache Policy",
+            "url": "https://payment.link4data.com/24online/webpages/polmgt/managecachepolicy.jsp"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "menu_4",
+    "name": "Package",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_401",
+        "name": "Package",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_40001",
+            "name": "Create",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/addupdategroup.jsp"
+          },
+          {
+            "id": "menu_40002",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/managegroups.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_402",
+        "name": "Invoice",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_600200",
+            "name": "Custom Invoice",
+            "url": "https://payment.link4data.com/24online/cdr/createCsvUpload.do"
+          },
+          {
+            "id": "menu_40005",
+            "name": "Purge Invoice",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/purgeinvoice.jsp"
+          },
+          {
+            "id": "menu_40004",
+            "name": "Invoice Reports",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/invoicefrontpage.jsp?mode=reports"
+          },
+          {
+            "id": "menu_40014",
+            "name": "Create Invoice",
+            "url": "https://payment.link4data.com/24online/usermgt/generateinvoice.do"
+          },
+          {
+            "id": "menu_40003",
+            "name": "Configuration",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/invoicefrontpage.jsp?submodule=28"
+          },
+          {
+            "id": "menu_40016",
+            "name": "Zone Invoice",
+            "url": "https://payment.link4data.com/24online/grpmgt/zone/invoiceconf.do"
+          }
+        ]
+      },
+      {
+        "id": "menu_403",
+        "name": "Invoice Template",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_40006",
+            "name": "Create",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/createinvoicetemplate.jsp"
+          },
+          {
+            "id": "menu_40007",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/manageinvoicetemplate.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_404",
+        "name": "Ancillary Service",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_40008",
+            "name": "Add Service",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/createancillaryservice.jsp"
+          },
+          {
+            "id": "menu_40009",
+            "name": "Manage Service",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/manageancillaryservice.jsp"
+          },
+          {
+            "id": "menu_40012",
+            "name": "Default Service",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/configureancservice.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_405",
+        "name": "Tax Information",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_40010",
+            "name": "Add",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/createtaxinfo.jsp"
+          },
+          {
+            "id": "menu_40011",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/managetaxinfo.jsp"
+          },
+          {
+            "id": "menu_40013",
+            "name": "Default Tax",
+            "url": "https://payment.link4data.com/24online/webpages/grpmgt/configuretaxinfo.jsp"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "menu_11",
+    "name": "Payment Gateway",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_1101",
+        "name": "Configure",
+        "url": "https://payment.link4data.com/24online/servlet/PaymentGatewayManager?mode=5015",
+        "children": []
+      },
+      {
+        "id": "menu_1102",
+        "name": "Merchant",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_110001",
+            "name": "Create",
+            "url": "https://payment.link4data.com/24online/servlet/MerchantManager?mode=297"
+          },
+          {
+            "id": "menu_110002",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/servlet/MerchantManager?mode=300"
+          }
+        ]
+      },
+      {
+        "id": "menu_1103",
+        "name": "Search Transactions",
+        "url": "https://payment.link4data.com/24online/servlet/PaymentGatewayReportManager?mode=5018",
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "menu_6",
+    "name": "User",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_601",
+        "name": "Manage Users",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_60001",
+            "name": "Add User",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/registration.jsp"
+          },
+          {
+            "id": "menu_60004",
+            "name": "Search User",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/searchuser.jsp"
+          },
+          {
+            "id": "menu_600133",
+            "name": "Advance Search User",
+            "url": "https://payment.link4data.com/24online/usermgt/advancesearchuser.do"
+          },
+          {
+            "id": "menu_600031",
+            "name": "Leased Line Users",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/reloginleasedlineusers.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_602",
+        "name": "Live Users",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_60005",
+            "name": "Manage Live Users",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/liveusers.jsp"
+          },
+          {
+            "id": "menu_60017",
+            "name": "Search Live Users",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/searchliveusers.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_603",
+        "name": "Zone Management",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_60006",
+            "name": "Create Zone",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/createzone.jsp"
+          },
+          {
+            "id": "menu_60007",
+            "name": "Manage Zone",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/managezone.jsp"
+          },
+          {
+            "id": "menu_60008",
+            "name": "Search Zone Admin",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/searchzone.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_604",
+        "name": "Pool Management",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_60009",
+            "name": "Create Pool",
+            "url": "https://payment.link4data.com/24online/usermgt/createpool.do"
+          },
+          {
+            "id": "menu_60010",
+            "name": "Manage Pool",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/managepool.jsp"
+          },
+          {
+            "id": "menu_60011",
+            "name": "Search Node",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/searchnode.jsp"
+          },
+          {
+            "id": "menu_60023",
+            "name": "Search Network",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/searchnetwork.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_607",
+        "name": "Manage Customers",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_60021",
+            "name": "Edit Customers",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/editcustomer.jsp"
+          },
+          {
+            "id": "menu_60022",
+            "name": "Purge Customers",
+            "url": "https://payment.link4data.com/24online/webpages/usermgt/purgecustomer.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_611",
+        "name": "Dynamize Fields",
+        "url": "https://payment.link4data.com/24online/webpages/usermgt/guipreferences.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_616",
+        "name": "Demographic Fields",
+        "url": "https://payment.link4data.com/24online/usermgt/demographicfieldsdetailpg.do",
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "menu_20",
+    "name": "Ticket Management",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_2001",
+        "name": "Search Ticket",
+        "url": "https://payment.link4data.com/24online/usermgt/searchadminticket.do",
+        "children": []
+      },
+      {
+        "id": "menu_2002",
+        "name": "Create Ticket",
+        "url": "https://payment.link4data.com/24online/usermgt/createadminticket.do",
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "menu_21",
+    "name": "Sales Management",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_2101",
+        "name": "Lead Management",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_210101",
+            "name": "Create",
+            "url": "https://payment.link4data.com/24online/salesmgt/createsearchleadticket.do"
+          },
+          {
+            "id": "menu_210102",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/salesmgt/manageleadticket.do"
+          }
+        ]
+      },
+      {
+        "id": "menu_2102",
+        "name": "Service Request",
+        "url": "https://payment.link4data.com/24online/salemgt/servicemgt.do",
+        "children": [
+          {
+            "id": "menu_210202",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/salesmgt/manageserviceticket.do"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "menu_22",
+    "name": "Inventory",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_2201",
+        "name": "Transaction",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_220101",
+            "name": "Indent",
+            "url": "https://payment.link4data.com/24online/inventorymgt/viewindent.do"
+          },
+          {
+            "id": "menu_220102",
+            "name": "Purchase Order",
+            "url": "https://payment.link4data.com/24online/inventorymgt/createprd.do"
+          },
+          {
+            "id": "menu_220103",
+            "name": "Receipt",
+            "url": "https://payment.link4data.com/24online/inventorymgt/getReceiptOption.do"
+          },
+          {
+            "id": "menu_220104",
+            "name": "Issue",
+            "url": "https://payment.link4data.com/24online/inventorymgt/viewitmissue.do"
+          },
+          {
+            "id": "menu_220105",
+            "name": "Stock Transfer",
+            "url": "javascript:void(0)"
+          },
+          {
+            "id": "menu_220106",
+            "name": "Customer Return",
+            "url": "https://payment.link4data.com/24online/inventorymgt/selectcustomerid.do"
+          },
+          {
+            "id": "menu_220107",
+            "name": "Supplier Return",
+            "url": "https://payment.link4data.com/24online/inventorymgt/viewsupplierreturn.do"
+          }
+        ]
+      },
+      {
+        "id": "menu_2202",
+        "name": "Master",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_220201",
+            "name": "Item Master",
+            "url": "https://payment.link4data.com/24online/inventorymgt/createitem.do"
+          },
+          {
+            "id": "menu_220202",
+            "name": "Ware House",
+            "url": "https://payment.link4data.com/24online/inventorymgt/createwhmst.do"
+          },
+          {
+            "id": "menu_220203",
+            "name": "Vendor",
+            "url": "https://payment.link4data.com/24online/inventorymgt/createvndmst.do"
+          },
+          {
+            "id": "menu_220204",
+            "name": "Unit of Measure",
+            "url": "https://payment.link4data.com/24online/inventorymgt/createuntmsr.do"
+          },
+          {
+            "id": "menu_220205",
+            "name": "View Stock",
+            "url": "https://payment.link4data.com/24online/inventorymgt/viewstock.do"
+          },
+          {
+            "id": "menu_220206",
+            "name": "Emi Master",
+            "url": "https://payment.link4data.com/24online/inventorymgt/createemimst.do"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "menu_15",
+    "name": "Alert",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_151",
+        "name": "SMS Gateway",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_1501",
+            "name": "Manage",
+            "url": "https://payment.link4data.com/24online/servlet/SMSGatewayManager?mode=5002"
+          },
+          {
+            "id": "menu_1502",
+            "name": "Configure Details",
+            "url": "https://payment.link4data.com/24online/servlet/SMSGatewayManager?mode=5003"
+          },
+          {
+            "id": "menu_1503",
+            "name": "Bulk SMS",
+            "url": "https://payment.link4data.com/24online/webpages/smsgateway/searchcriteriaforbulksms.jsp"
+          },
+          {
+            "id": "menu_1504",
+            "name": "SMS Log Report",
+            "url": "https://payment.link4data.com/24online/webpages/smsgateway/smslogreport.jsp"
+          },
+          {
+            "id": "menu_1505",
+            "name": "Purge SMS Logs",
+            "url": "https://payment.link4data.com/24online/webpages/smsgateway/purgesmslogs.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_113",
+        "name": "Email Management",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_10039",
+            "name": "Create Template",
+            "url": "https://payment.link4data.com/24online/servlet/EmailReminder?mode=5005"
+          },
+          {
+            "id": "menu_10040",
+            "name": "Manage Template",
+            "url": "https://payment.link4data.com/24online/servlet/EmailReminder?mode=5006"
+          },
+          {
+            "id": "menu_10041",
+            "name": "Configure",
+            "url": "https://payment.link4data.com/24online/servlet/EmailReminder?mode=5010"
+          },
+          {
+            "id": "menu_10016",
+            "name": "Proactive Reports",
+            "url": "https://payment.link4data.com/24online/webpages/sysmgt/manageproactivereports.jsp"
+          },
+          {
+            "id": "menu_600135",
+            "name": "SMTP Configuration",
+            "url": "https://payment.link4data.com/24online/webpages/alert/smtpconfiguration.jsp"
+          },
+          {
+            "id": "menu_600136",
+            "name": "System Alerts",
+            "url": "https://payment.link4data.com/24online/alertscont/systemalert.do"
+          }
+        ]
+      },
+      {
+        "id": "menu_1508",
+        "name": "Alert configuration",
+        "url": "https://payment.link4data.com/24online/servlet/SMSGatewayManager?mode=5004",
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "menu_25",
+    "name": "Ott Service",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_2501",
+        "name": "Platforms",
+        "url": "https://payment.link4data.com/24online/ottservice/viewplatforms.do",
+        "children": []
+      },
+      {
+        "id": "menu_2502",
+        "name": "Platform Utility",
+        "url": "https://payment.link4data.com/24online/ottservice/platformutility.do",
+        "children": []
+      },
+      {
+        "id": "menu_2503",
+        "name": "Platform Utility Relation",
+        "url": "https://payment.link4data.com/24online/ottservice/platformutilityrelation.do",
+        "children": []
+      },
+      {
+        "id": "menu_2504",
+        "name": "Add Partner Key",
+        "url": "https://payment.link4data.com/24online/webpages/usermgt/ottplatform.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_2505",
+        "name": "Bind OTT Name",
+        "url": "https://payment.link4data.com/24online/webpages/usermgt/ottplayboxtv.jsp",
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "menu_13",
+    "name": "Payment Tracking",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_1301",
+        "name": "Manage Accounts",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_130101",
+            "name": "Customers",
+            "url": "https://payment.link4data.com/24online/paymenttracking/customer/manage.do"
+          },
+          {
+            "id": "menu_130103",
+            "name": "Zone",
+            "url": "https://payment.link4data.com/24online/paymenttracking/franchise/zone/manage.do"
+          }
+        ]
+      },
+      {
+        "id": "menu_1302",
+        "name": "Search Accounts",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_130201",
+            "name": "Customer",
+            "url": "https://payment.link4data.com/24online/webpages/paymenttracking/searchcustomeraccounts.jsp"
+          },
+          {
+            "id": "menu_130203",
+            "name": "Zone",
+            "url": "https://payment.link4data.com/24online/webpages/paymenttracking/searchfranchisee.jsp?zone=2&franchisetype=2"
+          }
+        ]
+      },
+      {
+        "id": "menu_1303",
+        "name": "Payment Details",
+        "url": "https://payment.link4data.com/24online/webpages/paymenttracking/searchcustomerpaymentdetails.jsp",
+        "children": [
+          {
+            "id": "menu_1305",
+            "name": "Seach Details",
+            "url": "javascript:void(0)"
+          },
+          {
+            "id": "menu_1306",
+            "name": "Payment Mode",
+            "url": "https://payment.link4data.com/24online/webpages/paymenttracking/paymentmode.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_1304",
+        "name": "Reverse Transactions",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_130401",
+            "name": "Customer",
+            "url": "https://payment.link4data.com/24online/webpages/paymenttracking/searchcustomerpaymentdetails.jsp?reversetransaction=Y"
+          },
+          {
+            "id": "menu_130403",
+            "name": "Zone",
+            "url": "https://payment.link4data.com/24online/webpages/paymenttracking/searchfranchiseaccounts.jsp?zone=2&franchisetype=2&reversetransaction=Y"
+          }
+        ]
+      },
+      {
+        "id": "menu_1307",
+        "name": "Settle Transactions",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_130701",
+            "name": "Customers",
+            "url": "https://payment.link4data.com/24online/paymenttracking/customer/settletransaction.do"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "menu_16",
+    "name": "Web Surfing Logger",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_1601",
+        "name": "Manage Logger",
+        "url": "https://payment.link4data.com/24online/webpages/websurfinglogger/managewebsurflogger.jsp",
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "menu_17",
+    "name": "Net Kapture",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_1701",
+        "name": "Manage Service",
+        "url": "https://payment.link4data.com/24online/webpages/netkapture/managenetkapture.jsp",
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "menu_8",
+    "name": "Reports",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_801",
+        "name": "Reports",
+        "url": "https://payment.link4data.com/24online/webpages/reports/intermediate.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_804",
+        "name": "FTP Report Configuration",
+        "url": "https://payment.link4data.com/24online/system/schedule.do",
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "menu_9",
+    "name": "Help",
+    "url": "javascript:void(0)",
+    "children": [
+      {
+        "id": "menu_901",
+        "name": "Company Info",
+        "url": "https://payment.link4data.com/24online/webpages/help/companyinfo.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_902",
+        "name": "24Online Client",
+        "url": "https://payment.link4data.com/24online/webpages/help/24onlineclient.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_903",
+        "name": "Upgrade Version",
+        "url": "https://payment.link4data.com/24online/webpages/help/upgrade.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_904",
+        "name": "Register 24online",
+        "url": "javascript:void(0)",
+        "children": [
+          {
+            "id": "menu_90006",
+            "name": "Online Registration",
+            "url": "https://payment.link4data.com/24online/webpages/help/onlineregistration.jsp"
+          },
+          {
+            "id": "menu_90008",
+            "name": "Module License",
+            "url": "https://payment.link4data.com/24online/webpages/help/modulelicense.jsp"
+          }
+        ]
+      },
+      {
+        "id": "menu_600138",
+        "name": "Manage Customization",
+        "url": "https://payment.link4data.com/24online/help/customizationView.do",
+        "children": []
+      },
+      {
+        "id": "menu_90009",
+        "name": "Documentation",
+        "url": "https://payment.link4data.com/24online/webpages/help/dochelp.jsp",
+        "children": []
+      },
+      {
+        "id": "menu_906",
+        "name": "About",
+        "url": "https://payment.link4data.com/24online/webpages/help/about.jsp",
+        "children": []
+      }
+    ]
+  }
+]

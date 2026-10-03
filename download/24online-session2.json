@@ -1,0 +1,38 @@
+{
+  "cookies": [
+    {
+      "name": "JSESSIONID",
+      "value": "8845C8FBBB99DAFAD8B762B528C272F6.GUI",
+      "domain": "payment.link4data.com",
+      "path": "/24online/",
+      "expires": -1.0,
+      "size": 46,
+      "httpOnly": true,
+      "secure": true,
+      "session": true
+    },
+    {
+      "name": "menu_id",
+      "value": "menu_9",
+      "domain": "payment.link4data.com",
+      "path": "/",
+      "expires": -1.0,
+      "size": 13,
+      "httpOnly": false,
+      "secure": false,
+      "session": true
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "cryptsk-theme",
+          "value": "light"
+        }
+      ],
+      "sessionStorage": []
+    }
+  ]
+}

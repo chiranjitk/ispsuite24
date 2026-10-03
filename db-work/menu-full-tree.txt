@@ -1,0 +1,236 @@
+
+## System (menu_1)
+  Network (menu_101):
+    - Interface (menu_10001)
+    - Gateway (menu_10002)
+    - Priorities (menu_10064)
+    - DNS (menu_10003)
+    - Static Route (menu_10054)
+  Firewall (menu_102):
+    - Create (menu_10004)
+    - Manage (menu_10005)
+    - DoS Settings (menu_10006)
+    - DoS Bypass (menu_10028)
+    - Free Sites (menu_10020)
+  DHCP (menu_103):
+    - Manage DHCP (menu_10048)
+    - IP Leasing Report (menu_10049)
+  Services (menu_104)  [no children]
+  PPPoE (menu_1031):
+    - Manage PPPoE (menu_1032)
+  Console (menu_105)  [no children]
+  Manage Data (menu_106):
+    - Backup (menu_10007)
+    - Backup Schedule (menu_10008)
+    - Restore (menu_10009)
+    - Auto Purge (menu_10010)
+    - Manual Purge (menu_10011)
+    - Migrate User (menu_10021)
+    - Authentication Logs (menu_10027)
+  Client Services (menu_107):
+    - Parameters (menu_10013)
+    - Customized Images (menu_10014)
+    - Forgot Password (menu_10701)
+    - ClientGUI URLs (menu_10037)
+    - Webservice Config (menu_10042)
+    - Password Config (menu_10056)
+    - Configuration (menu_10138)
+  ACL (menu_108):
+    - Access Control (menu_10017)
+    - User Type (menu_10018)
+    - User Access (menu_10019)
+    - Console ACL (menu_600134)
+  Dynamic DNS Service (menu_109):
+    - Register Host (menu_10022)
+    - Manage Hosts (menu_10023)
+  Captive Portal (menu_110):
+    - Create (menu_10024)
+    - Manage (menu_10025)
+    - Client Page (menu_10026)
+    - Portal Networks (menu_10052)
+    - Leased Line Page (menu_10057)
+    - Messages (menu_10012)
+    - Portal Config (menu_10058)
+    - Configure Profile (menu_121305)
+    - Security Configuration (menu_121310)
+    - Social Media Config (menu_10081)
+    - CP Registration Policy (menu_10069)
+  NAS Management (menu_112):
+    - NAS IP Configuration (menu_10032)
+    - Radius Configuration (menu_10033)
+    - NAS Configuration (menu_10034)
+    - Preferences (menu_10035)
+    - Connectivity (menu_10036)
+    - NAS Client Config (menu_10060)
+    - Attribute Mapping (menu_10063)
+  Status Tracker (menu_117):
+    - Add Device (menu_10050)
+    - Manage Devices (menu_10051)
+    - Device Logs Details (menu_10062)
+  System Settings (menu_118)  [no children]
+  Dashboard Conf (menu_10059)  [no children]
+  System Tools (menu_119):
+    - Packet Capture (menu_120)
+
+## Policy (menu_3)
+  Surfing Quota (menu_301):
+    - Create (menu_30001)
+    - Manage (menu_30002)
+  Access Time (menu_302):
+    - Create (menu_30003)
+    - Manage (menu_30004)
+  Bandwidth (menu_303):
+    - Create (menu_30005)
+    - Manage (menu_30006)
+    - Schedule (menu_30010)
+  Data Transfer Policy (menu_304):
+    - Create (menu_30007)
+    - Manage (menu_30008)
+  Fair Access Policy (menu_306):
+    - Create FAP Details (menu_30601)
+    - Manage FAP Details (menu_30602)
+  QoS Policy (menu_309):
+    - Create Cache Policy (menu_30901)
+    - Manage Cache Policy (menu_30902)
+
+## Package (menu_4)
+  Package (menu_401):
+    - Create (menu_40001)
+    - Manage (menu_40002)
+  Invoice (menu_402):
+    - Custom Invoice (menu_600200)
+    - Purge Invoice (menu_40005)
+    - Invoice Reports (menu_40004)
+    - Create Invoice (menu_40014)
+    - Configuration (menu_40003)
+    - Zone Invoice (menu_40016)
+  Invoice Template (menu_403):
+    - Create (menu_40006)
+    - Manage (menu_40007)
+  Ancillary Service (menu_404):
+    - Add Service (menu_40008)
+    - Manage Service (menu_40009)
+    - Default Service (menu_40012)
+  Tax Information (menu_405):
+    - Add (menu_40010)
+    - Manage (menu_40011)
+    - Default Tax (menu_40013)
+
+## Payment Gateway (menu_11)
+  Configure (menu_1101)  [no children]
+  Merchant (menu_1102):
+    - Create (menu_110001)
+    - Manage (menu_110002)
+  Search Transactions (menu_1103)  [no children]
+
+## User (menu_6)
+  Manage Users (menu_601):
+    - Add User (menu_60001)
+    - Search User (menu_60004)
+    - Advance Search User (menu_600133)
+    - Leased Line Users (menu_600031)
+  Live Users (menu_602):
+    - Manage Live Users (menu_60005)
+    - Search Live Users (menu_60017)
+  Zone Management (menu_603):
+    - Create Zone (menu_60006)
+    - Manage Zone (menu_60007)
+    - Search Zone Admin (menu_60008)
+  Pool Management (menu_604):
+    - Create Pool (menu_60009)
+    - Manage Pool (menu_60010)
+    - Search Node (menu_60011)
+    - Search Network (menu_60023)
+  Manage Customers (menu_607):
+    - Edit Customers (menu_60021)
+    - Purge Customers (menu_60022)
+  Dynamize Fields (menu_611)  [no children]
+  Demographic Fields (menu_616)  [no children]
+
+## Ticket Management (menu_20)
+  Search Ticket (menu_2001)  [no children]
+  Create Ticket (menu_2002)  [no children]
+
+## Sales Management (menu_21)
+  Lead Management (menu_2101):
+    - Create (menu_210101)
+    - Manage (menu_210102)
+  Service Request (menu_2102):
+    - Manage (menu_210202)
+
+## Inventory (menu_22)
+  Transaction (menu_2201):
+    - Indent (menu_220101)
+    - Purchase Order (menu_220102)
+    - Receipt (menu_220103)
+    - Issue (menu_220104)
+    - Stock Transfer (menu_220105)
+    - Customer Return (menu_220106)
+    - Supplier Return (menu_220107)
+  Master (menu_2202):
+    - Item Master (menu_220201)
+    - Ware House (menu_220202)
+    - Vendor (menu_220203)
+    - Unit of Measure (menu_220204)
+    - View Stock (menu_220205)
+    - Emi Master (menu_220206)
+
+## Alert (menu_15)
+  SMS Gateway (menu_151):
+    - Manage (menu_1501)
+    - Configure Details (menu_1502)
+    - Bulk SMS (menu_1503)
+    - SMS Log Report (menu_1504)
+    - Purge SMS Logs (menu_1505)
+  Email Management (menu_113):
+    - Create Template (menu_10039)
+    - Manage Template (menu_10040)
+    - Configure (menu_10041)
+    - Proactive Reports (menu_10016)
+    - SMTP Configuration (menu_600135)
+    - System Alerts (menu_600136)
+  Alert configuration (menu_1508)  [no children]
+
+## Ott Service (menu_25)
+  Platforms (menu_2501)  [no children]
+  Platform Utility (menu_2502)  [no children]
+  Platform Utility Relation (menu_2503)  [no children]
+  Add Partner Key (menu_2504)  [no children]
+  Bind OTT Name (menu_2505)  [no children]
+
+## Payment Tracking (menu_13)
+  Manage Accounts (menu_1301):
+    - Customers (menu_130101)
+    - Zone (menu_130103)
+  Search Accounts (menu_1302):
+    - Customer (menu_130201)
+    - Zone (menu_130203)
+  Payment Details (menu_1303):
+    - Seach Details (menu_1305)
+    - Payment Mode (menu_1306)
+  Reverse Transactions (menu_1304):
+    - Customer (menu_130401)
+    - Zone (menu_130403)
+  Settle Transactions (menu_1307):
+    - Customers (menu_130701)
+
+## Web Surfing Logger (menu_16)
+  Manage Logger (menu_1601)  [no children]
+
+## Net Kapture (menu_17)
+  Manage Service (menu_1701)  [no children]
+
+## Reports (menu_8)
+  Reports (menu_801)  [no children]
+  FTP Report Configuration (menu_804)  [no children]
+
+## Help (menu_9)
+  Company Info (menu_901)  [no children]
+  24Online Client (menu_902)  [no children]
+  Upgrade Version (menu_903)  [no children]
+  Register 24online (menu_904):
+    - Online Registration (menu_90006)
+    - Module License (menu_90008)
+  Manage Customization (menu_600138)  [no children]
+  Documentation (menu_90009)  [no children]
+  About (menu_906)  [no children]

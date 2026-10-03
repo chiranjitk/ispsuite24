@@ -289,3 +289,43 @@ Unresolved / Next Phase:
 - Business logic deep-dive per module (deferred until UI stable — now stable).
 - Help section needs all-module business-logic documentation (will add in next phase).
 - Real authentication (currently any credentials work).
+
+---
+Task ID: PHASE-2
+Agent: main (Z.ai Code)
+Task: Add all 3-level nested submenus, install PostgreSQL from source, restore DB dump
+
+Work Log:
+- Stopped and deleted the recurring 15-min webDevReview cron job (job ID 433976) per user request.
+- Re-explored the 24online reference site via agent-browser. Extracted the COMPLETE 3-level menu tree via JavaScript DOM scraping: 15 modules → 67 submenus → 139 sub-submenus (previously only had levels 1+2, missing all 139 level-3 items). Also extracted the JSP/Action URL for every menu item (206 URLs total).
+- Saved full menu tree to /home/z/my-project/db-work/menu-tree-clean.json and /home/z/my-project/db-work/menu-enriched.json (with URLs).
+- REBUILT src/lib/nav.ts: added NavGrandchild interface, grandchildren array on NavChild, and all 139 grandchildren with labels, descriptions, and reference URLs. Added findGrandchild() helper.
+- Updated src/lib/store.ts: added activeGrandchild state + 3-arg setActive(moduleId, childId, grandchildId).
+- Rebuilt src/components/app/Sidebar.tsx: now renders 3-level collapsible navigation (module → child → grandchild) with proper active states, search across all 3 levels, and click-to-navigate.
+- Updated src/components/app/Topbar.tsx: breadcrumb now shows 3 levels (Cryptsk / Module / Child / Grandchild) with clickable segments.
+- Created src/components/app/views/ChildOverview.tsx: renders a card grid of a child's grandchildren (shown when a child with grandchildren is selected but no specific grandchild is active).
+- Rewrote src/components/app/views/_shared.tsx: added LeafPlaceholder component (renders a polished page for any grandchild with header, description, reference URL, and back-navigation — even without bespoke content). Updated useModuleHeader to resolve 3 levels.
+- Updated src/components/app/AppShell.tsx: central 3-level router — if activeChild has grandchildren, renders ChildOverview (no grandchild) or LeafPlaceholder (grandchild selected); otherwise delegates to module view for children without grandchildren.
+- Fixed Tailwind CSS 4 compiler crash (E.map is not a function): the @tailwindcss/postcss package was corrupted. Reinstalled tailwindcss + @tailwindcss/postcss (4.1.18 → 4.3.3) which resolved the crash. Also removed custom --color-brand* tokens from @theme inline block.
+- Built bison 3.8.2 from source (needed m4, which was already available) → installed to /home/z/local/bin.
+- Built flex 2.6.4 from source → installed to /home/z/local/bin.
+- Built PostgreSQL 18.0 from source (--without-readline --without-icu --with-openssl) → installed to /home/z/pg18. Configure + make + make install all succeeded.
+- Ran initdb -D /home/z/pg18-data -U accsium. Started PostgreSQL server on localhost:5432.
+- Created roles: accsium (superuser, password accsium), cryptsk (superuser, the dump's object owner), postgres (superuser).
+- Created database accsium owned by accsium.
+- Restored /home/z/my-project/upload/accsium_rev05.gz (decompressed to accsium_rev05, 4.4MB plain SQL) into the accsium database via psql. 0 errors. Result: 800 tables, 8 views, 68 functions.
+- Updated .env: DATABASE_URL=postgresql://accsium:accsium@localhost:5432/accsium?schema=public
+- Created start/stop scripts: /home/z/my-project/db-work/start-pg.sh and stop-pg.sh.
+
+Stage Summary:
+- 3-LEVEL NAV COMPLETE: All 15 modules, 67 submenus, and 139 sub-submenus are now in the navigation tree with reference URLs. The sidebar renders 3 collapsible levels. The Topbar breadcrumb shows all 3 levels. AppShell routes: module overview → child overview (grandchildren cards) → grandchild page (LeafPlaceholder with description + ref URL). Children without grandchildren keep their existing bespoke content.
+- POSTGRESQL 18 INSTALLED FROM SOURCE: /home/z/pg18/bin/{postgres,psql,initdb,pg_ctl,...}. Server running on localhost:5432. Data dir: /home/z/pg18-data.
+- DB DUMP RESTORED: accsium database has 800 tables (tbluser, tblgroup, tblinvoice, tblpolicy, tblipaddress, tblauditlog, tblcustomerdetail, etc.), 68 functions, 8 views. Key counts: 13 plans, 20 invoices, 750 policies, 1020 IPs, 13725 audit logs, 6 customers.
+- Lint: 0 errors, 0 warnings. Dev server compiles and serves 200 via curl.
+- Dev server note: The Next.js dev server (both Turbopack and webpack modes) crashes silently after 2-3 requests from agent-browser's Chrome in this sandbox (likely a memory/cgroup limit during on-demand chunk compilation). curl requests work reliably. Using `next dev --webpack` is more stable than Turbopack. To test interactively: start server, warm up with curl, then use a fresh agent-browser session (`agent-browser --session fresh open ...`).
+
+Unresolved / Next Phase:
+- Wire Prisma to PostgreSQL: run `prisma db pull` to introspect the 800-table schema, then create API routes to serve real data to the UI modules (replace mock-data with DB queries).
+- Build bespoke content for high-priority grandchild pages (Interface config, Firewall create/manage, Manage Users search, Live Users, Plans manage, Invoices, etc.) — currently they show LeafPlaceholder.
+- Real authentication: wire login against tbluser (currently 4 admin users in DB).
+- The dev server instability in this sandbox needs investigation (possibly increase sandbox memory or use a production build for testing).
