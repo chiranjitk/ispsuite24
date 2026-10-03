@@ -1,0 +1,291 @@
+# Cryptsk — 24online Clone — Worklog
+
+## Project Overview
+Building **Cryptsk**, a UI clone of **24online** (Elitecore ISP Gateway / Billing Management Solution), branded with white & red brand colors. The reference site is `https://payment.link4data.com/24online/webpages/login.jsp` (BHIWANI COMMUNICATIONS deployment, v8.3.8 build 3.0, model SMS_2500iX).
+
+Reference credentials used for exploration: `administrator / Link$gui33`
+
+## Current Project Status
+- **Phase:** UI scaffolding (frontend first). Source code + DB dump will be provided later by the user for mapping/backend integration.
+- **Tech Stack:** Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 + shadcn/ui + Prisma (SQLite for now; will migrate to PostgreSQL built from source when DB dump arrives).
+- **Brand:** "Cryptsk" — primary brand colors white + red (red used sparingly as accent, not everywhere).
+
+## Reference UI Exploration Summary (from agent-browser)
+
+### Top-level layout
+- **Top header bar:** brand logo (left) + module tabs strip (System, Policy, Package, Payment Gateway, User, Ticket Management, Sales Management, Inventory, Alert, Ott Service, Payment Tracking, Web Surfing Logger, Net Kapture, Reports, Help) + welcome panel (Welcome administrator / Version 8.3.8 build 3.0 / 24online Model SMS_2500iX).
+- **Sub-header (page toolbar):** page title (e.g. "Manage Live Users") + action icons (Home, Dashboard, Console, Support, Logout).
+- **Content area:** page-specific tables / forms / dashboards.
+- **Footer:** "Powered by 24online Info | Copyright ©2026 24online Info | All Rights Reserved".
+
+### Full Menu → Page Mapping (15 modules)
+
+#### 1. System (`sysmgt/`)
+- **Network** → Interface (configureinterface), Gateway, DNS (configuredns), Priorities (managepriorities), Static Route (routeconfig/addroute)
+- **Firewall** → Create (createfirewall), Manage (managefirewall), DoS Settings (dosattacksconfiguration), DoS Bypass (dosattacksbypassmgt), Free Sites (managefreesites)
+- **DHCP** → Manage DHCP (managedhcp), IP Leasing Report (dhcpleasereport)
+- **Services** → Control Services (controlservices)
+- **PPPoE** → Manage PPPoE (managepppoe)
+- **Console** → Reset Console Password (resetconsolepass)
+- **Manage Data** → Backup (backupdata), Backup Schedule (backupschedule), Restore (restoredata), Auto Purge (autopurge), Purge Data (purgedata), RADIUS Auth Log (radiusauthlog)
+- **Client Services** → Client Services (clientservices), My Account Images (myaccountimages), Forgot Password (forgotpassword), Manage Client GUI URLs (manageclientguiurls), Web Service Config (webserviceconfig)
+- **ACL** → Module Detail (aclmoduledetail), Role Management (aclrolemgt), Security Management (aclsecuritymgt), Console ACL (consoleacl)
+- **Dynamic DNS Service** → Add (adddynamicdnsservice), Manage (managedynamicdnsservices)
+- **Captive Portal** → Create Client Login (createclientlogin), Manage Client Login (manageclientlogin), Template-Zone Relation (templatezonerel), Manage Deny Network (dashboard/managedenynetwork), Leased Line User Template (leasedlineusertemplate)
+- **NAS Management** → Create NAS Config (createnasconfig), Global RADIUS Config (manageglobalradiusconfig), NAS Client Config (managenasclientconfig), NAS Connectivity (managenasconnectivity), RADIUS Client Config (manageradiusclientconfig), Attribute Mapping (attributemapping), 24online NAS Reader (createe24onlinenasreader)
+- **Status Tracker** → Device Logs (devicelogs), Edit Device (editdevice), Manage Devices (managedevices), Packet Capture (packetcapture)
+- **System Settings** → Manage Proactive Reports (manageproactivereports), GUI Preferences (guipreferences)
+- **Dashboard Conf** → dashboardconfig.jsp (Dashboard 1 / Dashboard 2, 3-column layout, Edit)
+- **System Tools** → (system utilities)
+
+#### 2. Policy (`polmgt/` + `fap/`)
+- **Surfing Quota** → Create Surf Policy (createsurfpolicy), Manage Surf Policy (managesurfpolicy)
+- **Access Time** → Create Access Policy (createaccesspolicy), Manage Access Policy (manageaccesspolicy)
+- **Bandwidth** → Create Bandwidth Restriction (createbandwidthrestriction), Manage Bandwidth Policy (managebandwidthpolicy)
+- **Data Transfer Policy** → Create (createdatatransferpolicy), Manage (managedatatransferpolicy)
+- **Fair Access Policy** → Create FAP (fap/createfapdetails), Manage FAP (fap/managefapdetails)
+- **QoS Policy** → Create Cache Policy (createcachepolicy), Manage Cache Policy (managecachepolicy), Manage Schedule (manageschedule)
+
+#### 3. Package (`grpmgt/`)
+- **Package** → Manage Groups (managegroups), Add/Update Group (addupdategroup)
+- **Invoice** → Invoice Front Page (invoicefrontpage), Purge Invoice (purgeinvoice)
+- **Invoice Template** → Create (createinvoicetemplate), Manage (manageinvoicetemplate)
+- **Ancillary Service** → Configure (configureancservice), Create (createancillaryservice), Manage (manageancillaryservice)
+- **Tax Information** → Configure (configuretaxinfo), Create (createtaxinfo), Manage (managetaxinfo)
+
+#### 4. Payment Gateway
+- **Configure** → gateway configuration
+- **Merchant** → merchant management
+- **Search Transactions** → transaction search
+
+#### 5. User (`usermgt/`)
+- **Manage Users** → Search User (searchuser.jsp — search by username/account no/customer name/mobile/IP/MAC), Registration (registration.jsp)
+- **Live Users** → liveusers.jsp — table columns: Sr.No, Account No, User Name, User Type (PPPoE/Leased Line), Connected From, Public IP, MAC Address, StartTime, Time (hh:mm), Upload Data Transfer, Download Data Transfer, Bandwidth (bits/sec), Device Type, Select (checkbox). Toolbar: Send Message to All, Previous, Next>>, Advance Search, Send Message, Disconnect. Header shows "Total Users Connected: 799".
+- **Zone Management** → Create Zone (createzone), Manage Zone (managezone), Search Zone (searchzone)
+- **Pool Management** → managepool.jsp
+- **Manage Customers** → Edit Customer (editcustomer), Purge Customer (purgecustomer)
+- **Dynamize Fields** → dynamic field configuration
+- **Demographic Fields** → demographic field configuration
+
+#### 6. Ticket Management
+- **Search Ticket**
+- **Create Ticket**
+
+#### 7. Sales Management
+- **Lead Management**
+- **Service Request**
+
+#### 8. Inventory
+- **Transaction**
+- **Master**
+
+#### 9. Alert
+- **SMS Gateway** → Purge SMS Logs (smsgateway/purgesmslogs), Bulk SMS Criteria (searchcriteriaforbulksms), SMS Log Report (smslogreport)
+- **Email Management** → SMTP Configuration (alert/smtpconfiguration)
+- **Alert configuration**
+
+#### 10. Ott Service
+- **Platforms** → usermgt/ottplatform.jsp
+- **Platform Utility**
+- **Platform Utility Relation**
+- **Add Partner Key**
+- **Bind OTT Name** → usermgt/ottplayboxtv.jsp
+
+#### 11. Payment Tracking (`paymenttracking/`)
+- **Manage Accounts** → paymentmode.jsp
+- **Search Accounts** → searchcustomeraccounts.jsp, searchfranchiseaccounts.jsp, searchfranchisee.jsp
+- **Payment Details** → searchcustomerpaymentdetails.jsp
+- **Reverse Transactions** → searchcustomerpaymentdetails.jsp?reversetransaction=Y
+- **Settle Transactions** → searchcustomerpaymentdetails.jsp?searchmode=Y
+
+#### 12. Web Surfing Logger (`websurfinglogger/`)
+- **Manage Logger** → managewebsurflogger.jsp
+
+#### 13. Net Kapture (`netkapture/`)
+- **Manage Service** → managenetkapture.jsp
+
+#### 14. Reports (`reports/`)
+- **Reports** → intermediate.jsp (report launcher)
+- **FTP Report Configuration** → manageproactivereports / ftp config
+
+#### 15. Help (`help/`)
+- **Company Info** → companyinfo.jsp
+- **24Online Client** → 24onlineclient.jsp
+- **Upgrade Version** → upgrade.jsp
+- **Register 24online** → onlineregistration.jsp
+- **Manage Customization** → modulelicense.jsp
+- **Documentation** → dochelp.jsp
+- **About** → about.jsp
+
+### Dashboard Widgets (observed on genericdashboard.jsp)
+1. **Package wise User** — bar/list of Package Name vs active Users count (e.g. PR HULC 500 → 411).
+2. **Interface Information** — table: Name (eth0(A)…eth13(N)) | Type (Internal/External) | IP Address/CIDR.
+3. **Login trend (Date vs Count)** — last 10 days, count of logins per day.
+4. **User Status** — Active / Archived / Deactive / Suspended / Total counts (e.g. 1017 / 8 / 2643 / 6 / 3668).
+5. **User Type** — PPPoE / Leased Line counts (768 / 30).
+6. **Top Bandwidth Users** — Account ID | User Name | Total Bandwidth (bits/sec) | IP Address.
+7. **Invoice Summary** — Package Name | No. of Invoices | Amount.
+
+### Live Users Table (key data grid)
+Columns: Sr.No · Account No · User Name · User Type · Connected From · Public IP · MAC Address · StartTime · Time(hh:mm) · Upload Data Transfer · Download Data Transfer · Bandwidth(bits/sec) · Device Type · Select(checkbox).
+Toolbar actions: Send Message to All Live Users · Previous · Next>> · Advance Search · Send Message · Disconnect.
+
+## Current Goals
+1. Build complete Cryptsk UI shell: login → dashboard → all 15 modules with their subpages (frontend-first, mocked data).
+2. Use shadcn/ui + Tailwind, white background with red accents (buttons, active states, logo, KPI highlights).
+3. Sticky footer, responsive (mobile-first), accessible.
+4. Single route `/` (per project rules) — module pages will be in-page views switched via client-side state, OR internal sub-routes if needed (but only `/` is user-visible). **Decision:** Use client-side view-state navigation within `/` so the user only sees `/`.
+
+## Verification Results
+- agent-browser successfully logged into reference site and mapped all 15 modules + submenus + key page URLs.
+- Screenshots saved: `/home/z/my-project/download/24online-login.png`, `24online-liveusers.png`, `24online-manageusers.png`, `24online-dashboard-real.png`.
+- Session state saved: `/home/z/my-project/download/24online-session.json` (for re-exploration).
+
+## Unresolved / Next Phase
+- Awaiting user's full source code + PostgreSQL DB dump → install PostgreSQL **from source** (no apt), restore dump, map Prisma schema, wire backend APIs.
+- Business logic deep-dive (per module) deferred until UI shell is complete.
+- Help section needs all-module business-logic documentation (will add after UI is stable).
+
+## Phase 1 Artifacts To Produce
+- `src/app/page.tsx` — single-page app shell with sidebar + topbar + view router.
+- `src/lib/nav.ts` — full menu tree data structure.
+- `src/components/` — layout (Sidebar, Topbar, Footer), shared (DataTable, KpiCard, PageHeader, SearchBar, FormCard).
+- `src/components/views/` — one folder per module with subpage components.
+- Mock data in `src/lib/mock/` to simulate DB rows.
+
+---
+Task ID: 6-b
+Agent: full-stack-developer
+Task: Build Ticket, Sales, Inventory, Alert module views for Cryptsk
+
+Work Log:
+- Read worklog.md and studied the established UserView.tsx pattern (useModuleHeader hook, ViewProps interface, PageHeader/ActionBar/SectionCard/KpiCard/EmptyState usage, useToast for actions, useAppStore for navigation).
+- Appended four new mock datasets to src/lib/mock-data.ts: SERVICE_REQUESTS (6 rows), INVENTORY_TXNS (8 rows), ALERT_RULES (6 rules), EMAIL_TEMPLATES (5 templates). Existing exports left untouched.
+- Built TicketView.tsx: module overview with 2 child cards + KPI summary (total/open/resolved/avg resolution); SearchTicket page with 4 status KPIs, filter bar (status/priority/category selects + search input + reset), tickets table using TICKETS data with priority+status badges (slate/sky/amber/primary palette), row-click toast, Export + Advance buttons; CreateTicket page with two-column layout (form fields on left incl. customer/subject/category/assignee selects, priority RadioGroup, description Textarea, attachment Upload button; preview/summary card on right with InfoRow + live priority badge), Submit Ticket button with field validation.
+- Built SalesView.tsx: overview with 2 child cards + 3 KPIs (active leads/conversion rate/open SRs); LeadManagement page with 5-column Kanban board (New/Contacted/Survey Done/Converted/Lost) using LEADS data, toggle to list view, owner/area/stage filters, Add Lead button, KPIs (total/conversion/this week); ServiceRequestPage with table view + timeline view toggle (Tabs), SERVICE_REQUESTS data, New Request button, status+priority badges, KPIs (total/pending/in progress/completed).
+- Built InventoryView.tsx: overview with 2 child cards + 3 KPIs (SKUs/stock value/low stock); TransactionPage with INVENTORY_TXNS table, type/item/date filters, New Transaction + Export buttons, IN=emerald/OUT=primary badges with directional icons; MasterPage with INVENTORY_ITEMS table, low-stock amber row highlight + Low warning badge, KPIs (total items/stock value/low stock/out of stock), computed total value column, Add Item + Export buttons, search input.
+- Built AlertView.tsx: overview with 3 child cards + 3 KPIs (SMS sent today/emails sent/active rules); SmsGateway page with Tabs (SMS Logs using SMS_LOGS / Bulk SMS compose form with template select + recipient input + message Textarea with 160-char counter + live preview / Purge Logs date range + destructive button), KPIs (sent today/failed/delivery rate); EmailManagement page with SMTP config form (server/port/encryption select [SSL/TLS/None]/username/password/from email/from name) + Save + Send Test Email buttons + connection summary card + EMAIL_TEMPLATES table with Edit buttons; AlertConfig page with ALERT_RULES table using Switch for enable/disable toggle (stateful), channel badges, Edit buttons, Add Rule button, KPIs (total/active/disabled).
+- After each file write, watched dev.log hot-reload output to confirm successful compilation — no errors encountered.
+- Ran `bun run lint` — 0 errors, only 3 pre-existing warnings in PaymentTrackingView.tsx and UserView.tsx (not in my new files).
+
+Stage Summary:
+- Files modified:
+  - src/lib/mock-data.ts (appended 4 new exports: SERVICE_REQUESTS, INVENTORY_TXNS, ALERT_RULES, EMAIL_TEMPLATES)
+  - src/components/app/views/TicketView.tsx (overwrote stub with full implementation)
+  - src/components/app/views/SalesView.tsx (overwrote stub with full implementation)
+  - src/components/app/views/InventoryView.tsx (overwrote stub with full implementation)
+  - src/components/app/views/AlertView.tsx (overwrote stub with full implementation)
+- Key decisions:
+  - Followed UserView.tsx pattern verbatim: useModuleHeader hook, ViewProps from _shared.tsx, shared PageHeader/ActionBar/SectionCard/KpiCard/EmptyState/InfoRow components, useToast for all actions, useAppStore.setActive for overview navigation.
+  - Status color palette strictly adheres to brand rules: emerald=success, primary(red)=danger/critical, amber=warning, slate=neutral, sky=info (allowed by spec as blue-free alternative for Medium priority / Scheduled status), violet=tertiary accent for Survey Done / In Progress / Email channel — no raw blue/indigo.
+  - All list pages include KPI cards on top, ActionBar with filters/actions, SectionCard-wrapped Table with overflow-x-auto + scrollbar-thin on Kanban scrollable columns.
+  - All buttons have toast handlers; no dead UI.
+  - Used RadioGroup for ticket priority, Switch for alert rule toggle (stateful), Tabs for SMS gateway sections and service-request view switcher.
+  - Two-column layouts used for create-ticket and SMTP config forms with live preview/summary cards on the right.
+- Any issues remaining:
+  - None. App compiles cleanly (`GET / 200`), lint passes with 0 errors. All four modules are reachable from the sidebar and their child sub-pages render with mocked data.
+
+---
+Task ID: 6-c
+Agent: full-stack-developer
+Task: Build OTT, Payment Tracking, Web Surfing, Net Kapture, Reports, Help module views for Cryptsk
+
+Work Log:
+- Read worklog.md, _shared.tsx, UserView.tsx (the pattern to follow), shared.tsx (PageHeader/KpiCard/SectionCard/ActionBar/EmptyState), mock-data.ts, nav.ts, and the shadcn ui primitives (table, badge, button, input, select, checkbox, tabs, switch, textarea, label) to lock down established patterns and component APIs.
+- Appended 9 new mock-data blocks to src/lib/mock-data.ts (without disturbing existing exports): OTT_PLATFORMS, OTT_UTILITIES, OTT_PLATFORM_UTILITY_RELATIONS, OTT_PARTNER_KEYS, OTT_BINDINGS, PAYMENT_MODES, FRANCHISE_ACCOUNTS, ACCOUNT_SEARCH_RESULTS, WEB_LOG_URLS, NET_KAPTURE_SESSIONS, FTP_REPORT_SCHEDULES, MODULE_LICENSES, DOC_SECTIONS (+ DocBlock interface). All typed, all categories aligned with the 24online reference.
+- Built OttView.tsx: overview card grid (5 children + 3 KPIs) and 5 child pages — Platforms table with "Configure" buttons, Platform Utility table, Platform Utility Relation table, Partner Key (Add Key form on left + key table on right with revoke action), Bind OTT (Bind form + bindings table with unbind action). Status badges use emerald/red colour scheme per project rules.
+- Built PaymentTrackingView.tsx: overview (5 cards + 3 KPIs), Manage Accounts (payment modes table with enable Switch + set-default + franchise accounts table), Search Accounts (filter form + results table), Payment Details (date range + account filter, KPIs for collected/settled/pending/reversed, transactions table with mode & status badges), Reverse Transactions (select + reason input + reverse button with validation), Settle Transactions (ActionBar + select-all + table filtered to status=Pending with empty state).
+- Built WebSurfingView.tsx: overview (1 card + 3 KPIs) and Manage Logger (configuration form with enable Switch, retention, log level, storage path, max size + sticky-header recent URLs table with filter, Allowed/Blocked badges, purge action).
+- Built NetKaptureView.tsx: overview (1 card + 3 KPIs) and Manage Service (capture config form: enable, interface select, BPF filter input, max packets, duration + Start/Stop/Save buttons + sticky-header capture sessions table with Running/Stopped/Completed badges, .pcap download action).
+- Built ReportsView.tsx: overview (2 cards + 3 KPIs), Report Launcher (top filter bar with from/to dates, zone, format + Generate All + left sidebar category list with counts + right grid of report cards grouped/filtered by category, each card with format badge + Generate button), FTP Report (5 schedules table with enable Switch, Run Now action + collapsible Add Schedule form).
+- Built HelpView.tsx: overview (7 cards) and 7 child pages — Company Info (editable form + logo upload card), Cryptsk Client (version KPIs + 3 OS download cards + release notes), Upgrade Version (current vs latest KPIs + check/download actions + upgrade path + changelog), Register Product (license key form + benefits card), Manage Customization (15-module license table with Active/Trial/Expired badges + renew action), Documentation (sidebar sections + search + DocBlock renderer for h1/h2/p/ul/code blocks), About (logo card with version/build/model + tech stack grid + credits + footer).
+- Ran `bun run lint` after each batch of edits — final pass: 0 errors, 1 warning (existing UserView.tsx ternary pattern that's outside my scope).
+- Fixed two lint warnings in PaymentTrackingView.tsx by converting `next.has(id) ? next.delete(id) : next.add(id);` ternary expressions to proper `if/else` statements.
+- Removed unused imports proactively: ActionBar/EmptyState/Search from OttView, ActionBar from NetKaptureView, ActionBar/Download from ReportsView, Switch from OttView, and the redundant `useAppStore as _useAppStore` alias from HelpView.
+- Verified dev.log: only one transient 500 (during mid-write of mock-data.ts) followed by hundreds of successful `✓ Compiled` and `GET / 200` entries. App compiles cleanly under Next.js 16 Turbopack.
+
+Stage Summary:
+- Files created/modified:
+  • src/lib/mock-data.ts (appended ~430 lines of new typed mock data — OTT, Payment Tracking extras, Web Surfing, Net Kapture, FTP Report, Module Licenses, Documentation)
+  • src/components/app/views/OttView.tsx (full rewrite from ComingSoon stub — ~470 lines)
+  • src/components/app/views/PaymentTrackingView.tsx (full rewrite — ~580 lines)
+  • src/components/app/views/WebSurfingView.tsx (full rewrite — ~250 lines)
+  • src/components/app/views/NetKaptureView.tsx (full rewrite — ~270 lines)
+  • src/components/app/views/ReportsView.tsx (full rewrite — ~330 lines)
+  • src/components/app/views/HelpView.tsx (full rewrite — ~480 lines)
+- Key decisions:
+  • Followed UserView.tsx pattern verbatim: same ViewProps + useModuleHeader imports, same PageHeader/SectionCard/KpiCard/ActionBar/EmptyState usage, same `useToast` for every action, same `useAppStore.setActive` for overview→child navigation, same breadcrumb format [Cryptsk / Module / Child], same status badge colour convention (emerald=success, primary-red=danger, amber=warning, muted=neutral).
+  • Each child page rendered with a ChildHeader helper that wraps PageHeader with the standard breadcrumb.
+  • Added `scrollbar-thin` class + sticky headers + max-h-96 on the long log/capture tables (Web Surfing URLs, Net Kapture sessions, Docs sections) for the established custom-scrollbar styling.
+  • Two-column "form + table" layout (lg:col-span-2 + lg:col-span-3) used consistently for Partner Key, Bind OTT, Manage Logger, Manage Service, Company Info, and Register Product pages.
+  • Reports launcher uses a 5-col grid (1 col category sidebar + 4 col report card grid) so the catalog feels like a real report browser.
+  • Documentation page renders DocBlock content (h1/h2/p/ul/code) — kept the schema in mock-data.ts so it can be swapped for real markdown later.
+  • Brand-red usage confined to primary/primary-foreground Tailwind tokens (no raw red/blue/indigo classes).
+- Issues remaining: none. Lint clean (0 errors). Dev server compiles without errors. All 6 module views are feature-complete and ready for backend wiring when the source + DB dump arrive.
+
+---
+Task ID: 6-a
+Agent: full-stack-developer
+Task: Build System, Policy, Package, Payment Gateway module views for Cryptsk
+
+Work Log:
+- Read worklog.md, _shared.tsx, UserView.tsx, shared.tsx, mock-data.ts and nav.ts to internalize the established Cryptsk view pattern (PageHeader + KpiCards + SectionCard + Table + useToast + useAppStore.setActive overview nav).
+- Audited existing stubs at SystemView.tsx, PolicyView.tsx, PackageView.tsx, PaymentGatewayView.tsx (all were single-line `ComingSoon` wrappers).
+- Appended ~340 lines of new mock data to `src/lib/mock-data.ts` (SYSTEM_SERVICES, ACL_ROLES, DYNAMIC_DNS, CAPTIVE_TEMPLATES, DENY_NETWORK, DEVICE_LOGS, MANAGED_DEVICES, DASHBOARD_LAYOUTS, INVOICES, INVOICE_TEMPLATES, ANCILLARY_SERVICES, TAX_INFO, MERCHANTS, GATEWAY_TXNS, SURFING_POLICIES, ACCESS_TIME_POLICIES, BANDWIDTH_POLICIES, DATA_TRANSFER_POLICIES, FAP_POLICIES, QOS_POLICIES) without touching existing exports.
+- Built SystemView.tsx with 16 fully-detailed children (network, firewall, dhcp, services, pppoe, console, manage-data, client-services, acl, dynamic-dns, captive-portal, nas, status-tracker, system-settings, dashboard-conf, system-tools) plus a 16-card module overview. Includes interactive firewall rule enable/disable, services start/stop/restart with switches, a 4-tab Manage Data view, a 4-tab ACL view, a 7-row device log with scroll, a diagnostic tools panel with live output, and a visual dashboard widget grid.
+- Built PolicyView.tsx with 6 children (surfing-quota, access-time, bandwidth, data-transfer, fap, qos) plus a 6-card overview. The access-time child includes an interactive 7×24 weekly schedule grid where each hour cell is click-to-toggle (green = allowed, muted = blocked).
+- Built PackageView.tsx with 5 children (package, invoice, invoice-template, ancillary, tax) plus a 6-card overview with KPI summary (Total Plans, Active Plans, Active Users, Est. MRR, Invoices, Tax Slabs). The package table has 12 columns and supports type filter + text search; rows are clickable for a detail toast. The invoice-template child renders 3 visual invoice mockups.
+- Built PaymentGatewayView.tsx with 3 children (configure, merchant, search-transactions) plus a 3-card overview with KPIs (Total Transactions, Success Rate, Refunded). The configure child has provider/merchant-id/secret(show-hide)/callback/currency/settlement/test-mode controls. The merchant table supports default-selection Checkbox + status click-toggle. The search-transactions child has a full filter form (date range + status + gateway + text) and a results table with a Refund button for Success transactions.
+- Removed all unused imports (Tabs in PolicyView, EmptyState/Switch/Checkbox/ActionBar/InfoRow/Search/Calendar/Cpu/Settings2 in SystemView, Boxes/FileText/Tabs/Download in PackageView, Trash2 in PaymentGatewayView).
+- Verified dev.log after each file: all "✓ Compiled" entries, no errors. `bun run lint` reports 0 errors (1 pre-existing warning in UserView.tsx, not in scope). `curl http://localhost:3000/` → 200 OK.
+
+Stage Summary:
+- Files created/modified:
+  - MODIFIED `src/lib/mock-data.ts` (appended new mock-data block, ~340 lines, all new exports)
+  - MODIFIED `src/components/app/views/SystemView.tsx` (16 children + overview, ~1100 lines)
+  - MODIFIED `src/components/app/views/PolicyView.tsx` (6 children + overview, ~540 lines)
+  - MODIFIED `src/components/app/views/PackageView.tsx` (5 children + overview, ~540 lines)
+  - MODIFIED `src/components/app/views/PaymentGatewayView.tsx` (3 children + overview, ~470 lines)
+  - CREATED `src/agent-ctx/6-a-full-stack-developer.md` (this task's work record)
+- Key decisions:
+  - Followed the UserView.tsx pattern exactly (useModuleHeader hook, ViewProps interface, PageHeader + KpiCard + SectionCard + ActionBar components, useToast for every action button, useAppStore.setActive for overview navigation).
+  - Brand color discipline maintained: red (primary) for danger/suspended/Leased Line, emerald for success/Active, amber for warning/Pending, slate-muted for neutral/Inactive. No raw red/blue/indigo classes.
+  - Tables responsive with overflow-x-auto; long log lists use max-h-96 overflow-y-auto scrollbar-thin.
+  - Interactive elements beyond static tables: firewall rule Checkbox toggles, service Switch toggles with start/stop/restart buttons, 7×24 access-time grid click-to-toggle, merchant default Checkbox + status click-toggle, system-tools ping/traceroute/dns/conn with live output area, dashboard-conf visual widget grid.
+  - All new mock data namespaced and clearly delimited; no existing exports modified.
+- Any issues remaining:
+  - None for this task. All 4 views compile cleanly (verified via dev.log + bun run lint + curl 200).
+  - Sibling view files (Sales, Ticket, Inventory, Alert, Reports, Help, OTT, Payment Tracking, Web Surfing, Net Kapture) remain as ComingSoon stubs — those belong to other agents.
+
+---
+Task ID: FINAL
+Agent: main (Z.ai Code)
+Task: Cryptsk UI Phase 1 — complete UI shell + all 15 module views + verification
+
+Work Log:
+- Explored reference 24online site via agent-browser (login, all 15 module menus, submenus, dashboard widgets, live users table, manage users). Mapped full menu→URL tree.
+- Initialized worklog with full reference documentation (menu structure, page mappings, dashboard widgets, live users columns).
+- Built foundation: red/white brand theme (globals.css), ThemeProvider, layout metadata, favicon.
+- Created nav tree (src/lib/nav.ts) — 15 modules with all children + icons + descriptions.
+- Created Zustand store (src/lib/store.ts) — auth + navigation state + system meta.
+- Created mock data (src/lib/mock-data.ts) — live users, packages, tickets, zones, pools, firewall, policies, inventory, payments, leads, SMS, reports, NAS, DHCP leases.
+- Built shared components (src/components/app/shared.tsx) — PageHeader, KpiCard, SectionCard, ActionBar, EmptyState, InfoRow.
+- Built LoginPage (split-screen, red brand panel + form), Sidebar (collapsible modules w/ search), Topbar (breadcrumb, search, quick actions, theme toggle, user menu), Footer (sticky), AppShell (view router).
+- Built DashboardView (6 KPIs, login trend area chart, status pie, package bar chart, top bandwidth, interfaces, invoices, quick links).
+- Built UserView in detail (Manage Users search, Live Users 42-row table w/ select/disconnect, Zone Mgmt, Pool Mgmt w/ utilization bars, Manage Customers).
+- Delegated 14 remaining module views to 3 parallel full-stack-developer subagents (Task 6-a/6-b/6-c), each built their modules following the UserView pattern.
+- Fixed duplicate POOLS export in mock-data, fixed no-unused-expressions lint warning.
+- Verified via agent-browser: all 15 modules navigate + render correctly (correct h1, table rows populated), mobile responsive (sidebar collapses), sticky footer (sticks on short pages, pushes down on long pages — footer at 2197px on 2238px Live Users page), 0 console errors, 0 lint errors.
+
+Stage Summary:
+- UI Phase 1 COMPLETE. Single-page app at `/` with login → dashboard → 15 modules × ~60 sub-pages.
+- All views use mocked data (illustrative). Ready for backend wiring when source code + PostgreSQL DB dump arrive.
+- Brand: white background + red (primary) accents — applied via theme, not hardcoded.
+- Files: src/lib/{nav,store,mock-data}.ts, src/components/app/{LoginPage,Sidebar,Topbar,Footer,AppShell,shared,theme-provider}.tsx, src/components/app/views/{Dashboard,User,System,Policy,Package,PaymentGateway,Ticket,Sales,Inventory,Alert,Ott,PaymentTracking,WebSurfing,NetKapture,Reports,Help,ModuleOverview}View.tsx + _shared.tsx.
+- Verified: bun run lint → 0 errors/0 warnings. dev.log clean. All modules browser-tested.
+
+Unresolved / Next Phase:
+- Awaiting user's full source code + PostgreSQL DB dump → install PostgreSQL from source (no apt), restore dump, map Prisma schema, wire backend APIs to replace mock data.
+- Business logic deep-dive per module (deferred until UI stable — now stable).
+- Help section needs all-module business-logic documentation (will add in next phase).
+- Real authentication (currently any credentials work).

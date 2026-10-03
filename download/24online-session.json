@@ -1,0 +1,27 @@
+{
+  "cookies": [
+    {
+      "name": "JSESSIONID",
+      "value": "1B3A8CF9C93289687DCEF370F6A2CCE0.GUI",
+      "domain": "payment.link4data.com",
+      "path": "/24online/",
+      "expires": -1.0,
+      "size": 46,
+      "httpOnly": true,
+      "secure": true,
+      "session": true
+    },
+    {
+      "name": "menu_id",
+      "value": "menu_601",
+      "domain": "payment.link4data.com",
+      "path": "/",
+      "expires": -1.0,
+      "size": 15,
+      "httpOnly": false,
+      "secure": false,
+      "session": true
+    }
+  ],
+  "origins": []
+}
