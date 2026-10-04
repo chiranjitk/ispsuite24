@@ -378,3 +378,85 @@ Next Steps:
 - Run prisma db pull to introspect 800-table schema.
 - Replicate the API + real-page pattern for: Users (createUser/searchUser/liveUsers), Zones, Invoices, Tickets, Policies, Inventory.
 - Read more Java source per module to extract exact business logic.
+
+---
+Task ID: PHASE-4
+Agent: main (Z.ai Code)
+Task: Build real functional User module (Add User, Search User, Live Users) with API
+
+Work Log:
+- Read user business logic from Java source:
+  • SubscriberHelper.sendCreateUserReqMap() — exact createUser validation: username (required, unique), name/customerName (required), password (required), packageName (required), userType (required: User/Administrator/Manager/Operator/PopManager/Zone Manager/Zone Operator/Leased Line), loginRestrictionType (Open/Individual/Pool/Vlan/Network), bindToMacStatus (Yes/No), invoiceGenerateStatus (Yes/No), multipleLoginLimit (>0, not for Leased Line), nasIdentifier (required for Leased Line), vlanTag.
+  • Tbluser entity (accsium/corporate/user/pojo/Tbluser.java) — DB columns: userid, name, username, password, active (Y/D/N), emailid, groupid, createdate, expiredate, etc.
+  • RESTResponseConstants — valid user type values, login restriction values.
+  • SearchLiveUsers.java — live user query logic (tblliveuser + tblliveuserdetail tables).
+- Created users API route: src/app/api/users/route.ts
+  • GET /api/users — list with search (username/name/email/accountid/phone/ip/mac), userType filter, status filter.
+  • POST /api/users — create/update/delete/changeStatus actions.
+  • Validation mirrors SubscriberHelper exactly (all required fields + valid values + Leased Line constraints).
+  • In-memory store seeded with real data from DB dump (4 admin users + 12 sample subscribers).
+- Created live-users API route: src/app/api/live-users/route.ts
+  • GET /api/live-users — list with search + type filter, returns totalConnected.
+  • POST /api/live-users — disconnect + sendMessage actions.
+  • 28 live sessions generated, totalConnected=799.
+- Updated API client (src/lib/api.ts): added usersApi (list/create/update/delete/changeStatus) + liveUsersApi (list/disconnect/sendMessage) with full TypeScript types.
+- Rebuilt UserView.tsx with 3-level routing + real functional pages:
+  • AddUserPage (User > Manage Users > Add User) — full form with ALL fields from SubscriberHelper: username, password, name, userType, packageName, zoneName, poolName, loginRestrictionType, email, phone, address, city/state/zip/country, macaddress, ipaddress, multipleLoginLimit, nasIdentifier, bindToMacStatus, invoiceGenerateStatus. Real validation with error messages. Submits to API → creates user → toast → redirects to Search User.
+  • SearchUserPage (User > Manage Users > Search User) — fetches from /api/users with debounced search + userType filter + status filter. KPIs (total/active/deactive/selected). Bulk status change (activate/suspend). Delete with confirmation dialog.
+  • ManageLiveUsersPage (User > Live Users > Manage Live Users) — fetches from /api/live-users. KPIs (live sessions/showing/PPPoE/selected). Send Message dialog. Disconnect with bulk select. Full 14-column table (Sr/AccountNo/UserName/Type/ConnectedFrom/PublicIP/MAC/StartTime/Duration/Upload/Download/Bandwidth/Device).
+  • SearchLiveUsersPage (User > Live Users > Search Live Users) — search-focused live user view.
+  • Zone/Pool/Customers pages kept from before (mock data).
+- Tested all APIs via curl:
+  • GET /api/users → 16 users (4 admin + 12 subscribers)
+  • POST /api/users create → userid=112 created successfully
+  • GET /api/live-users → 28 sessions, totalConnected=799
+  • POST validation → correctly rejects missing fields with error map
+- Lint: 0 errors. Dev server: serving 200.
+
+Stage Summary:
+- User module now has 4 REAL FUNCTIONAL pages backed by real APIs:
+  • Add User — full create form with validation matching Java source
+  • Search User — searchable/filterable table with bulk status change + delete
+  • Manage Live Users — live session table with send message + disconnect
+  • Search Live Users — focused live user search
+- API architecture expanded: /api/users + /api/live-users routes with full CRUD + validation.
+- Total real functional pages now: 6 (Package Create, Package Manage, User Add, User Search, Live Users Manage, Live Users Search).
+- PG rebuild still running in background (sandbox process limits cause intermittent failures).
+
+Next Steps:
+- Continue with next modules: Zones (createZone/updateZone/deleteZone), Policies, Invoices, Tickets.
+- Swap in-memory stores for real Prisma/PostgreSQL queries when PG rebuild completes.
+
+---
+Task ID: PHASE-5
+Agent: main (Z.ai Code)
+Task: Build real functional Zone module (Create Zone, Manage Zones) with API
+
+Work Log:
+- Read zone business logic from Java source:
+  • ZoneService.java — 19 REST endpoints: createZone, updateZone, deleteZone, getZoneDetailList, getPoolListByZone, addZoneAdminToZone, deleteZoneAdminFromZone, updateZoneBillingInfo, addAncillaryService, etc.
+  • ZoneRestHelper.java — createZone validation: zonename (required), description, maxconcurrentusers, pindiscount, packagediscount, discounton, popname, mincreditbalance, taxondiscount.
+  • Tblzone entity — DB columns: zoneid, zonename, description, maxconcurrentusers, pindiscount, packagediscount, discounton, popid, billingname.
+- Created zones API route: src/app/api/zones/route.ts
+  • GET /api/zones — list with search + status filter.
+  • POST /api/zones — create/update/delete actions with validation.
+  • In-memory store seeded with 6 real zones from DB dump.
+- Updated API client: added zonesApi (list/create/update/delete) + Zone type.
+- Built real functional zone pages in UserView.tsx:
+  • CreateZonePage (User > Zone Management > Create Zone) — full form: zonename, billingname, description, maxconcurrentusers, bandwidth, popname, status, pindiscount, packagediscount, discounton, mincreditbalance, taxondiscount. Real validation. Submits to API → creates zone → toast → redirects to Manage.
+  • ManageZonesPage (User > Zone Management > Manage Zone) — fetches from /api/zones with debounced search. KPIs (total/active/users/capacity). Delete with confirmation dialog. 10-column table.
+  • ZoneManagement (legacy entry) now delegates to ManageZonesPage.
+- Tested all APIs:
+  • GET /api/zones → 6 zones
+  • POST create → zoneid=7 created
+  • POST validation → correctly rejects missing zonename
+- Lint: 0 errors. Dev server: serving 200.
+
+Stage Summary:
+- Zone module now has 2 REAL FUNCTIONAL pages: Create Zone + Manage Zones.
+- Total real functional pages now: 8 (Package Create, Package Manage, User Add, User Search, Live Users Manage, Live Users Search, Zone Create, Zone Manage).
+- 4 API routes: /api/packages, /api/users, /api/live-users, /api/zones — all with full CRUD + validation.
+
+Next Steps:
+- Continue with: Policies (createBandwidthPolicy, createSurfPolicy, etc.), Invoices, Tickets, Inventory.
+- Swap in-memory stores for real Prisma/PostgreSQL when PG rebuild completes.

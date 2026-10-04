@@ -93,3 +93,150 @@ export const packagesApi = {
       body: JSON.stringify({ action: "delete", groupid }),
     }),
 };
+
+/* --- Users --- */
+
+export interface User {
+  userid: number;
+  username: string;
+  name: string;
+  password: string;
+  emailid: string;
+  active: "Y" | "D" | "N";
+  groupid: number;
+  packageName: string;
+  zoneName: string;
+  poolName: string;
+  userType: string;
+  phone: string;
+  address1: string;
+  address2: string;
+  city: string;
+  state: string;
+  country: string;
+  zip: string;
+  macaddress: string;
+  ipaddress: string;
+  bindToMacStatus: "Yes" | "No";
+  loginRestrictionType: "Open" | "Individual" | "Pool" | "Vlan" | "Network";
+  invoiceGenerateStatus: "Yes" | "No";
+  multipleLoginLimit: number;
+  nasIdentifier: string;
+  vlanTag: number;
+  birthdate: string;
+  createdate: string;
+  expiredate: string;
+  accountid: string;
+}
+
+export const usersApi = {
+  list: (params?: { search?: string; userType?: string; status?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set("search", params.search);
+    if (params?.userType) q.set("userType", params.userType);
+    if (params?.status) q.set("status", params.status);
+    return request<User[]>(`/api/users?${q.toString()}`);
+  },
+  create: (data: Partial<User>) =>
+    request<User>("/api/users", {
+      method: "POST",
+      body: JSON.stringify({ action: "create", ...data }),
+    }),
+  update: (data: Partial<User> & { userid: number }) =>
+    request<User>("/api/users", {
+      method: "POST",
+      body: JSON.stringify({ action: "update", ...data }),
+    }),
+  delete: (userid: number) =>
+    request<void>("/api/users", {
+      method: "POST",
+      body: JSON.stringify({ action: "delete", userid }),
+    }),
+  changeStatus: (userids: number[], active: "Y" | "D" | "N") =>
+    request<void>("/api/users", {
+      method: "POST",
+      body: JSON.stringify({ action: "changeStatus", userids, active }),
+    }),
+};
+
+/* --- Live Users --- */
+
+export interface LiveUser {
+  sr: number;
+  accountNo: string;
+  userName: string;
+  userType: "PPPoE" | "Leased Line" | "Hotspot";
+  connectedFrom: string;
+  publicIp: string;
+  mac: string;
+  startTime: string;
+  duration: string;
+  upload: string;
+  download: string;
+  bandwidth: string;
+  deviceType: string;
+  sessionid: string;
+}
+
+export const liveUsersApi = {
+  list: (params?: { search?: string; type?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set("search", params.search);
+    if (params?.type) q.set("type", params.type);
+    return request<LiveUser[]>(`/api/live-users?${q.toString()}`);
+  },
+  disconnect: (sessionids: string[]) =>
+    request<void>("/api/live-users", {
+      method: "POST",
+      body: JSON.stringify({ action: "disconnect", sessionids }),
+    }),
+  sendMessage: (sessionids: string[], message: string) =>
+    request<void>("/api/live-users", {
+      method: "POST",
+      body: JSON.stringify({ action: "sendMessage", sessionids, message }),
+    }),
+};
+
+/* --- Zones --- */
+
+export interface Zone {
+  zoneid: number;
+  zonename: string;
+  description: string;
+  maxconcurrentusers: number;
+  pindiscount: number;
+  packagediscount: number;
+  discounton: "TOTAL" | "PACKAGE" | "PIN";
+  popid: number;
+  popname: string;
+  billingname: string;
+  mincreditbalance: number;
+  taxondiscount: "Y" | "N";
+  bandwidth: string;
+  users: number;
+  status: "Y" | "N";
+}
+
+export const zonesApi = {
+  list: (params?: { search?: string; status?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set("search", params.search);
+    if (params?.status) q.set("status", params.status);
+    return request<Zone[]>(`/api/zones?${q.toString()}`);
+  },
+  create: (data: Partial<Zone>) =>
+    request<Zone>("/api/zones", {
+      method: "POST",
+      body: JSON.stringify({ action: "create", ...data }),
+    }),
+  update: (data: Partial<Zone> & { zoneid: number }) =>
+    request<Zone>("/api/zones", {
+      method: "POST",
+      body: JSON.stringify({ action: "update", ...data }),
+    }),
+  delete: (zoneid: number) =>
+    request<void>("/api/zones", {
+      method: "POST",
+      body: JSON.stringify({ action: "delete", zoneid }),
+    }),
+};
