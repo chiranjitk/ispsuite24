@@ -1,8 +1,6 @@
 #!/bin/bash
 cd /home/z/my-project
 while true; do
-  echo "[$(date)] Starting server..."
-  node .next/standalone/server.js 2>&1
-  echo "[$(date)] Server exited with code $?, restarting in 2s..."
-  sleep 2
+  node .next/standalone/server.js > dev.log 2>&1
+  sleep 1
 done
