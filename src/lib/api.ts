@@ -240,3 +240,38 @@ export const zonesApi = {
       body: JSON.stringify({ action: "delete", zoneid }),
     }),
 };
+
+/* --- System (multi-sub-module) --- */
+
+export const systemApi = {
+  list: (sub: string, search?: string) => {
+    const q = new URLSearchParams({ sub });
+    if (search) q.set("search", search);
+    return request<any[]>(`/api/system?${q.toString()}`);
+  },
+  create: (sub: string, data: any) =>
+    request<any>("/api/system", {
+      method: "POST",
+      body: JSON.stringify({ sub, action: "create", ...data }),
+    }),
+  update: (sub: string, data: any) =>
+    request<any>("/api/system", {
+      method: "POST",
+      body: JSON.stringify({ sub, action: "update", ...data }),
+    }),
+  delete: (sub: string, id: number) =>
+    request<void>("/api/system", {
+      method: "POST",
+      body: JSON.stringify({ sub, action: "delete", id }),
+    }),
+  toggle: (sub: string, id: number, field: string) =>
+    request<any>("/api/system", {
+      method: "POST",
+      body: JSON.stringify({ sub, action: "toggle", id, field }),
+    }),
+  serviceControl: (sub: string, id: string, command: "start" | "stop" | "restart") =>
+    request<any>("/api/system", {
+      method: "POST",
+      body: JSON.stringify({ sub, action: "serviceControl", id, command }),
+    }),
+};

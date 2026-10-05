@@ -460,3 +460,77 @@ Stage Summary:
 Next Steps:
 - Continue with: Policies (createBandwidthPolicy, createSurfPolicy, etc.), Invoices, Tickets, Inventory.
 - Swap in-memory stores for real Prisma/PostgreSQL when PG rebuild completes.
+
+---
+Task ID: SYS-1
+Agent: full-stack-developer
+Task: Rebuild SystemView with real functional pages for all 16 System sub-menus
+
+Work Log:
+- Read worklog.md, _shared.tsx (ViewProps, useViewRouter, useModuleHeader, ChildOverview, LeafPlaceholder), PackageView.tsx (canonical pattern), UserView.tsx (form pattern), src/lib/api.ts (systemApi: list/create/update/delete/toggle/serviceControl), src/app/api/system/route.ts (seed data + handlers for 15 sub-modules), and src/lib/nav.ts (System module navigation tree).
+- Completely overwrote src/components/app/views/SystemView.tsx (~4600 lines, was placeholder).
+- Implemented the useViewRouter 4-state pattern: module-overview → SystemOverview; child-overview → ChildOverview; grandchild → bespoke page or LeafPlaceholder fallback; child (leaf) → bespoke page.
+- Built 40+ bespoke functional pages, all backed by systemApi (real CRUD) or local mock data where the API sub-module is missing:
+  * Network: InterfacePage (+ InterfaceDialog CRUD), GatewayPage (+ GatewayDialog CRUD), DnsPage (form w/ Save), StaticRoutePage (+ RouteDialog CRUD) — all backed by systemApi.list/create/update/delete/toggle on sub-modules interfaces/gateways/dns/routes.
+  * Firewall: FirewallCreatePage (full form with src/dst/port-type/protocol/action/schedule/bandwidth), FirewallManagePage (table w/ toggle, move up/down, delete via systemApi), DosSettingsPage (toggle via systemApi), DosBypassPage (local state + systemApi.create), FreeSitesPage (+ FreeSiteDialog CRUD + toggle).
+  * DHCP: ManageDhcpPage (+ DhcpScopeDialog CRUD), IpLeasingPage (search/filter + Release action).
+  * Services (leaf): ServicesPage with Start/Stop/Restart via systemApi.serviceControl and Auto-Start toggle.
+  * Console (leaf): ConsolePage with reset-password form (3 password fields w/ show/hide toggle + validation).
+  * Manage Data: BackupPage (Backup Now button), BackupSchedulePage (+ dialog CRUD), RestorePage (select existing backup + mocked upload), AutoPurgePage (form), ManualPurgePage (form + confirmation dialog), MigrateUserPage (zone-from/zone-to/user form), AuthLogsPage (mock 8 rows, search/filter, KPI cards, max-h-96 sticky-header scroll).
+  * Client Services: ClientServicesParametersPage form (session/login/password policy with switches); others → LeafPlaceholder.
+  * ACL: AccessControlPage (8 mock modules × view/create/update/delete checkboxes), UserTypePage (6 mock roles), UserAccessPage (6 mock user-access entries), ConsoleAclPage (form).
+  * Dynamic DNS: DdnsRegisterPage (form), DdnsManagePage (3 mock hosts + Update IP/Delete).
+  * Captive Portal: CaptiveCreatePage (form), CaptiveManagePage (3 mock templates + toggle/delete); others → LeafPlaceholder.
+  * NAS: NasIpConfigPage (+ NasDialog CRUD via systemApi on nasDevices) with KPI cards; others → LeafPlaceholder.
+  * Status Tracker: AddDevicePage (form), ManageDevicesPage (table + delete via systemApi on managedDevices), DeviceLogsPage (table w/ search + level filter + max-h-96 sticky-header scroll + LevelBadge component).
+  * System Settings (leaf): SystemSettingsPage form (proactive reports, GUI density, language, timezone, date format).
+  * Dashboard Conf (leaf): DashboardConfPage with 2 mock layouts (3-column visual + Edit/Preview).
+  * System Tools: PacketCapturePage with interface select, BPF filter, packet count/duration, Start/Stop buttons, and a streamed mock tcpdump output area styled as a dark terminal.
+- Implemented reusable helpers: useBreadcrumb (3-level nav breadcrumb builder), StatusBadge (status→color map), LevelBadge (INFO/WARN/ERROR colors), PageLoader, DeleteDialog (confirmation pattern).
+- Status color policy enforced: emerald=success/active/running, primary(red)=danger/denied/error, amber=warning, slate=neutral.
+- All tables use overflow-x-auto; long lists (AuthLogs, DeviceLogs) use max-h-96 overflow-y-auto scrollbar-thin with sticky TableHeader.
+- All forms use shadcn/ui Input, Label, Select, Switch, Textarea, Button; all dialogs use Dialog/DialogContent/DialogHeader/DialogTitle/DialogDescription/DialogFooter.
+- Fixed a JSX parsing error: `<mod?.icon />` is invalid JSX (optional chaining not allowed in member expressions). Replaced all 32 instances with `<Settings2 className="h-5 w-5" />` (the System module icon from nav.ts) via sed.
+
+Stage Summary:
+- Files modified: src/components/app/views/SystemView.tsx (full rewrite, ~4600 lines).
+- Key decisions:
+  * Used `Settings2` (the System module icon) directly in PageHeader `icon` prop instead of `mod.icon` because `<mod?.icon />` is invalid JSX and `mod` is guaranteed to be defined for SystemView routes (moduleId is always "system").
+  * Routes that have backend seed data (interfaces, gateways, dns, routes, firewallRules, dosSettings, freeSites, dhcpScopes, dhcpLeases, services, backups, backupSchedules, nasDevices, managedDevices, deviceLogs) use real systemApi calls with loading spinners and refresh-on-mutation.
+  * Routes without backend seed data (DoS Bypass, Migrate User, Auth Logs, ACL pages, Dynamic DNS, Captive Portal templates, Dashboard Conf, System Settings, Auto/Manual Purge, Restore, Console, Client Services parameters, Packet Capture) use local React state or local mock arrays + toast feedback, but still wire create() calls into systemApi where it makes sense (e.g., DoS Bypass, Add Device, NAS) so they round-trip through the backend's in-memory store.
+  * Captive Portal's 9 non-create/manage grandchildren and NAS's 6 non-ip-config grandchildren and Client Services' 6 non-parameters grandchildren all fall through to LeafPlaceholder (good-looking placeholder with breadcrumb + reference URL), matching the task spec.
+- Verification:
+  * `bun run lint` → no errors.
+  * dev.log shows ✓ Compiled in 798ms after the fix; all `/api/system?sub=*` requests return 200 with valid JSON (interfaces=7, gateways=2, dns=1, managedDevices=4, etc.).
+  * Page route `/` returns 200 with the SystemView chunk loaded as `src_components_app_views_SystemView_tsx_5106167a._.js`.
+
+---
+Task ID: SYS-VERIFY
+Agent: main (Z.ai Code)
+Task: Verify System module rebuild + summary
+
+Work Log:
+- Verified System API route: src/app/api/system/route.ts — handles 15 sub-modules (interfaces, gateways, dns, routes, firewallRules, dosSettings, freeSites, dhcpScopes, dhcpLeases, services, backups, backupSchedules, nasDevices, managedDevices, deviceLogs) with GET (list+search) and POST (create/update/delete/toggle/serviceControl). All seed data from the real 24online DB dump.
+- Verified SystemView.tsx: 4,647 lines, 40+ bespoke functional pages covering all 16 System sub-menus.
+- Tested all API endpoints: interfaces(7), firewallRules(6), services(8), dhcpScopes(2), nasDevices(4), managedDevices(4), deviceLogs(6) — all return 200 with data.
+- Lint: 0 errors. Dev server: HTTP 200.
+
+Stage Summary — System module pages built:
+- Network: Interface (CRUD table+dialog), Gateway (CRUD), DNS (config form), Static Route (CRUD)
+- Firewall: Create (full form with source/dest/port/protocol/action/schedule/bandwidth), Manage (table with toggle/move/delete), DoS Settings (toggle table), DoS Bypass (add/delete IPs), Free Sites (CRUD+toggle)
+- DHCP: Manage DHCP (CRUD scopes), IP Leasing Report (searchable table with release)
+- Services: Start/Stop/Restart + Auto-Start toggle for 8 services
+- Console: Reset password form with validation
+- Manage Data: Backup (table+backup now), Backup Schedule (CRUD), Restore (select+upload), Auto Purge (form), Manual Purge (form+confirm), Migrate User (zone form), Auth Logs (8 rows, scrollable)
+- Client Services: Parameters (form), others=LeafPlaceholder
+- ACL: Access Control (8-module checkbox matrix), User Type (6 roles), User Access (6 entries), Console ACL (form)
+- Dynamic DNS: Register Host (form), Manage Hosts (table+update/delete)
+- Captive Portal: Create (form), Manage (table), others=LeafPlaceholder
+- NAS: NAS IP Configuration (CRUD), others=LeafPlaceholder
+- Status Tracker: Add Device (form), Manage Devices (table+delete), Device Logs (scrollable+filterable)
+- System Settings: settings form
+- Dashboard Conf: 2 layouts with edit
+- System Tools: Packet Capture (form+terminal output)
+
+Total real functional pages across project: ~55 (8 from Phase 3-5 + 40+ in System module)
+Total API routes: 5 (/api/packages, /api/users, /api/live-users, /api/zones, /api/system)
