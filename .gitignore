@@ -52,3 +52,25 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# Build artifacts
+/.next/standalone/
+
+# Database work directory (contains proprietary source code + DB dump)
+/db-work/
+
+# Downloads
+/download/
+
+# Uploads
+/upload/
+
+# PM2
+/.pm2/
+
+# Agent context
+/agent-ctx/
+
+# Temporary files
+/tmp/
+*.tmp
