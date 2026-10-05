@@ -6,7 +6,6 @@ import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Collapsible,
   CollapsibleContent,
@@ -115,8 +114,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
         </div>
 
-        {/* Nav — 3 levels */}
-        <ScrollArea className="flex-1 px-2 py-2">
+        {/* Nav — 3 levels (scrollable) */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin px-2 py-2">
           <nav className="space-y-1">
             {filtered.map((m) => {
               const isActiveMod = activeModule === m.id;
@@ -245,7 +244,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               </p>
             )}
           </nav>
-        </ScrollArea>
+        </div>
 
         {/* Footer status */}
         <div className="border-t border-sidebar-border p-3">

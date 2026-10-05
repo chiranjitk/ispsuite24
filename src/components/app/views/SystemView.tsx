@@ -1639,26 +1639,28 @@ function DosBypassPage({ moduleId, childId, grandchildId }: ViewProps) {
   const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
   const [rows, setRows] = React.useState<any[]>([
-    { id: 1, ip: "192.168.1.100", description: "Admin workstation" },
-    { id: 2, ip: "10.10.5.20", description: "Monitoring server" },
+    { id: 1, source: "*", sourcePort: "*", destination: "127.0.0.1", destinationPort: "1812", protocol: "UDP" },
+    { id: 2, source: "192.168.1.0/24", sourcePort: "*", destination: "*", destinationPort: "53", protocol: "UDP" },
   ]);
-  const [form, setForm] = React.useState({ ip: "", description: "" });
+  const [showForm, setShowForm] = React.useState(false);
+  const [form, setForm] = React.useState({ source: "", sourcePort: "*", destination: "", destinationPort: "*", protocol: "UDP" });
   const [saving, setSaving] = React.useState(false);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.ip) return;
+    if (!form.source && !form.destination) return;
     setSaving(true);
     await systemApi.create("dosBypass", form);
     setSaving(false);
     setRows([...rows, { id: Date.now(), ...form }]);
-    setForm({ ip: "", description: "" });
-    toast({ title: "Bypass IP added", description: form.ip });
+    setForm({ source: "", sourcePort: "*", destination: "", destinationPort: "*", protocol: "UDP" });
+    setShowForm(false);
+    toast({ title: "Bypass rule created", description: `${form.source || "*"} → ${form.destination || "*"}` });
   };
 
   const handleDelete = (r: any) => {
     setRows(rows.filter((x) => x.id !== r.id));
-    toast({ title: "Bypass IP removed", description: r.ip });
+    toast({ title: "Bypass rule deleted", description: `${r.source || "*"} → ${r.destination || "*"}` });
   };
 
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
@@ -1667,49 +1669,88 @@ function DosBypassPage({ moduleId, childId, grandchildId }: ViewProps) {
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "DoS Bypass"}
-        description="Add IP addresses that bypass DoS protection checks."
+        description="Create rules to bypass DoS protection for specific traffic (Source, Destination, Port, Protocol)."
         icon={<Settings2 className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
-      <SectionCard title="Add Bypass IP" description="IPs here will not be subjected to DoS protection thresholds">
-        <form onSubmit={handleAdd} className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end">
-          <div className="space-y-2">
-            <Label>IP Address</Label>
-            <Input value={form.ip} onChange={(e) => setForm({ ...form, ip: e.target.value })} placeholder="192.168.1.100" required />
-          </div>
-          <div className="space-y-2">
-            <Label>Description</Label>
-            <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Why is this IP bypassed?" />
-          </div>
-          <Button type="submit" disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-            Add
+      <ActionBar>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}>
+          <Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Create"}
+        </Button>
+        {rows.length > 0 && (
+          <Button size="sm" variant="destructive" onClick={() => { setRows([]); toast({ title: "All bypass rules deleted" }); }}>
+            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete All
           </Button>
-        </form>
-      </SectionCard>
+        )}
+      </ActionBar>
 
-      <SectionCard title="Bypass Entries" description={`${rows.length} entries`}>
+      {showForm && (
+        <SectionCard title="Create Bypass Rule" description="Traffic matching this rule will bypass DoS protection">
+          <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Source *</Label>
+              <Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="* for all or IP/Network" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Source Port</Label>
+              <Input value={form.sourcePort} onChange={(e) => setForm({ ...form, sourcePort: e.target.value })} placeholder="* for all" />
+            </div>
+            <div className="space-y-2">
+              <Label>Protocol</Label>
+              <Select value={form.protocol} onValueChange={(v) => setForm({ ...form, protocol: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TCP">TCP</SelectItem>
+                  <SelectItem value="UDP">UDP</SelectItem>
+                  <SelectItem value="ICMP">ICMP</SelectItem>
+                  <SelectItem value="ANY">Any</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Destination *</Label>
+              <Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} placeholder="* for all or IP/Network" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Destination Port</Label>
+              <Input value={form.destinationPort} onChange={(e) => setForm({ ...form, destinationPort: e.target.value })} placeholder="* for all" />
+            </div>
+            <div className="flex items-end">
+              <Button type="submit" disabled={saving} className="w-full">
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                Create
+              </Button>
+            </div>
+          </form>
+        </SectionCard>
+      )}
+
+      <SectionCard title="Manage DoS Bypass Rules" description={`${rows.length} rules`}>
         {rows.length === 0 ? (
-          <EmptyState icon={<ShieldCheck className="h-5 w-5" />} title="No bypass entries" description="Add an IP to bypass DoS protection." />
+          <EmptyState icon={<ShieldCheck className="h-5 w-5" />} title="No bypass rules" description="Create a rule to bypass DoS protection for specific traffic." />
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>IP Address</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Source Port</TableHead>
+                  <TableHead>Destination</TableHead>
+                  <TableHead>Destination Port</TableHead>
+                  <TableHead>Protocol</TableHead>
+                  <TableHead className="text-right">Del</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-mono text-xs">{r.ip}</TableCell>
-                    <TableCell className="text-xs">{r.description}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.source || "*"}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.sourcePort || "*"}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.destination || "*"}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.destinationPort || "*"}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px]">{r.protocol}</Badge></TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => handleDelete(r)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <Checkbox onClick={() => handleDelete(r)} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -3020,6 +3061,13 @@ function MigrateUserPage({ moduleId, childId, grandchildId }: ViewProps) {
     targetZone: "",
     username: "",
   });
+  const [csvFile, setCsvFile] = React.useState<File | null>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const [migrationHistory, setMigrationHistory] = React.useState<any[]>([
+    { id: 1, date: "03 Oct 2026", file: "zone1_to_zone2_0310.csv", users: 45, status: "Completed" },
+    { id: 2, date: "01 Oct 2026", file: "hisar_to_bhiwani_0110.csv", users: 12, status: "Completed" },
+    { id: 3, date: "28 Sep 2026", file: "rohtak_migration_2809.csv", users: 8, status: "Failed" },
+  ]);
 
   const zones = [
     { id: "zone-1", name: "Bhiwani Zone 1" },
@@ -3046,16 +3094,57 @@ function MigrateUserPage({ moduleId, childId, grandchildId }: ViewProps) {
     setForm({ sourceZone: "", targetZone: "", username: "" });
   };
 
+  const handleCsvUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!csvFile) return;
+    setUploading(true);
+    await new Promise((r) => setTimeout(r, 1000));
+    setUploading(false);
+    setMigrationHistory([
+      { id: Date.now(), date: new Date().toLocaleDateString(), file: csvFile.name, users: Math.floor(Math.random() * 50) + 1, status: "Completed" },
+      ...migrationHistory,
+    ]);
+    toast({ title: "CSV uploaded", description: `${csvFile.name} processed. Users migrated successfully.` });
+    setCsvFile(null);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Migrate User"}
-        description="Move a user account from one zone to another."
+        description="Migrate users between zones via CSV upload or single-user migration."
         icon={<Settings2 className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
+
+      {/* CSV Upload */}
+      <SectionCard title="Bulk Migration via CSV" description="Upload a CSV file to migrate multiple users at once">
+        <form onSubmit={handleCsvUpload} className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1fr]">
+          <div className="space-y-2">
+            <Label>CSV File</Label>
+            <div className="flex h-10 items-center gap-2 rounded-md border border-dashed border-border bg-muted/30 px-3">
+              <Upload className="h-4 w-4 text-muted-foreground" />
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)}
+                className="flex-1 text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1 file:text-primary-foreground"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">CSV format: username, target_zone, target_package</p>
+          </div>
+          <div className="flex items-end">
+            <Button type="submit" disabled={!csvFile || uploading} className="w-full">
+              {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Upload & Migrate
+            </Button>
+          </div>
+        </form>
+      </SectionCard>
+
+      {/* Single User Migration */}
       <form onSubmit={handleMigrate}>
-        <SectionCard title="Migration Form">
+        <SectionCard title="Single User Migration" description="Migrate one user from one zone to another">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Source Zone</Label>
@@ -3096,6 +3185,32 @@ function MigrateUserPage({ moduleId, childId, grandchildId }: ViewProps) {
           </div>
         </SectionCard>
       </form>
+
+      {/* Migration History */}
+      <SectionCard title="Migration History" description={`${migrationHistory.length} past migrations`}>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>CSV File</TableHead>
+                <TableHead>Users Migrated</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {migrationHistory.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell className="text-xs text-muted-foreground">{m.date}</TableCell>
+                  <TableCell className="font-mono text-xs">{m.file}</TableCell>
+                  <TableCell>{m.users}</TableCell>
+                  <TableCell><StatusBadge status={m.status} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
     </div>
   );
 }
@@ -3115,6 +3230,7 @@ const AUTH_LOGS_MOCK = [
 
 function AuthLogsPage({ moduleId, childId, grandchildId }: ViewProps) {
   const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { toast } = useToast();
   const [search, setSearch] = React.useState("");
   const [resultFilter, setResultFilter] = React.useState("all");
   const [fromDate, setFromDate] = React.useState("");
@@ -3170,6 +3286,12 @@ function AuthLogsPage({ moduleId, childId, grandchildId }: ViewProps) {
         </Select>
         <Input type="date" className="h-8 w-[150px]" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
         <Input type="date" className="h-8 w-[150px]" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+        <Button size="sm" className="h-8" onClick={() => toast({ title: "Downloading", description: "RADIUS auth logs exported as CSV." })}>
+          <Download className="mr-1.5 h-3.5 w-3.5" /> Download CSV
+        </Button>
+        <Button size="sm" className="h-8" variant="outline" onClick={() => toast({ title: "Live View", description: "Opening live authentication log viewer…" })}>
+          <Activity className="mr-1.5 h-3.5 w-3.5" /> Live View
+        </Button>
       </ActionBar>
 
       <SectionCard title="RADIUS Auth Logs" description={`${filtered.length} of ${AUTH_LOGS_MOCK.length} entries`}>
