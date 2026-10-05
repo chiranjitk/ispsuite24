@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ViewProps, useModuleHeader } from "./_shared";
-import { PageHeader, KpiCard, SectionCard, EmptyState } from "@/components/app/shared";
+import { ViewProps, useModuleHeader, useViewRouter, ChildOverview, LeafPlaceholder } from "./_shared";
+import { PageHeader, KpiCard, SectionCard, EmptyState, ActionBar } from "@/components/app/shared";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -27,6 +27,13 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   CreditCard,
   Settings2,
   Store,
@@ -45,6 +52,10 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  Trash2,
+  X,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import {
   MERCHANTS,
@@ -53,20 +64,52 @@ import {
   type GatewayTxn,
 } from "@/lib/mock-data";
 
-export function PaymentGatewayView({ moduleId, childId }: ViewProps) {
-  const { mod } = useModuleHeader(moduleId, childId);
-  if (!mod) return null;
-  if (!childId) return <GatewayOverview moduleId={moduleId} />;
+export function PaymentGatewayView({ moduleId, childId, grandchildId }: ViewProps) {
+  const router = useViewRouter(moduleId, childId, grandchildId);
+
+  if (router.state === "loading") return null;
+  if (router.state === "module-overview") return <GatewayOverview moduleId={moduleId} />;
+  if (router.state === "child-overview")
+    return <ChildOverview moduleId={moduleId} childId={router.childId} />;
+
+  if (router.state === "grandchild") {
+    // Merchant sub-pages
+    if (childId === "merchant" && grandchildId === "create")
+      return <MerchantCreatePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "merchant" && grandchildId === "manage")
+      return <MerchantManagePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+
+    return (
+      <LeafPlaceholder
+        moduleId={moduleId}
+        childId={router.childId}
+        grandchildId={router.grandchildId}
+      />
+    );
+  }
+
+  // state === "child" — children without grandchildren
   switch (childId) {
     case "configure":
       return <ConfigureChild moduleId={moduleId} childId={childId} />;
-    case "merchant":
-      return <MerchantChild moduleId={moduleId} childId={childId} />;
     case "search-transactions":
       return <SearchTxnChild moduleId={moduleId} childId={childId} />;
     default:
       return <GatewayOverview moduleId={moduleId} />;
   }
+}
+
+/* ---------------- Shared helpers ---------------- */
+
+function useBreadcrumb(moduleId: string, childId: string, grandchildId?: string) {
+  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const setActive = useAppStore((s) => s.setActive);
+  return [
+    { label: "Cryptsk" },
+    { label: mod?.label ?? "Payment Gateway", onClick: () => setActive(moduleId, "", "") },
+    { label: child?.label ?? childId, onClick: () => setActive(moduleId, childId, "") },
+    ...(grandchild ? [{ label: grandchild.label }] : []),
+  ];
 }
 
 /* ---------------- Overview ---------------- */
@@ -491,6 +534,301 @@ function SearchTxnChild({ moduleId, childId }: ViewProps) {
           <EmptyState icon={<Filter className="h-5 w-5" />} title="No transactions match your filters" />
         )}
       </SectionCard>
+    </div>
+  );
+}
+
+/* ============================================================
+ * MERCHANT — Create (grandchild)
+ * ============================================================ */
+
+const PROVIDERS = ["Razorpay", "PayU", "Stripe", "Cashfree"] as const;
+type Provider = (typeof PROVIDERS)[number];
+
+function MerchantCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const { mod, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const setActive = useAppStore((s) => s.setActive);
+  const { toast } = useToast();
+  const [saving, setSaving] = React.useState(false);
+  const [showSecret, setShowSecret] = React.useState(false);
+
+  const [form, setForm] = React.useState({
+    name: "",
+    provider: "Razorpay" as Provider,
+    merchantId: "",
+    secretKey: "",
+    callbackUrl: "https://noc.cryptsk.in/api/payments/callback",
+    testMode: true,
+    setAsDefault: false,
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.merchantId.trim() || !form.secretKey.trim()) {
+      toast({ title: "Missing fields", description: "Name, merchant ID and secret key are required.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 700));
+    setSaving(false);
+    toast({
+      title: "Merchant created",
+      description: `${form.name} (${form.provider}) added${form.setAsDefault ? " and set as default" : ""}.`,
+    });
+    setActive(moduleId, childId, "manage");
+  };
+
+  if (!mod) return null;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={grandchild?.label ?? "Create Merchant"}
+        description="Onboard a new merchant account across supported payment providers."
+        icon={<Store className="h-5 w-5" />}
+        breadcrumb={breadcrumb}
+        actions={
+          <Button variant="outline" onClick={() => setActive(moduleId, childId, "manage")}>
+            <X className="mr-2 h-4 w-4" /> Cancel
+          </Button>
+        }
+      />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <SectionCard title="Merchant Identity" description="Display name and provider">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="mname">Merchant Name <span className="text-primary">*</span></Label>
+              <Input id="mname" value={form.name} onChange={(e) => set("name", e.target.value)}
+                placeholder="e.g. Cryptsk Primary" />
+            </div>
+            <div className="space-y-2">
+              <Label>Provider <span className="text-primary">*</span></Label>
+              <Select value={form.provider} onValueChange={(v) => set("provider", v as Provider)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PROVIDERS.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Credentials" description="Provider-issued merchant ID and secret key">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="mid">Merchant ID <span className="text-primary">*</span></Label>
+              <Input id="mid" value={form.merchantId} onChange={(e) => set("merchantId", e.target.value)}
+                placeholder="e.g. rzp_live_BHIWANI" className="font-mono text-xs" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="secret">Secret / API Key <span className="text-primary">*</span></Label>
+              <div className="relative">
+                <Input id="secret" type={showSecret ? "text" : "password"}
+                  value={form.secretKey} onChange={(e) => set("secretKey", e.target.value)}
+                  placeholder="sk_live_…" className="pr-9 font-mono" />
+                <button type="button" onClick={() => setShowSecret((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showSecret ? "Hide secret" : "Show secret"}>
+                  {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                <KeyRound className="mr-1 inline h-3 w-3" /> Stored encrypted at rest.
+              </p>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="cb">Callback / Webhook URL</Label>
+              <Input id="cb" value={form.callbackUrl} onChange={(e) => set("callbackUrl", e.target.value)}
+                className="font-mono text-xs" />
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Mode & Default" description="Test mode and default merchant selection">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Test Mode</p>
+                <p className="text-xs text-muted-foreground">Route transactions through the sandbox environment.</p>
+              </div>
+              <Switch checked={form.testMode} onCheckedChange={(v) => set("testMode", v)} aria-label="Test mode toggle" />
+            </label>
+            <label className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Set as Default</p>
+                <p className="text-xs text-muted-foreground">Use this merchant for new transactions by default.</p>
+              </div>
+              <Switch checked={form.setAsDefault} onCheckedChange={(v) => set("setAsDefault", v)} aria-label="Default toggle" />
+            </label>
+          </div>
+          <div className="mt-3 rounded-lg bg-primary/5 p-3 text-xs text-primary">
+            <Globe className="mr-1 inline h-3.5 w-3.5" />
+            Provider: <span className="font-semibold">{form.provider}</span> · Mode: <span className="font-semibold">{form.testMode ? "TEST" : "LIVE"}</span>
+            {form.setAsDefault && <> · Default: <span className="font-semibold">Yes</span></>}
+          </div>
+        </SectionCard>
+
+        <div className="flex items-center justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => setActive(moduleId, childId, "manage")}>Cancel</Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating…</> : <><Save className="mr-2 h-4 w-4" /> Create Merchant</>}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* ============================================================
+ * MERCHANT — Manage (grandchild)
+ * ============================================================ */
+
+function MerchantManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const { mod, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const setActive = useAppStore((s) => s.setActive);
+  const { toast } = useToast();
+  const [merchants, setMerchants] = React.useState<Merchant[]>(MERCHANTS);
+  const [search, setSearch] = React.useState("");
+  const [deleteTarget, setDeleteTarget] = React.useState<Merchant | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+
+  const filtered = merchants.filter((m) =>
+    !search.trim()
+      ? true
+      : m.name.toLowerCase().includes(search.toLowerCase()) ||
+        m.merchantId.toLowerCase().includes(search.toLowerCase()) ||
+        m.provider.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const setDefault = (id: string) => {
+    setMerchants((prev) => prev.map((m) => ({ ...m, isDefault: m.id === id })));
+    const m = merchants.find((x) => x.id === id);
+    toast({ title: "Default merchant updated", description: `${m?.name} is now the default ${m?.provider} account.` });
+  };
+  const toggleStatus = (id: string) => {
+    setMerchants((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, status: m.status === "Active" ? "Inactive" : "Active" } : m))
+    );
+    const m = merchants.find((x) => x.id === id);
+    toast({ title: `${m?.status === "Active" ? "Deactivated" : "Activated"} merchant`, description: m?.name });
+  };
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    await new Promise((r) => setTimeout(r, 400));
+    setDeleting(false);
+    setMerchants((prev) => prev.filter((m) => m.id !== deleteTarget.id));
+    toast({ title: "Merchant deleted", description: deleteTarget.name, variant: "destructive" });
+    setDeleteTarget(null);
+  };
+
+  if (!mod) return null;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={grandchild?.label ?? "Manage Merchants"}
+        description="View, search and manage merchant accounts across providers."
+        icon={<Store className="h-5 w-5" />}
+        breadcrumb={breadcrumb}
+        actions={
+          <Button onClick={() => setActive(moduleId, childId, "create")}>
+            <Plus className="mr-2 h-4 w-4" /> Create Merchant
+          </Button>
+        }
+      />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard label="Merchants" value={String(merchants.length)} icon={<Store className="h-4 w-4" />} accent />
+        <KpiCard label="Active" value={String(merchants.filter((m) => m.status === "Active").length)} icon={<CheckCircle2 className="h-4 w-4" />} />
+        <KpiCard label="Providers" value={String(new Set(merchants.map((m) => m.provider)).size)} icon={<CreditCard className="h-4 w-4" />} />
+        <KpiCard label="Default" value={merchants.find((m) => m.isDefault)?.provider ?? "—"} icon={<TrendingUp className="h-4 w-4" />} />
+      </div>
+      <ActionBar>
+        <div className="relative flex-1 max-w-xs">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input placeholder="Search merchants…" className="h-8 pl-8 text-xs" value={search}
+            onChange={(e) => setSearch(e.target.value)} />
+        </div>
+      </ActionBar>
+      <SectionCard title="Merchant Accounts" description={`${filtered.length} of ${merchants.length} accounts`}>
+        {filtered.length === 0 ? (
+          <EmptyState icon={<Store className="h-5 w-5" />} title="No merchants found"
+            description="Create your first merchant account."
+            action={<Button onClick={() => setActive(moduleId, childId, "create")}><Plus className="mr-2 h-4 w-4" /> Create Merchant</Button>} />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Merchant ID</TableHead>
+                  <TableHead>Default</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((m) => (
+                  <TableRow key={m.id} data-state={m.status === "Inactive" ? "selected" : undefined}>
+                    <TableCell className="font-mono text-xs">{m.id}</TableCell>
+                    <TableCell className="font-medium">{m.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">{m.provider}</Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{m.merchantId}</TableCell>
+                    <TableCell>
+                      <Checkbox checked={m.isDefault} onCheckedChange={() => setDefault(m.id)} aria-label={`Set ${m.name} as default`} />
+                    </TableCell>
+                    <TableCell>
+                      <button onClick={() => toggleStatus(m.id)} aria-label={`Toggle ${m.name} status`}>
+                        <Badge variant="outline" className={m.status === "Active"
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                          : "border-border bg-muted text-muted-foreground"}>
+                          {m.status}
+                        </Badge>
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm"
+                          onClick={() => toast({ title: "Edit merchant", description: `${m.name} (coming soon)` })}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary"
+                          onClick={() => setDeleteTarget(m)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </SectionCard>
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete Merchant</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete <span className="font-medium text-foreground">{deleteTarget?.name}</span>?
+            Any pending settlements should be reconciled first.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…</> : <><Trash2 className="mr-2 h-4 w-4" /> Delete</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

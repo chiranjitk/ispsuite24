@@ -1,0 +1,597 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { ViewProps, useModuleHeader } from "./_shared";
+     5→import {
+     6→  PageHeader,
+     7→  KpiCard,
+     8→  SectionCard,
+     9→  EmptyState,
+    10→} from "@/components/app/shared";
+    11→import { useAppStore } from "@/lib/store";
+    12→import { useToast } from "@/hooks/use-toast";
+    13→import {
+    14→  Table,
+    15→  TableBody,
+    16→  TableCell,
+    17→  TableHead,
+    18→  TableHeader,
+    19→  TableRow,
+    20→} from "@/components/ui/table";
+    21→import {
+    22→  Select,
+    23→  SelectContent,
+    24→  SelectItem,
+    25→  SelectTrigger,
+    26→  SelectValue,
+    27→} from "@/components/ui/select";
+    28→import { Input } from "@/components/ui/input";
+    29→import { Label } from "@/components/ui/label";
+    30→import { Textarea } from "@/components/ui/textarea";
+    31→import { Button } from "@/components/ui/button";
+    32→import { Badge } from "@/components/ui/badge";
+    33→import {
+    34→  Building2,
+    35→  Monitor,
+    36→  DownloadCloud,
+    37→  RefreshCw,
+    38→  KeySquare,
+    39→  FileText,
+    40→  Info,
+    41→  Save,
+    42→  Search,
+    43→  CheckCircle2,
+    44→  ShieldCheck,
+    45→  Cpu,
+    46→  Server,
+    47→  Database,
+    48→  Cloud,
+    49→  Apple,
+    50→  MonitorDown,
+    51→} from "lucide-react";
+    52→import { MODULE_LICENSES, DOC_SECTIONS } from "@/lib/mock-data";
+    53→import type { DocBlock } from "@/lib/mock-data";
+    54→
+    55→export function HelpView({ moduleId, childId }: ViewProps) {
+    56→  const { mod } = useModuleHeader(moduleId, childId);
+    57→  if (!mod) return null;
+    58→  if (!childId) return <HelpOverview moduleId={moduleId} />;
+    59→  switch (childId) {
+    60→    case "company-info":
+    61→      return <CompanyInfo moduleId={moduleId} childId={childId} />;
+    62→    case "client":
+    63→      return <ClientApp moduleId={moduleId} childId={childId} />;
+    64→    case "upgrade":
+    65→      return <UpgradeVersion moduleId={moduleId} childId={childId} />;
+    66→    case "register":
+    67→      return <RegisterProduct moduleId={moduleId} childId={childId} />;
+    68→    case "customization":
+    69→      return <ManageCustomization moduleId={moduleId} childId={childId} />;
+    70→    case "documentation":
+    71→      return <Documentation moduleId={moduleId} childId={childId} />;
+    72→    case "about":
+    73→      return <About moduleId={moduleId} childId={childId} />;
+    74→    default:
+    75→      return <HelpOverview moduleId={moduleId} />;
+    76→  }
+    77→}
+    78→
+    79→/* ---------------- Overview ---------------- */
+    80→
+    81→function HelpOverview({ moduleId }: { moduleId: string }) {
+    82→  const { mod } = useModuleHeader(moduleId);
+    83→  const setActive = useAppStore((s) => s.setActive);
+    84→  if (!mod) return null;
+    85→  const cards = [
+    86→    { label: "Company Info", desc: "Company details & logo", icon: Building2, child: "company-info" },
+    87→    { label: "Cryptsk Client", desc: "Desktop client downloads", icon: Monitor, child: "client" },
+    88→    { label: "Upgrade Version", desc: "Check & install upgrades", icon: DownloadCloud, child: "upgrade" },
+    89→    { label: "Register Cryptsk", desc: "Product registration", icon: KeySquare, child: "register" },
+    90→    { label: "Manage Customization", desc: "Module licenses", icon: ShieldCheck, child: "customization" },
+    91→    { label: "Documentation", desc: "User documentation", icon: FileText, child: "documentation" },
+    92→    { label: "About", desc: "About Cryptsk", icon: Info, child: "about" },
+    93→  ];
+    94→  return (
+    95→    <div className="space-y-6">
+    96→      <PageHeader title={mod.label} description={mod.desc} icon={<mod.icon className="h-5 w-5" />} />
+    97→      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    98→        {cards.map((c) => (
+    99→          <button
+   100→            key={c.child}
+   101→            onClick={() => setActive(moduleId, c.child)}
+   102→            className="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+   103→          >
+   104→            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+   105→              <c.icon className="h-5 w-5" />
+   106→            </div>
+   107→            <div className="min-w-0 flex-1">
+   108→              <p className="font-medium text-foreground">{c.label}</p>
+   109→              <p className="mt-0.5 text-xs text-muted-foreground">{c.desc}</p>
+   110→            </div>
+   111→          </button>
+   112→        ))}
+   113→      </div>
+   114→    </div>
+   115→  );
+   116→}
+   117→
+   118→function ChildHeader({ moduleId, childId }: ViewProps) {
+   119→  const { mod, child } = useModuleHeader(moduleId, childId);
+   120→  if (!mod || !child) return null;
+   121→  return (
+   122→    <PageHeader
+   123→      title={child.label}
+   124→      description={child.desc}
+   125→      icon={<mod.icon className="h-5 w-5" />}
+   126→      breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child.label }]}
+   127→    />
+   128→  );
+   129→}
+   130→
+   131→/* ---------------- Company Info ---------------- */
+   132→
+   133→function CompanyInfo({ moduleId, childId }: ViewProps) {
+   134→  const { toast } = useToast();
+   135→  const [company, setCompany] = React.useState("Cryptsk Networks Pvt. Ltd.");
+   136→  const [address, setAddress] = React.useState("1, Cyber Park, Bhiwani, Haryana — 127021, India");
+   137→  const [contact, setContact] = React.useState("+91-98xxxxxx00");
+   138→  const [email, setEmail] = React.useState("hello@cryptsk.net");
+   139→  const [website, setWebsite] = React.useState("https://cryptsk.net");
+   140→  const [gst, setGst] = React.useState("06AABCC1234D1Z5");
+   141→  return (
+   142→    <div className="space-y-6">
+   143→      <ChildHeader moduleId={moduleId} childId={childId} />
+   144→      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+   145→        <SectionCard title="Company Information" description="Editable company profile" className="lg:col-span-2">
+   146→          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+   147→            <div className="space-y-1.5 sm:col-span-2">
+   148→              <Label htmlFor="cn">Company Name</Label>
+   149→              <Input id="cn" value={company} onChange={(e) => setCompany(e.target.value)} />
+   150→            </div>
+   151→            <div className="space-y-1.5 sm:col-span-2">
+   152→              <Label htmlFor="ad">Address</Label>
+   153→              <Textarea id="ad" value={address} onChange={(e) => setAddress(e.target.value)} />
+   154→            </div>
+   155→            <div className="space-y-1.5">
+   156→              <Label htmlFor="co">Contact</Label>
+   157→              <Input id="co" value={contact} onChange={(e) => setContact(e.target.value)} />
+   158→            </div>
+   159→            <div className="space-y-1.5">
+   160→              <Label htmlFor="em">Email</Label>
+   161→              <Input id="em" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+   162→            </div>
+   163→            <div className="space-y-1.5">
+   164→              <Label htmlFor="ws">Website</Label>
+   165→              <Input id="ws" value={website} onChange={(e) => setWebsite(e.target.value)} />
+   166→            </div>
+   167→            <div className="space-y-1.5">
+   168→              <Label htmlFor="gst">GST Number</Label>
+   169→              <Input id="gst" value={gst} onChange={(e) => setGst(e.target.value)} className="font-mono text-xs" />
+   170→            </div>
+   171→          </div>
+   172→          <div className="mt-4 flex justify-end">
+   173→            <Button onClick={() => toast({ title: "Company information saved" })}>
+   174→              <Save className="mr-1.5 h-4 w-4" /> Save Changes
+   175→            </Button>
+   176→          </div>
+   177→        </SectionCard>
+   178→        <SectionCard title="Company Logo" description="Square image, max 1 MB">
+   179→          <div className="flex flex-col items-center gap-3">
+   180→            <div className="flex h-32 w-32 items-center justify-center rounded-xl border border-dashed border-border bg-muted/40">
+   181→              <Building2 className="h-12 w-12 text-muted-foreground" />
+   182→            </div>
+   183→            <p className="text-xs text-muted-foreground">PNG / SVG · 1:1 recommended</p>
+   184→            <Button variant="outline" className="w-full" onClick={() => toast({ title: "Upload", description: "Logo upload dialog opened." })}>
+   185→              <DownloadCloud className="mr-1.5 h-4 w-4" /> Upload Logo
+   186→            </Button>
+   187→          </div>
+   188→        </SectionCard>
+   189→      </div>
+   190→    </div>
+   191→  );
+   192→}
+   193→
+   194→/* ---------------- Cryptsk Client ---------------- */
+   195→
+   196→function ClientApp({ moduleId, childId }: ViewProps) {
+   197→  const { toast } = useToast();
+   198→  const systemMeta = useAppStore((s) => s.systemMeta);
+   199→  const downloads = [
+   200→    { os: "Windows", icon: Monitor, size: "82.4 MB", file: "CryptskClient-Setup.exe", req: "Windows 10 or later" },
+   201→    { os: "macOS", icon: Apple, size: "76.1 MB", file: "CryptskClient.dmg", req: "macOS 11 Big Sur or later" },
+   202→    { os: "Linux", icon: MonitorDown, size: "68.9 MB", file: "CryptskClient.AppImage", req: "Ubuntu 20.04+, Fedora 35+" },
+   203→  ];
+   204→  return (
+   205→    <div className="space-y-6">
+   206→      <ChildHeader moduleId={moduleId} childId={childId} />
+   207→      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+   208→        <KpiCard label="Client Version" value="8.3.8" icon={<Monitor className="h-4 w-4" />} accent />
+   209→        <KpiCard label="Build" value="3.0" icon={<Cpu className="h-4 w-4" />} />
+   210→        <KpiCard label="Supported OS" value="3" icon={<MonitorDown className="h-4 w-4" />} />
+   211→      </div>
+   212→      <SectionCard title="Download Cryptsk Client" description="Connect securely to your Cryptsk gateway from any desktop">
+   213→        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+   214→          {downloads.map((d) => (
+   215→            <div key={d.os} className="flex flex-col items-start gap-2 rounded-lg border border-border bg-muted/30 p-4">
+   216→              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+   217→                <d.icon className="h-5 w-5" />
+   218→              </div>
+   219→              <p className="font-medium">{d.os}</p>
+   220→              <p className="text-xs text-muted-foreground">{d.req}</p>
+   221→              <p className="font-mono text-xs text-muted-foreground">{d.file} · {d.size}</p>
+   222→              <Button size="sm" className="mt-1 w-full" onClick={() => toast({ title: "Download started", description: `${d.file} is downloading.` })}>
+   223→                <DownloadCloud className="mr-1.5 h-3.5 w-3.5" /> Download
+   224→              </Button>
+   225→            </div>
+   226→          ))}
+   227→        </div>
+   228→      </SectionCard>
+   229→      <SectionCard title="Release Notes" description={`Cryptsk Client v${systemMeta.version} build ${systemMeta.build}`}>
+   230→        <div className="space-y-3 text-sm">
+   231→          <div>
+   232→            <p className="font-medium">v8.3.8 — 04 Oct 2026</p>
+   233→            <ul className="ml-4 list-disc text-xs text-muted-foreground">
+   234→              <li>Added dark mode for the desktop client UI</li>
+   235→              <li>Improved reconnection logic for flaky links</li>
+   236→              <li>Fixed data usage counter overflow on long sessions</li>
+   237→            </ul>
+   238→          </div>
+   239→          <div>
+   240→            <p className="font-medium">v8.3.7 — 18 Sep 2026</p>
+   241→            <ul className="ml-4 list-disc text-xs text-muted-foreground">
+   242→              <li>Added native Apple Silicon builds</li>
+   243→              <li>Auto-update check on launch</li>
+   244→            </ul>
+   245→          </div>
+   246→        </div>
+   247→      </SectionCard>
+   248→    </div>
+   249→  );
+   250→}
+   251→
+   252→/* ---------------- Upgrade Version ---------------- */
+   253→
+   254→function UpgradeVersion({ moduleId, childId }: ViewProps) {
+   255→  const { toast } = useToast();
+   256→  const systemMeta = useAppStore((s) => s.systemMeta);
+   257→  const changelog = [
+   258→    { version: "8.3.9", date: "Pending release", notes: ["RADIUS performance improvements", "New OTT platform connectors", "Security patches"] },
+   259→    { version: "8.3.8", date: "04 Oct 2026 (current)", notes: ["Dashboard widget redesign", "FAP scheduling bug fix"] },
+   260→    { version: "8.3.7", date: "18 Sep 2026", notes: ["Captive portal template gallery", "Backup integrity check"] },
+   261→  ];
+   262→  return (
+   263→    <div className="space-y-6">
+   264→      <ChildHeader moduleId={moduleId} childId={childId} />
+   265→      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+   266→        <KpiCard label="Current Version" value={`${systemMeta.version} build ${systemMeta.build}`} icon={<Cpu className="h-4 w-4" />} accent />
+   267→        <KpiCard label="Latest Available" value="8.3.9" icon={<DownloadCloud className="h-4 w-4" />} />
+   268→        <KpiCard label="Status" value="Up to date" icon={<CheckCircle2 className="h-4 w-4" />} />
+   269→      </div>
+   270→      <SectionCard title="Upgrade" description="Check for newer Cryptsk builds">
+   271→        <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+   272→          <div>
+   273→            <p className="font-medium">You are running Cryptsk {systemMeta.version} build {systemMeta.build}</p>
+   274→            <p className="text-xs text-muted-foreground">Last check: 04 Oct 2026, 09:48 AM · Model {systemMeta.model}</p>
+   275→          </div>
+   276→          <div className="flex gap-2">
+   277→            <Button variant="outline" onClick={() => toast({ title: "Checking for updates", description: "Latest version: 8.3.9" })}>
+   278→              <RefreshCw className="mr-1.5 h-4 w-4" /> Check for Updates
+   279→            </Button>
+   280→            <Button onClick={() => toast({ title: "Download started", description: "Cryptsk-8.3.9.bundle is downloading." })}>
+   281→              <DownloadCloud className="mr-1.5 h-4 w-4" /> Download 8.3.9
+   282→            </Button>
+   283→          </div>
+   284→        </div>
+   285→      </SectionCard>
+   286→      <SectionCard title="Upgrade Path" description="Recommended sequence">
+   287→        <ol className="ml-4 list-decimal space-y-1 text-sm text-muted-foreground">
+   288→          <li>Take a full backup from System → Manage Data → Backup</li>
+   289→          <li>Download the 8.3.9 bundle from above</li>
+   290→          <li>Stop all services via System → Services → Control Services</li>
+   291→          <li>Upload & install the bundle through the upgrade wizard</li>
+   292→          <li>Run the post-upgrade database migration (automatic)</li>
+   293→          <li>Restart services and verify with the dashboard widgets</li>
+   294→        </ol>
+   295→      </SectionCard>
+   296→      <SectionCard title="Changelog" description="Recent Cryptsk releases">
+   297→        <div className="space-y-4">
+   298→          {changelog.map((c) => (
+   299→            <div key={c.version} className="rounded-lg border border-border p-3">
+   300→              <div className="flex items-center justify-between">
+   301→                <p className="font-medium">v{c.version}</p>
+   302→                <Badge variant="outline" className="text-[10px]">{c.date}</Badge>
+   303→              </div>
+   304→              <ul className="ml-4 mt-1 list-disc text-xs text-muted-foreground">
+   305→                {c.notes.map((n) => <li key={n}>{n}</li>)}
+   306→              </ul>
+   307→            </div>
+   308→          ))}
+   309→        </div>
+   310→      </SectionCard>
+   311→    </div>
+   312→  );
+   313→}
+   314→
+   315→/* ---------------- Register ---------------- */
+   316→
+   317→function RegisterProduct({ moduleId, childId }: ViewProps) {
+   318→  const { toast } = useToast();
+   319→  const [licenseKey, setLicenseKey] = React.useState("");
+   320→  const [customerName, setCustomerName] = React.useState("");
+   321→  const [email, setEmail] = React.useState("");
+   322→  const [contact, setContact] = React.useState("");
+   323→  const register = () => {
+   324→    if (!licenseKey.trim() || !customerName.trim() || !email.trim()) {
+   325→      toast({ title: "Missing fields", description: "License key, customer name and email are required.", variant: "destructive" });
+   326→      return;
+   327→    }
+   328→    toast({ title: "Product registered", description: `Cryptsk registered to ${customerName}.` });
+   329→    setLicenseKey("");
+   330→    setCustomerName("");
+   331→    setEmail("");
+   332→    setContact("");
+   333→  };
+   334→  return (
+   335→    <div className="space-y-6">
+   336→      <ChildHeader moduleId={moduleId} childId={childId} />
+   337→      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+   338→        <SectionCard title="Product Registration" description="Enter your license key & customer details" className="lg:col-span-3">
+   339→          <div className="space-y-4">
+   340→            <div className="space-y-1.5">
+   341→              <Label htmlFor="lk">License Key</Label>
+   342→              <Input id="lk" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" value={licenseKey} onChange={(e) => setLicenseKey(e.target.value)} className="font-mono text-xs" />
+   343→            </div>
+   344→            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+   345→              <div className="space-y-1.5">
+   346→                <Label htmlFor="cn">Customer Name</Label>
+   347→                <Input id="cn" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+   348→              </div>
+   349→              <div className="space-y-1.5">
+   350→                <Label htmlFor="ce">Email</Label>
+   351→                <Input id="ce" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+   352→              </div>
+   353→            </div>
+   354→            <div className="space-y-1.5">
+   355→              <Label htmlFor="cc">Contact Number</Label>
+   356→              <Input id="cc" value={contact} onChange={(e) => setContact(e.target.value)} />
+   357→            </div>
+   358→            <Button className="w-full sm:w-auto" onClick={register}>
+   359→              <KeySquare className="mr-1.5 h-4 w-4" /> Register Product
+   360→            </Button>
+   361→          </div>
+   362→        </SectionCard>
+   363→        <SectionCard title="Why Register?" description="Benefits of registering your Cryptsk deployment" className="lg:col-span-2">
+   364→          <ul className="space-y-2 text-sm text-muted-foreground">
+   365→            <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" /> Unlock premium module licenses</li>
+   366→            <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" /> Receive automatic upgrade notifications</li>
+   367→            <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" /> Priority support from Cryptsk Networks</li>
+   368→            <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" /> Cloud-sync of configuration backups</li>
+   369→          </ul>
+   370→        </SectionCard>
+   371→      </div>
+   372→    </div>
+   373→  );
+   374→}
+   375→
+   376→/* ---------------- Manage Customization ---------------- */
+   377→
+   378→function ManageCustomization({ moduleId, childId }: ViewProps) {
+   379→  const { toast } = useToast();
+   380→  return (
+   381→    <div className="space-y-6">
+   382→      <ChildHeader moduleId={moduleId} childId={childId} />
+   383→      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+   384→        <KpiCard label="Total Modules" value={String(MODULE_LICENSES.length)} icon={<ShieldCheck className="h-4 w-4" />} accent />
+   385→        <KpiCard label="Licensed" value={String(MODULE_LICENSES.filter((m) => m.licensed).length)} icon={<CheckCircle2 className="h-4 w-4" />} />
+   386→        <KpiCard label="Expired / Trial" value={String(MODULE_LICENSES.filter((m) => m.status !== "Active").length)} icon={<KeySquare className="h-4 w-4" />} />
+   387→      </div>
+   388→      <SectionCard title="Module Licenses" description={`${MODULE_LICENSES.length} modules`}>
+   389→        <div className="overflow-x-auto scrollbar-thin">
+   390→          <Table>
+   391→            <TableHeader>
+   392→              <TableRow>
+   393→                <TableHead>Module</TableHead>
+   394→                <TableHead>Licensed</TableHead>
+   395→                <TableHead>Expiry</TableHead>
+   396→                <TableHead>Status</TableHead>
+   397→                <TableHead className="text-right">Actions</TableHead>
+   398→              </TableRow>
+   399→            </TableHeader>
+   400→            <TableBody>
+   401→              {MODULE_LICENSES.map((m) => (
+   402→                <TableRow key={m.id}>
+   403→                  <TableCell className="font-medium">{m.name}</TableCell>
+   404→                  <TableCell>
+   405→                    {m.licensed ? (
+   406→                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+   407→                    ) : (
+   408→                      <span className="text-xs text-muted-foreground">No</span>
+   409→                    )}
+   410→                  </TableCell>
+   411→                  <TableCell className="font-mono text-xs text-muted-foreground">{m.expiry}</TableCell>
+   412→                  <TableCell>
+   413→                    <Badge
+   414→                      variant="outline"
+   415→                      className={
+   416→                        m.status === "Active"
+   417→                          ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
+   418→                          : m.status === "Trial"
+   419→                          ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+   420→                          : "bg-primary/10 text-primary hover:bg-primary/10"
+   421→                      }
+   422→                    >
+   423→                      {m.status}
+   424→                    </Badge>
+   425→                  </TableCell>
+   426→                  <TableCell className="text-right">
+   427→                    <Button
+   428→                      variant="ghost"
+   429→                      size="sm"
+   430→                      onClick={() => toast({ title: "Renew license", description: `Renewal form opened for ${m.name}.` })}
+   431→                    >
+   432→                      <RefreshCw className="mr-1 h-3.5 w-3.5" /> Renew
+   433→                    </Button>
+   434→                  </TableCell>
+   435→                </TableRow>
+   436→              ))}
+   437→            </TableBody>
+   438→          </Table>
+   439→        </div>
+   440→      </SectionCard>
+   441→    </div>
+   442→  );
+   443→}
+   444→
+   445→/* ---------------- Documentation ---------------- */
+   446→
+   447→function DocBlockRenderer({ block }: { block: DocBlock }) {
+   448→  switch (block.type) {
+   449→    case "h1":
+   450→      return <h1 className="text-xl font-semibold tracking-tight text-foreground">{block.text}</h1>;
+   451→    case "h2":
+   452→      return <h2 className="mt-4 text-base font-semibold text-foreground">{block.text}</h2>;
+   453→    case "p":
+   454→      return <p className="text-sm leading-relaxed text-muted-foreground">{block.text}</p>;
+   455→    case "ul":
+   456→      return (
+   457→        <ul className="ml-5 list-disc space-y-1 text-sm text-muted-foreground">
+   458→          {block.items?.map((i, idx) => <li key={idx}>{i}</li>)}
+   459→        </ul>
+   460→      );
+   461→    case "code":
+   462→      return (
+   463→        <pre className="overflow-x-auto rounded-md border border-border bg-muted/60 p-3 font-mono text-xs text-foreground scrollbar-thin">
+   464→          <code>{block.text}</code>
+   465→        </pre>
+   466→      );
+   467→    default:
+   468→      return null;
+   469→  }
+   470→}
+   471→
+   472→function Documentation({ moduleId, childId }: ViewProps) {
+   473→  const { toast } = useToast();
+   474→  const [activeId, setActiveId] = React.useState(DOC_SECTIONS[0].id);
+   475→  const [query, setQuery] = React.useState("");
+   476→  const filtered = DOC_SECTIONS.filter((s) =>
+   477→    !query.trim()
+   478→      ? true
+   479→      : s.title.toLowerCase().includes(query.toLowerCase()) ||
+   480→        s.content.some((b) => (b.text ?? "").toLowerCase().includes(query.toLowerCase()))
+   481→  );
+   482→  const active = DOC_SECTIONS.find((s) => s.id === activeId) ?? DOC_SECTIONS[0];
+   483→
+   484→  return (
+   485→    <div className="space-y-6">
+   486→      <ChildHeader moduleId={moduleId} childId={childId} />
+   487→      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+   488→        <SectionCard title="Sections" description={`${DOC_SECTIONS.length} articles`} className="lg:col-span-1">
+   489→          <div className="relative mb-3">
+   490→            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+   491→            <Input placeholder="Search docs…" className="h-8 pl-8 text-xs" value={query} onChange={(e) => setQuery(e.target.value)} />
+   492→          </div>
+   493→          <div className="flex flex-col gap-1">
+   494→            {filtered.length === 0 ? (
+   495→              <EmptyState icon={<Search className="h-4 w-4" />} title="No results" />
+   496→            ) : (
+   497→              filtered.map((s) => (
+   498→                <button
+   499→                  key={s.id}
+   500→                  onClick={() => setActiveId(s.id)}
+   501→                  className={
+   502→                    "flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors " +
+   503→                    (activeId === s.id
+   504→                      ? "bg-primary/10 font-medium text-primary"
+   505→                      : "text-muted-foreground hover:bg-muted hover:text-foreground")
+   506→                  }
+   507→                >
+   508→                  <FileText className="h-3.5 w-3.5 shrink-0" />
+   509→                  <span className="truncate">{s.title}</span>
+   510→                </button>
+   511→              ))
+   512→            )}
+   513→          </div>
+   514→        </SectionCard>
+   515→        <SectionCard
+   516→          title={active.title}
+   517→          description={active.category}
+   518→          className="lg:col-span-4"
+   519→          actions={
+   520→            <Button variant="outline" size="sm" onClick={() => toast({ title: "Exported", description: `${active.title}.pdf download started.` })}>
+   521→              <DownloadCloud className="mr-1.5 h-3.5 w-3.5" /> Export PDF
+   522→            </Button>
+   523→          }
+   524→        >
+   525→          <div className="space-y-3">
+   526→            {active.content.map((b, i) => <DocBlockRenderer key={i} block={b} />)}
+   527→          </div>
+   528→        </SectionCard>
+   529→      </div>
+   530→    </div>
+   531→  );
+   532→}
+   533→
+   534→/* ---------------- About ---------------- */
+   535→
+   536→function About({ moduleId, childId }: ViewProps) {
+   537→  const systemMeta = useAppStore((s) => s.systemMeta);
+   538→  const stack = [
+   539→    { label: "Frontend", value: "Next.js 16 · TypeScript", icon: Monitor },
+   540→    { label: "Backend", value: "Node.js · Prisma ORM", icon: Server },
+   541→    { label: "Database", value: "PostgreSQL (built from source)", icon: Database },
+   542→    { label: "Cloud", value: "Self-hosted · Mini services", icon: Cloud },
+   543→  ];
+   544→  return (
+   545→    <div className="space-y-6">
+   546→      <ChildHeader moduleId={moduleId} childId={childId} />
+   547→      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+   548→        <SectionCard className="lg:col-span-1">
+   549→          <div className="flex flex-col items-center gap-3 py-6 text-center">
+   550→            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+   551→              <ShieldCheck className="h-10 w-10" />
+   552→            </div>
+   553→            <div>
+   554→              <p className="text-lg font-semibold">Cryptsk</p>
+   555→              <p className="text-xs text-muted-foreground">ISP Billing & Gateway Suite</p>
+   556→            </div>
+   557→            <div className="mt-2 w-full space-y-1.5 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+   558→              <div className="flex justify-between"><span className="text-muted-foreground">Version</span><span className="font-medium">{systemMeta.version}</span></div>
+   559→              <div className="flex justify-between"><span className="text-muted-foreground">Build</span><span className="font-medium">{systemMeta.build}</span></div>
+   560→              <div className="flex justify-between"><span className="text-muted-foreground">Model</span><span className="font-mono text-xs">{systemMeta.model}</span></div>
+   561→            </div>
+   562→          </div>
+   563→        </SectionCard>
+   564→
+   565→        <SectionCard title="Technology Stack" description="What powers Cryptsk" className="lg:col-span-2">
+   566→          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+   567→            {stack.map((s) => (
+   568→              <div key={s.label} className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3">
+   569→                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+   570→                  <s.icon className="h-4 w-4" />
+   571→                </div>
+   572→                <div>
+   573→                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{s.label}</p>
+   574→                  <p className="text-sm font-medium">{s.value}</p>
+   575→                </div>
+   576→              </div>
+   577→            ))}
+   578→          </div>
+   579→        </SectionCard>
+   580→
+   581→        <SectionCard title="Credits" description="Built with the open-source community" className="lg:col-span-3">
+   582→          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+   583→            {["Next.js", "Tailwind CSS", "shadcn/ui", "Prisma", "Lucide Icons", "Radix UI", "Recharts", "Zustand"].map((c) => (
+   584→              <div key={c} className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-center font-medium text-foreground">{c}</div>
+   585→            ))}
+   586→          </div>
+   587→        </SectionCard>
+   588→      </div>
+   589→
+   590→      <div className="rounded-xl border border-border bg-card p-4 text-center text-xs text-muted-foreground shadow-sm">
+   591→        <p className="font-medium text-foreground">Powered by Cryptsk Networks</p>
+   592→        <p className="mt-1">Copyright © 2026 Cryptsk Networks · All Rights Reserved</p>
+   593→      </div>
+   594→    </div>
+   595→  );
+   596→}
+   597→

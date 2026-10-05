@@ -1,0 +1,643 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import * as React from "react";
+     4→     4→import { ViewProps, useModuleHeader } from "./_shared";
+     5→     5→import {
+     6→     6→  PageHeader,
+     7→     7→  ActionBar,
+     8→     8→  KpiCard,
+     9→     9→  SectionCard,
+    10→    10→  EmptyState,
+    11→    11→} from "@/components/app/shared";
+    12→    12→import { useAppStore } from "@/lib/store";
+    13→    13→import { useToast } from "@/hooks/use-toast";
+    14→    14→import {
+    15→    15→  Table,
+    16→    16→  TableBody,
+    17→    17→  TableCell,
+    18→    18→  TableHead,
+    19→    19→  TableHeader,
+    20→    20→  TableRow,
+    21→    21→} from "@/components/ui/table";
+    22→    22→import {
+    23→    23→  Select,
+    24→    24→  SelectContent,
+    25→    25→  SelectItem,
+    26→    26→  SelectTrigger,
+    27→    27→  SelectValue,
+    28→    28→} from "@/components/ui/select";
+    29→    29→import { Input } from "@/components/ui/input";
+    30→    30→import { Label } from "@/components/ui/label";
+    31→    31→import { Button } from "@/components/ui/button";
+    32→    32→import { Badge } from "@/components/ui/badge";
+    33→    33→import { Checkbox } from "@/components/ui/checkbox";
+    34→    34→import { Switch } from "@/components/ui/switch";
+    35→    35→import {
+    36→    36→  Wallet,
+    37→    37→  Search,
+    38→    38→  RefreshCw,
+    39→    39→  Undo2,
+    40→    40→  CheckCircle2,
+    41→    41→  Download,
+    42→    42→  Building2,
+    43→    43→  Coins,
+    44→    44→  AlertTriangle,
+    45→    45→  Clock,
+    46→    46→} from "lucide-react";
+    47→    47→import {
+    48→    48→  PAYMENT_TXNS,
+    49→    49→  PAYMENT_MODES,
+    50→    50→  FRANCHISE_ACCOUNTS,
+    51→    51→  ACCOUNT_SEARCH_RESULTS,
+    52→    52→} from "@/lib/mock-data";
+    53→    53→import type { PaymentTxn } from "@/lib/mock-data";
+    54→    54→
+    55→    55→export function PaymentTrackingView({ moduleId, childId }: ViewProps) {
+    56→    56→  const { mod } = useModuleHeader(moduleId, childId);
+    57→    57→  if (!mod) return null;
+    58→    58→  if (!childId) return <PaymentTrackingOverview moduleId={moduleId} />;
+    59→    59→  switch (childId) {
+    60→    60→    case "manage-accounts":
+    61→    61→      return <ManageAccounts moduleId={moduleId} childId={childId} />;
+    62→    62→    case "search-accounts":
+    63→    63→      return <SearchAccounts moduleId={moduleId} childId={childId} />;
+    64→    64→    case "payment-details":
+    65→    65→      return <PaymentDetails moduleId={moduleId} childId={childId} />;
+    66→    66→    case "reverse":
+    67→    67→      return <ReverseTransactions moduleId={moduleId} childId={childId} />;
+    68→    68→    case "settle":
+    69→    69→      return <SettleTransactions moduleId={moduleId} childId={childId} />;
+    70→    70→    default:
+    71→    71→      return <PaymentTrackingOverview moduleId={moduleId} />;
+    72→    72→  }
+    73→    73→}
+    74→    74→
+    75→    75→/* ---------------- Overview ---------------- */
+    76→    76→
+    77→    77→function PaymentTrackingOverview({ moduleId }: { moduleId: string }) {
+    78→    78→  const { mod } = useModuleHeader(moduleId);
+    79→    79→  const setActive = useAppStore((s) => s.setActive);
+    80→    80→  if (!mod) return null;
+    81→    81→  const cards = [
+    82→    82→    { label: "Manage Accounts", desc: "Payment modes & franchise accounts", icon: Wallet, child: "manage-accounts" },
+    83→    83→    { label: "Search Accounts", desc: "Customer & franchise lookup", icon: Search, child: "search-accounts" },
+    84→    84→    { label: "Payment Details", desc: "Payment history search", icon: Coins, child: "payment-details" },
+    85→    85→    { label: "Reverse Transactions", desc: "Reverse erroneous payments", icon: Undo2, child: "reverse" },
+    86→    86→    { label: "Settle Transactions", desc: "Settle pending payments", icon: CheckCircle2, child: "settle" },
+    87→    87→  ];
+    88→    88→  const collected = PAYMENT_TXNS.filter((t) => t.status === "Settled").length;
+    89→    89→  const pending = PAYMENT_TXNS.filter((t) => t.status === "Pending").length;
+    90→    90→  const reversed = PAYMENT_TXNS.filter((t) => t.status === "Reversed").length;
+    91→    91→  return (
+    92→    92→    <div className="space-y-6">
+    93→    93→      <PageHeader title={mod.label} description={mod.desc} icon={<mod.icon className="h-5 w-5" />} />
+    94→    94→      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    95→    95→        <KpiCard label="Collected Today" value={String(collected)} icon={<Coins className="h-4 w-4" />} accent />
+    96→    96→        <KpiCard label="Pending Settlement" value={String(pending)} icon={<Clock className="h-4 w-4" />} />
+    97→    97→        <KpiCard label="Reversed This Month" value={String(reversed)} icon={<Undo2 className="h-4 w-4" />} />
+    98→    98→      </div>
+    99→    99→      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   100→   100→        {cards.map((c) => (
+   101→   101→          <button
+   102→   102→            key={c.child}
+   103→   103→            onClick={() => setActive(moduleId, c.child)}
+   104→   104→            className="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+   105→   105→          >
+   106→   106→            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+   107→   107→              <c.icon className="h-5 w-5" />
+   108→   108→            </div>
+   109→   109→            <div className="min-w-0 flex-1">
+   110→   110→              <p className="font-medium text-foreground">{c.label}</p>
+   111→   111→              <p className="mt-0.5 text-xs text-muted-foreground">{c.desc}</p>
+   112→   112→            </div>
+   113→   113→          </button>
+   114→   114→        ))}
+   115→   115→      </div>
+   116→   116→    </div>
+   117→   117→  );
+   118→   118→}
+   119→   119→
+   120→   120→function ChildHeader({ moduleId, childId }: ViewProps) {
+   121→   121→  const { mod, child } = useModuleHeader(moduleId, childId);
+   122→   122→  if (!mod || !child) return null;
+   123→   123→  return (
+   124→   124→    <PageHeader
+   125→   125→      title={child.label}
+   126→   126→      description={child.desc}
+   127→   127→      icon={<mod.icon className="h-5 w-5" />}
+   128→   128→      breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child.label }]}
+   129→   129→    />
+   130→   130→  );
+   131→   131→}
+   132→   132→
+   133→   133→/* ---------------- Manage Accounts ---------------- */
+   134→   134→
+   135→   135→function ManageAccounts({ moduleId, childId }: ViewProps) {
+   136→   136→  const { toast } = useToast();
+   137→   137→  const [modes, setModes] = React.useState(PAYMENT_MODES);
+   138→   138→  const toggleMode = (id: string, enabled: boolean) => {
+   139→   139→    setModes((prev) => prev.map((m) => (m.id === id ? { ...m, enabled } : m)));
+   140→   140→    const m = modes.find((x) => x.id === id);
+   141→   141→    toast({ title: `${m?.name} ${enabled ? "enabled" : "disabled"}` });
+   142→   142→  };
+   143→   143→  const setDefault = (id: string) => {
+   144→   144→    setModes((prev) => prev.map((m) => ({ ...m, isDefault: m.id === id })));
+   145→   145→    const m = modes.find((x) => x.id === id);
+   146→   146→    toast({ title: "Default payment mode", description: `${m?.name} is now the default.` });
+   147→   147→  };
+   148→   148→  return (
+   149→   149→    <div className="space-y-6">
+   150→   150→      <ChildHeader moduleId={moduleId} childId={childId} />
+   151→   151→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+   152→   152→        <KpiCard label="Payment Modes" value={String(modes.length)} icon={<Wallet className="h-4 w-4" />} accent />
+   153→   153→        <KpiCard label="Enabled" value={String(modes.filter((m) => m.enabled).length)} icon={<CheckCircle2 className="h-4 w-4" />} />
+   154→   154→        <KpiCard label="Franchise Accounts" value={String(FRANCHISE_ACCOUNTS.length)} icon={<Building2 className="h-4 w-4" />} />
+   155→   155→        <KpiCard label="Active Franchises" value={String(FRANCHISE_ACCOUNTS.filter((f) => f.status === "Active").length)} icon={<Building2 className="h-4 w-4" />} />
+   156→   156→      </div>
+   157→   157→      <SectionCard title="Payment Modes" description="Enable / disable modes and set the default">
+   158→   158→        <div className="overflow-x-auto scrollbar-thin">
+   159→   159→          <Table>
+   160→   160→            <TableHeader>
+   161→   161→              <TableRow>
+   162→   162→                <TableHead className="w-10">Enabled</TableHead>
+   163→   163→                <TableHead>Mode</TableHead>
+   164→   164→                <TableHead>Default</TableHead>
+   165→   165→                <TableHead className="text-right">Actions</TableHead>
+   166→   166→              </TableRow>
+   167→   167→            </TableHeader>
+   168→   168→            <TableBody>
+   169→   169→              {modes.map((m) => (
+   170→   170→                <TableRow key={m.id}>
+   171→   171→                  <TableCell>
+   172→   172→                    <Switch checked={m.enabled} onCheckedChange={(v) => toggleMode(m.id, v)} />
+   173→   173→                  </TableCell>
+   174→   174→                  <TableCell className="font-medium">{m.name}</TableCell>
+   175→   175→                  <TableCell>
+   176→   176→                    {m.isDefault ? (
+   177→   177→                      <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Default</Badge>
+   178→   178→                    ) : (
+   179→   179→                      <span className="text-xs text-muted-foreground">—</span>
+   180→   180→                    )}
+   181→   181→                  </TableCell>
+   182→   182→                  <TableCell className="text-right">
+   183→   183→                    <Button
+   184→   184→                      variant="ghost"
+   185→   185→                      size="sm"
+   186→   186→                      disabled={!m.enabled || m.isDefault}
+   187→   187→                      onClick={() => setDefault(m.id)}
+   188→   188→                    >
+   189→   189→                      Set Default
+   190→   190→                    </Button>
+   191→   191→                  </TableCell>
+   192→   192→                </TableRow>
+   193→   193→              ))}
+   194→   194→            </TableBody>
+   195→   195→          </Table>
+   196→   196→        </div>
+   197→   197→      </SectionCard>
+   198→   198→
+   199→   199→      <SectionCard title="Franchise Accounts" description={`${FRANCHISE_ACCOUNTS.length} accounts`}>
+   200→   200→        <div className="overflow-x-auto scrollbar-thin">
+   201→   201→          <Table>
+   202→   202→            <TableHeader>
+   203→   203→              <TableRow>
+   204→   204→                <TableHead>ID</TableHead>
+   205→   205→                <TableHead>Name</TableHead>
+   206→   206→                <TableHead>Type</TableHead>
+   207→   207→                <TableHead>Balance</TableHead>
+   208→   208→                <TableHead>Status</TableHead>
+   209→   209→                <TableHead className="text-right">Actions</TableHead>
+   210→   210→              </TableRow>
+   211→   211→            </TableHeader>
+   212→   212→            <TableBody>
+   213→   213→              {FRANCHISE_ACCOUNTS.map((f) => (
+   214→   214→                <TableRow key={f.id}>
+   215→   215→                  <TableCell className="font-mono text-xs">{f.id}</TableCell>
+   216→   216→                  <TableCell className="font-medium">{f.name}</TableCell>
+   217→   217→                  <TableCell>
+   218→   218→                    <Badge variant="outline" className="text-[10px]">{f.type}</Badge>
+   219→   219→                  </TableCell>
+   220→   220→                  <TableCell className={`font-mono text-xs ${f.balance.startsWith("-") ? "text-primary" : "text-foreground"}`}>{f.balance}</TableCell>
+   221→   221→                  <TableCell>
+   222→   222→                    <Badge
+   223→   223→                      variant={f.status === "Active" ? "default" : "secondary"}
+   224→   224→                      className={
+   225→   225→                        f.status === "Active"
+   226→   226→                          ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
+   227→   227→                          : "bg-primary/10 text-primary hover:bg-primary/10"
+   228→   228→                      }
+   229→   229→                    >
+   230→   230→                      {f.status}
+   231→   231→                    </Badge>
+   232→   232→                  </TableCell>
+   233→   233→                  <TableCell className="text-right">
+   234→   234→                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "View account", description: f.name })}>
+   235→   235→                      View Ledger
+   236→   236→                    </Button>
+   237→   237→                  </TableCell>
+   238→   238→                </TableRow>
+   239→   239→              ))}
+   240→   240→            </TableBody>
+   241→   241→          </Table>
+   242→   242→        </div>
+   243→   243→      </SectionCard>
+   244→   244→    </div>
+   245→   245→  );
+   246→   246→}
+   247→   247→
+   248→   248→/* ---------------- Search Accounts ---------------- */
+   249→   249→
+   250→   250→function SearchAccounts({ moduleId, childId }: ViewProps) {
+   251→   251→  const { toast } = useToast();
+   252→   252→  const [accountType, setAccountType] = React.useState("Customer");
+   253→   253→  const [zone, setZone] = React.useState("all");
+   254→   254→  const [query, setQuery] = React.useState("");
+   255→   255→  return (
+   256→   256→    <div className="space-y-6">
+   257→   257→      <ChildHeader moduleId={moduleId} childId={childId} />
+   258→   258→      <SectionCard title="Search Filter" description="Find customer or franchise accounts">
+   259→   259→        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+   260→   260→          <div className="space-y-1.5">
+   261→   261→            <Label htmlFor="at">Account Type</Label>
+   262→   262→            <Select value={accountType} onValueChange={setAccountType}>
+   263→   263→              <SelectTrigger id="at"><SelectValue /></SelectTrigger>
+   264→   264→              <SelectContent>
+   265→   265→                <SelectItem value="Customer">Customer</SelectItem>
+   266→   266→                <SelectItem value="Franchise">Franchise</SelectItem>
+   267→   267→              </SelectContent>
+   268→   268→            </Select>
+   269→   269→          </div>
+   270→   270→          <div className="space-y-1.5">
+   271→   271→            <Label htmlFor="zone">Zone</Label>
+   272→   272→            <Select value={zone} onValueChange={setZone}>
+   273→   273→              <SelectTrigger id="zone"><SelectValue placeholder="All zones" /></SelectTrigger>
+   274→   274→              <SelectContent>
+   275→   275→                <SelectItem value="all">All zones</SelectItem>
+   276→   276→                <SelectItem value="Z01">Bhiwani-Core</SelectItem>
+   277→   277→                <SelectItem value="Z02">Bhiwani-North</SelectItem>
+   278→   278→                <SelectItem value="Z03">Bhiwani-South</SelectItem>
+   279→   279→                <SelectItem value="Z04">Bhiwani-East</SelectItem>
+   280→   280→                <SelectItem value="Z05">Bhiwani-West</SelectItem>
+   281→   281→              </SelectContent>
+   282→   282→            </Select>
+   283→   283→          </div>
+   284→   284→          <div className="space-y-1.5 sm:col-span-2">
+   285→   285→            <Label htmlFor="sq">Search</Label>
+   286→   286→            <div className="relative">
+   287→   287→              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+   288→   288→              <Input id="sq" placeholder="Account no, customer name, mobile…" className="pl-9" value={query} onChange={(e) => setQuery(e.target.value)} />
+   289→   289→            </div>
+   290→   290→          </div>
+   291→   291→        </div>
+   292→   292→        <div className="mt-4 flex justify-end">
+   293→   293→          <Button onClick={() => toast({ title: "Search complete", description: `${ACCOUNT_SEARCH_RESULTS.length} account(s) found.` })}>
+   294→   294→            <Search className="mr-1.5 h-4 w-4" /> Search
+   295→   295→          </Button>
+   296→   296→        </div>
+   297→   297→      </SectionCard>
+   298→   298→
+   299→   299→      <SectionCard
+   300→   300→        title="Search Results"
+   301→   301→        description={`${ACCOUNT_SEARCH_RESULTS.length} account(s)`}
+   302→   302→        actions={
+   303→   303→          <Button variant="outline" size="sm" onClick={() => toast({ title: "Export", description: "CSV download started." })}>
+   304→   304→            <Download className="mr-1.5 h-3.5 w-3.5" /> Export
+   305→   305→          </Button>
+   306→   306→        }
+   307→   307→      >
+   308→   308→        <div className="overflow-x-auto scrollbar-thin">
+   309→   309→          <Table>
+   310→   310→            <TableHeader>
+   311→   311→              <TableRow>
+   312→   312→                <TableHead>Account</TableHead>
+   313→   313→                <TableHead>Customer</TableHead>
+   314→   314→                <TableHead>Balance</TableHead>
+   315→   315→                <TableHead>Last Payment</TableHead>
+   316→   316→                <TableHead>Status</TableHead>
+   317→   317→                <TableHead className="text-right">Actions</TableHead>
+   318→   318→              </TableRow>
+   319→   319→            </TableHeader>
+   320→   320→            <TableBody>
+   321→   321→              {ACCOUNT_SEARCH_RESULTS.map((a) => (
+   322→   322→                <TableRow key={a.id}>
+   323→   323→                  <TableCell className="font-mono text-xs">{a.account}</TableCell>
+   324→   324→                  <TableCell className="font-medium text-primary">{a.customer}</TableCell>
+   325→   325→                  <TableCell className="font-mono text-xs">{a.balance}</TableCell>
+   326→   326→                  <TableCell className="text-xs text-muted-foreground">{a.lastPayment}</TableCell>
+   327→   327→                  <TableCell>
+   328→   328→                    <Badge
+   329→   329→                      variant={a.status === "Active" ? "default" : "secondary"}
+   330→   330→                      className={
+   331→   331→                        a.status === "Active"
+   332→   332→                          ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
+   333→   333→                          : "bg-primary/10 text-primary hover:bg-primary/10"
+   334→   334→                      }
+   335→   335→                    >
+   336→   336→                      {a.status}
+   337→   337→                    </Badge>
+   338→   338→                  </TableCell>
+   339→   339→                  <TableCell className="text-right">
+   340→   340→                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "View ledger", description: a.customer })}>View Ledger</Button>
+   341→   341→                  </TableCell>
+   342→   342→                </TableRow>
+   343→   343→              ))}
+   344→   344→            </TableBody>
+   345→   345→          </Table>
+   346→   346→        </div>
+   347→   347→      </SectionCard>
+   348→   348→    </div>
+   349→   349→  );
+   350→   350→}
+   351→   351→
+   352→   352→/* ---------------- Payment Details ---------------- */
+   353→   353→
+   354→   354→const modeBadgeClass = (mode: PaymentTxn["mode"]) => {
+   355→   355→  const map: Record<PaymentTxn["mode"], string> = {
+   356→   356→    Cash: "bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400",
+   357→   357→    UPI: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400",
+   358→   358→    Card: "bg-chart-5/10 text-chart-5 hover:bg-chart-5/10",
+   359→   359→    Cheque: "bg-chart-3/10 text-chart-3 hover:bg-chart-3/10",
+   360→   360→    "Bank Transfer": "bg-primary/10 text-primary hover:bg-primary/10",
+   361→   361→  };
+   362→   362→  return map[mode];
+   363→   363→};
+   364→   364→
+   365→   365→const statusBadgeClass = (status: PaymentTxn["status"]) =>
+   366→   366→  status === "Settled"
+   367→   367→    ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
+   368→   368→    : status === "Pending"
+   369→   369→    ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+   370→   370→    : "bg-primary/10 text-primary hover:bg-primary/10";
+   371→   371→
+   372→   372→function PaymentDetails({ moduleId, childId }: ViewProps) {
+   373→   373→  const { toast } = useToast();
+   374→   374→  const [fromDate, setFromDate] = React.useState("");
+   375→   375→  const [toDate, setToDate] = React.useState("");
+   376→   376→  const [account, setAccount] = React.useState("");
+   377→   377→  const total = PAYMENT_TXNS.reduce((s, t) => s + parseFloat(t.amount), 0);
+   378→   378→  const settled = PAYMENT_TXNS.filter((t) => t.status === "Settled").reduce((s, t) => s + parseFloat(t.amount), 0);
+   379→   379→  const pending = PAYMENT_TXNS.filter((t) => t.status === "Pending").reduce((s, t) => s + parseFloat(t.amount), 0);
+   380→   380→  const reversed = PAYMENT_TXNS.filter((t) => t.status === "Reversed").reduce((s, t) => s + parseFloat(t.amount), 0);
+   381→   381→
+   382→   382→  return (
+   383→   383→    <div className="space-y-6">
+   384→   384→      <ChildHeader moduleId={moduleId} childId={childId} />
+   385→   385→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+   386→   386→        <KpiCard label="Total Collected" value={`₹ ${total.toFixed(2)}`} icon={<Coins className="h-4 w-4" />} accent />
+   387→   387→        <KpiCard label="Settled" value={`₹ ${settled.toFixed(2)}`} icon={<CheckCircle2 className="h-4 w-4" />} />
+   388→   388→        <KpiCard label="Pending" value={`₹ ${pending.toFixed(2)}`} icon={<Clock className="h-4 w-4" />} />
+   389→   389→        <KpiCard label="Reversed" value={`₹ ${reversed.toFixed(2)}`} icon={<Undo2 className="h-4 w-4" />} />
+   390→   390→      </div>
+   391→   391→      <SectionCard title="Search Filter" description="Filter payment details by date range & account">
+   392→   392→        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+   393→   393→          <div className="space-y-1.5">
+   394→   394→            <Label htmlFor="from">From Date</Label>
+   395→   395→            <Input id="from" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+   396→   396→          </div>
+   397→   397→          <div className="space-y-1.5">
+   398→   398→            <Label htmlFor="to">To Date</Label>
+   399→   399→            <Input id="to" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+   400→   400→          </div>
+   401→   401→          <div className="space-y-1.5 sm:col-span-2">
+   402→   402→            <Label htmlFor="acc">Account No / Customer</Label>
+   403→   403→            <Input id="acc" placeholder="e.g. A000002959 or shubham270597" value={account} onChange={(e) => setAccount(e.target.value)} />
+   404→   404→          </div>
+   405→   405→        </div>
+   406→   406→        <div className="mt-4 flex justify-end gap-2">
+   407→   407→          <Button variant="outline" size="sm" onClick={() => { setFromDate(""); setToDate(""); setAccount(""); toast({ title: "Filters cleared" }); }}>
+   408→   408→            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Reset
+   409→   409→          </Button>
+   410→   410→          <Button onClick={() => toast({ title: "Search complete", description: `${PAYMENT_TXNS.length} transaction(s) found.` })}>
+   411→   411→            <Search className="mr-1.5 h-4 w-4" /> Search
+   412→   412→          </Button>
+   413→   413→        </div>
+   414→   414→      </SectionCard>
+   415→   415→
+   416→   416→      <SectionCard
+   417→   417→        title="Payment Transactions"
+   418→   418→        description={`${PAYMENT_TXNS.length} transactions`}
+   419→   419→        actions={
+   420→   420→          <Button variant="outline" size="sm" onClick={() => toast({ title: "Export", description: "CSV download started." })}>
+   421→   421→            <Download className="mr-1.5 h-3.5 w-3.5" /> Export
+   422→   422→          </Button>
+   423→   423→        }
+   424→   424→      >
+   425→   425→        <div className="overflow-x-auto scrollbar-thin">
+   426→   426→          <Table>
+   427→   427→            <TableHeader>
+   428→   428→              <TableRow>
+   429→   429→                <TableHead>Txn ID</TableHead>
+   430→   430→                <TableHead>Account</TableHead>
+   431→   431→                <TableHead>Customer</TableHead>
+   432→   432→                <TableHead>Mode</TableHead>
+   433→   433→                <TableHead>Amount</TableHead>
+   434→   434→                <TableHead>Date</TableHead>
+   435→   435→                <TableHead>Status</TableHead>
+   436→   436→                <TableHead>Collected By</TableHead>
+   437→   437→              </TableRow>
+   438→   438→            </TableHeader>
+   439→   439→            <TableBody>
+   440→   440→              {PAYMENT_TXNS.map((t) => (
+   441→   441→                <TableRow key={t.id}>
+   442→   442→                  <TableCell className="font-mono text-xs">{t.id}</TableCell>
+   443→   443→                  <TableCell className="font-mono text-xs">{t.account}</TableCell>
+   444→   444→                  <TableCell className="font-medium text-primary">{t.customer}</TableCell>
+   445→   445→                  <TableCell>
+   446→   446→                    <Badge variant="outline" className={`text-[10px] ${modeBadgeClass(t.mode)}`}>{t.mode}</Badge>
+   447→   447→                  </TableCell>
+   448→   448→                  <TableCell className="font-mono text-xs">{t.amount}</TableCell>
+   449→   449→                  <TableCell className="text-xs text-muted-foreground">{t.date}</TableCell>
+   450→   450→                  <TableCell>
+   451→   451→                    <Badge variant="outline" className={`text-[10px] ${statusBadgeClass(t.status)}`}>{t.status}</Badge>
+   452→   452→                  </TableCell>
+   453→   453→                  <TableCell className="text-xs text-muted-foreground">{t.collectedBy}</TableCell>
+   454→   454→                </TableRow>
+   455→   455→              ))}
+   456→   456→            </TableBody>
+   457→   457→          </Table>
+   458→   458→        </div>
+   459→   459→      </SectionCard>
+   460→   460→    </div>
+   461→   461→  );
+   462→   462→}
+   463→   463→
+   464→   464→/* ---------------- Reverse Transactions ---------------- */
+   465→   465→
+   466→   466→function ReverseTransactions({ moduleId, childId }: ViewProps) {
+   467→   467→  const { toast } = useToast();
+   468→   468→  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+   469→   469→  const [reason, setReason] = React.useState("");
+   470→   470→
+   471→   471→  // show all, but pre-flag reversed ones; allow reversing pending/settled ones
+   472→   472→  const rows = PAYMENT_TXNS;
+   473→   473→  const toggle = (id: string) => {
+   474→   474→    const next = new Set(selected);
+   475→   475→    if (next.has(id)) next.delete(id); else next.add(id);
+   476→   476→    setSelected(next);
+   477→   477→  };
+   478→   478→
+   479→   479→  const reverse = () => {
+   480→   480→    if (selected.size === 0) {
+   481→   481→      toast({ title: "No selection", description: "Select one or more transactions to reverse.", variant: "destructive" });
+   482→   482→      return;
+   483→   483→    }
+   484→   484→    if (!reason.trim()) {
+   485→   485→      toast({ title: "Reason required", description: "Provide a reason for reversal.", variant: "destructive" });
+   486→   486→      return;
+   487→   487→    }
+   488→   488→    toast({ title: "Transactions reversed", description: `${selected.size} transaction(s) reversed.`, variant: "destructive" });
+   489→   489→    setSelected(new Set());
+   490→   490→    setReason("");
+   491→   491→  };
+   492→   492→
+   493→   493→  return (
+   494→   494→    <div className="space-y-6">
+   495→   495→      <ChildHeader moduleId={moduleId} childId={childId} />
+   496→   496→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+   497→   497→        <KpiCard label="Reversed This Month" value={String(PAYMENT_TXNS.filter((t) => t.status === "Reversed").length)} icon={<Undo2 className="h-4 w-4" />} accent />
+   498→   498→        <KpiCard label="Currently Selected" value={String(selected.size)} icon={<AlertTriangle className="h-4 w-4" />} />
+   499→   499→        <KpiCard label="Total Reversed Amount" value={`₹ ${PAYMENT_TXNS.filter((t) => t.status === "Reversed").reduce((s, t) => s + parseFloat(t.amount), 0).toFixed(2)}`} icon={<Coins className="h-4 w-4" />} />
+   500→   500→      </div>
+   501→   501→      <SectionCard title="Reverse Transactions" description="Select transactions and provide a reason to reverse">
+   502→   502→        <div className="overflow-x-auto scrollbar-thin">
+   503→   503→          <Table>
+   504→   504→            <TableHeader>
+   505→   505→              <TableRow>
+   506→   506→                <TableHead className="w-8">Select</TableHead>
+   507→   507→                <TableHead>Txn ID</TableHead>
+   508→   508→                <TableHead>Account</TableHead>
+   509→   509→                <TableHead>Customer</TableHead>
+   510→   510→                <TableHead>Mode</TableHead>
+   511→   511→                <TableHead>Amount</TableHead>
+   512→   512→                <TableHead>Date</TableHead>
+   513→   513→                <TableHead>Status</TableHead>
+   514→   514→                <TableHead>Collected By</TableHead>
+   515→   515→              </TableRow>
+   516→   516→            </TableHeader>
+   517→   517→            <TableBody>
+   518→   518→              {rows.map((t) => (
+   519→   519→                <TableRow key={t.id} data-state={selected.has(t.id) ? "selected" : undefined}>
+   520→   520→                  <TableCell>
+   521→   521→                    <Checkbox checked={selected.has(t.id)} onCheckedChange={() => toggle(t.id)} />
+   522→   522→                  </TableCell>
+   523→   523→                  <TableCell className="font-mono text-xs">{t.id}</TableCell>
+   524→   524→                  <TableCell className="font-mono text-xs">{t.account}</TableCell>
+   525→   525→                  <TableCell className="font-medium text-primary">{t.customer}</TableCell>
+   526→   526→                  <TableCell>
+   527→   527→                    <Badge variant="outline" className={`text-[10px] ${modeBadgeClass(t.mode)}`}>{t.mode}</Badge>
+   528→   528→                  </TableCell>
+   529→   529→                  <TableCell className="font-mono text-xs">{t.amount}</TableCell>
+   530→   530→                  <TableCell className="text-xs text-muted-foreground">{t.date}</TableCell>
+   531→   531→                  <TableCell>
+   532→   532→                    <Badge variant="outline" className={`text-[10px] ${statusBadgeClass(t.status)}`}>{t.status}</Badge>
+   533→   533→                  </TableCell>
+   534→   534→                  <TableCell className="text-xs text-muted-foreground">{t.collectedBy}</TableCell>
+   535→   535→                </TableRow>
+   536→   536→              ))}
+   537→   537→            </TableBody>
+   538→   538→          </Table>
+   539→   539→        </div>
+   540→   540→        <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-end">
+   541→   541→          <div className="flex-1 space-y-1.5">
+   542→   542→            <Label htmlFor="reason">Reason for Reversal</Label>
+   543→   543→            <Input id="reason" placeholder="e.g. Duplicate payment, wrong account, customer request…" value={reason} onChange={(e) => setReason(e.target.value)} />
+   544→   544→          </div>
+   545→   545→          <Button variant="destructive" onClick={reverse}>
+   546→   546→            <Undo2 className="mr-1.5 h-4 w-4" /> Reverse Selected
+   547→   547→          </Button>
+   548→   548→        </div>
+   549→   549→      </SectionCard>
+   550→   550→    </div>
+   551→   551→  );
+   552→   552→}
+   553→   553→
+   554→   554→/* ---------------- Settle Transactions ---------------- */
+   555→   555→
+   556→   556→function SettleTransactions({ moduleId, childId }: ViewProps) {
+   557→   557→  const { toast } = useToast();
+   558→   558→  const pending = PAYMENT_TXNS.filter((t) => t.status === "Pending");
+   559→   559→  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+   560→   560→  const toggle = (id: string) => {
+   561→   561→    const next = new Set(selected);
+   562→   562→    if (next.has(id)) next.delete(id); else next.add(id);
+   563→   563→    setSelected(next);
+   564→   564→  };
+   565→   565→  const toggleAll = () => {
+   566→   566→    if (selected.size === pending.length) setSelected(new Set());
+   567→   567→    else setSelected(new Set(pending.map((p) => p.id)));
+   568→   568→  };
+   569→   569→  const settle = () => {
+   570→   570→    if (selected.size === 0) {
+   571→   571→      toast({ title: "No selection", description: "Select one or more transactions to settle.", variant: "destructive" });
+   572→   572→      return;
+   573→   573→    }
+   574→   574→    toast({ title: "Transactions settled", description: `${selected.size} transaction(s) settled.` });
+   575→   575→    setSelected(new Set());
+   576→   576→  };
+   577→   577→  return (
+   578→   578→    <div className="space-y-6">
+   579→   579→      <ChildHeader moduleId={moduleId} childId={childId} />
+   580→   580→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+   581→   581→        <KpiCard label="Pending Settlement" value={String(pending.length)} icon={<Clock className="h-4 w-4" />} accent />
+   582→   582→        <KpiCard label="Selected" value={String(selected.size)} icon={<CheckCircle2 className="h-4 w-4" />} />
+   583→   583→        <KpiCard label="Pending Amount" value={`₹ ${pending.reduce((s, t) => s + parseFloat(t.amount), 0).toFixed(2)}`} icon={<Coins className="h-4 w-4" />} />
+   584→   584→      </div>
+   585→   585→      <SectionCard title="Pending Transactions" description="Select transactions to settle">
+   586→   586→        {pending.length === 0 ? (
+   587→   587→          <EmptyState icon={<CheckCircle2 className="h-5 w-5" />} title="No pending transactions" description="Everything is settled." />
+   588→   588→        ) : (
+   589→   589→          <>
+   590→   590→            <ActionBar>
+   591→   591→              <Button size="sm" onClick={settle}>
+   592→   592→                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Settle Selected
+   593→   593→              </Button>
+   594→   594→              <Button variant="outline" size="sm" onClick={toggleAll}>
+   595→   595→                {selected.size === pending.length ? "Clear All" : "Select All"}
+   596→   596→              </Button>
+   597→   597→            </ActionBar>
+   598→   598→            <div className="mt-3 overflow-x-auto scrollbar-thin">
+   599→   599→              <Table>
+   600→   600→                <TableHeader>
+   601→   601→                  <TableRow>
+   602→   602→                    <TableHead className="w-8">
+   603→   603→                      <Checkbox
+   604→   604→                        checked={pending.length > 0 && selected.size === pending.length}
+   605→   605→                        onCheckedChange={toggleAll}
+   606→   606→                      />
+   607→   607→                    </TableHead>
+   608→   608→                    <TableHead>Txn ID</TableHead>
+   609→   609→                    <TableHead>Account</TableHead>
+   610→   610→                    <TableHead>Customer</TableHead>
+   611→   611→                    <TableHead>Mode</TableHead>
+   612→   612→                    <TableHead>Amount</TableHead>
+   613→   613→                    <TableHead>Date</TableHead>
+   614→   614→                    <TableHead>Collected By</TableHead>
+   615→   615→                  </TableRow>
+   616→   616→                </TableHeader>
+   617→   617→                <TableBody>
+   618→   618→                  {pending.map((t) => (
+   619→   619→                    <TableRow key={t.id} data-state={selected.has(t.id) ? "selected" : undefined}>
+   620→   620→                      <TableCell>
+   621→   621→                        <Checkbox checked={selected.has(t.id)} onCheckedChange={() => toggle(t.id)} />
+   622→   622→                      </TableCell>
+   623→   623→                      <TableCell className="font-mono text-xs">{t.id}</TableCell>
+   624→   624→                      <TableCell className="font-mono text-xs">{t.account}</TableCell>
+   625→   625→                      <TableCell className="font-medium text-primary">{t.customer}</TableCell>
+   626→   626→                      <TableCell>
+   627→   627→                        <Badge variant="outline" className={`text-[10px] ${modeBadgeClass(t.mode)}`}>{t.mode}</Badge>
+   628→   628→                      </TableCell>
+   629→   629→                      <TableCell className="font-mono text-xs">{t.amount}</TableCell>
+   630→   630→                      <TableCell className="text-xs text-muted-foreground">{t.date}</TableCell>
+   631→   631→                      <TableCell className="text-xs text-muted-foreground">{t.collectedBy}</TableCell>
+   632→   632→                    </TableRow>
+   633→   633→                  ))}
+   634→   634→                </TableBody>
+   635→   635→              </Table>
+   636→   636→            </div>
+   637→   637→          </>
+   638→   638→        )}
+   639→   639→      </SectionCard>
+   640→   640→    </div>
+   641→   641→  );
+   642→   642→}
+   643→   643→

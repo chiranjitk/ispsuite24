@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ViewProps, useModuleHeader } from "./_shared";
+import { ViewProps, useModuleHeader, useViewRouter, ChildOverview, LeafPlaceholder } from "./_shared";
 import {
   PageHeader,
   KpiCard,
@@ -48,14 +48,38 @@ import {
   Cloud,
   Apple,
   MonitorDown,
+  X,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { MODULE_LICENSES, DOC_SECTIONS } from "@/lib/mock-data";
 import type { DocBlock } from "@/lib/mock-data";
 
-export function HelpView({ moduleId, childId }: ViewProps) {
-  const { mod } = useModuleHeader(moduleId, childId);
-  if (!mod) return null;
-  if (!childId) return <HelpOverview moduleId={moduleId} />;
+export function HelpView({ moduleId, childId, grandchildId }: ViewProps) {
+  const router = useViewRouter(moduleId, childId, grandchildId);
+
+  if (router.state === "loading") return null;
+  if (router.state === "module-overview") return <HelpOverview moduleId={moduleId} />;
+  if (router.state === "child-overview")
+    return <ChildOverview moduleId={moduleId} childId={router.childId} />;
+
+  if (router.state === "grandchild") {
+    // Register sub-pages
+    if (childId === "register" && grandchildId === "online-registration")
+      return <OnlineRegistrationPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "register" && grandchildId === "module-license")
+      return <ModuleLicensePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+
+    return (
+      <LeafPlaceholder
+        moduleId={moduleId}
+        childId={router.childId}
+        grandchildId={router.grandchildId}
+      />
+    );
+  }
+
+  // state === "child" — children without grandchildren
   switch (childId) {
     case "company-info":
       return <CompanyInfo moduleId={moduleId} childId={childId} />;
@@ -63,8 +87,6 @@ export function HelpView({ moduleId, childId }: ViewProps) {
       return <ClientApp moduleId={moduleId} childId={childId} />;
     case "upgrade":
       return <UpgradeVersion moduleId={moduleId} childId={childId} />;
-    case "register":
-      return <RegisterProduct moduleId={moduleId} childId={childId} />;
     case "customization":
       return <ManageCustomization moduleId={moduleId} childId={childId} />;
     case "documentation":
@@ -74,6 +96,19 @@ export function HelpView({ moduleId, childId }: ViewProps) {
     default:
       return <HelpOverview moduleId={moduleId} />;
   }
+}
+
+/* ---------------- Shared helpers ---------------- */
+
+function useBreadcrumb(moduleId: string, childId: string, grandchildId?: string) {
+  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const setActive = useAppStore((s) => s.setActive);
+  return [
+    { label: "Cryptsk" },
+    { label: mod?.label ?? "Help", onClick: () => setActive(moduleId, "", "") },
+    { label: child?.label ?? childId, onClick: () => setActive(moduleId, childId, "") },
+    ...(grandchild ? [{ label: grandchild.label }] : []),
+  ];
 }
 
 /* ---------------- Overview ---------------- */
@@ -591,6 +626,257 @@ function About({ moduleId, childId }: ViewProps) {
         <p className="font-medium text-foreground">Powered by Cryptsk Networks</p>
         <p className="mt-1">Copyright © 2026 Cryptsk Networks · All Rights Reserved</p>
       </div>
+    </div>
+  );
+}
+
+/* ============================================================
+ * REGISTER — Online Registration (grandchild)
+ * ============================================================ */
+
+function OnlineRegistrationPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const { mod, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const setActive = useAppStore((s) => s.setActive);
+  const { toast } = useToast();
+  const [saving, setSaving] = React.useState(false);
+
+  const [form, setForm] = React.useState({
+    companyName: "",
+    contactPerson: "",
+    email: "",
+    phone: "",
+    address: "",
+    licenseKey: "",
+  });
+  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.companyName.trim() || !form.contactPerson.trim() || !form.email.trim() || !form.licenseKey.trim()) {
+      toast({
+        title: "Missing required fields",
+        description: "Company name, contact person, email and license key are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) {
+      toast({ title: "Invalid email", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 800));
+    setSaving(false);
+    toast({
+      title: "Registration submitted",
+      description: `Cryptsk registered to ${form.companyName}. A confirmation email was sent to ${form.email}.`,
+    });
+    setActive(moduleId, childId, "module-license");
+  };
+
+  if (!mod) return null;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={grandchild?.label ?? "Online Registration"}
+        description="Register your Cryptsk deployment online to unlock module licenses and upgrades."
+        icon={<KeySquare className="h-5 w-5" />}
+        breadcrumb={breadcrumb}
+        actions={
+          <Button variant="outline" onClick={() => setActive(moduleId, childId, "module-license")}>
+            <X className="mr-2 h-4 w-4" /> Cancel
+          </Button>
+        }
+      />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <form onSubmit={handleSubmit} className="space-y-6 lg:col-span-3">
+          <SectionCard title="Company Information" description="Registered company and primary contact">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="cn">Company Name <span className="text-primary">*</span></Label>
+                <Input id="cn" value={form.companyName} onChange={(e) => set("companyName", e.target.value)}
+                  placeholder="e.g. Cryptsk Networks Pvt. Ltd." />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cp">Contact Person <span className="text-primary">*</span></Label>
+                <Input id="cp" value={form.contactPerson} onChange={(e) => set("contactPerson", e.target.value)}
+                  placeholder="e.g. Rajesh Kumar" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ce">Email <span className="text-primary">*</span></Label>
+                <Input id="ce" type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
+                  placeholder="admin@cryptsk.net" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cph">Phone</Label>
+                <Input id="cph" value={form.phone} onChange={(e) => set("phone", e.target.value)}
+                  placeholder="+91-98xxxxxx00" />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="ca">Address</Label>
+                <Textarea id="ca" rows={2} value={form.address} onChange={(e) => set("address", e.target.value)}
+                  placeholder="Registered business address" />
+              </div>
+            </div>
+          </SectionCard>
+          <SectionCard title="License Key" description="Enter the license key issued by Cryptsk Networks">
+            <div className="space-y-2">
+              <Label htmlFor="lk">License Key <span className="text-primary">*</span></Label>
+              <Input id="lk" value={form.licenseKey} onChange={(e) => set("licenseKey", e.target.value)}
+                placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" className="font-mono text-xs" />
+              <p className="text-xs text-muted-foreground">
+                <KeySquare className="mr-1 inline h-3 w-3" />
+                The license key is delivered with your purchase confirmation email.
+              </p>
+            </div>
+          </SectionCard>
+          <div className="flex items-center justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => setActive(moduleId, childId, "module-license")}>Cancel</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registering…</> : <><Save className="mr-2 h-4 w-4" /> Register</>}
+            </Button>
+          </div>
+        </form>
+        <SectionCard title="Why Register?" description="Benefits of registering your Cryptsk deployment" className="lg:col-span-2">
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" /> Unlock premium module licenses</li>
+            <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" /> Receive automatic upgrade notifications</li>
+            <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" /> Priority support from Cryptsk Networks</li>
+            <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" /> Cloud-sync of configuration backups</li>
+            <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" /> Access to the reseller partner portal</li>
+            <li className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" /> Annual compliance & audit reports</li>
+          </ul>
+          <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+            <AlertCircle className="mr-1 inline h-3.5 w-3.5" />
+            Your license key is validated online against the Cryptsk licensing server.
+          </div>
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+ * REGISTER — Module License (grandchild)
+ * ============================================================ */
+
+function ModuleLicensePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const { mod, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const setActive = useAppStore((s) => s.setActive);
+  const { toast } = useToast();
+  const [search, setSearch] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState("all");
+  const [renewing, setRenewing] = React.useState<string | null>(null);
+
+  const filtered = MODULE_LICENSES.filter((m) => {
+    if (statusFilter !== "all" && m.status !== statusFilter) return false;
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q);
+  });
+
+  const handleRenew = async (name: string) => {
+    setRenewing(name);
+    await new Promise((r) => setTimeout(r, 700));
+    setRenewing(null);
+    toast({ title: "Renewal requested", description: `Renewal form opened for ${name}. Our team will contact you within 24 hours.` });
+  };
+
+  const statusBadge = (status: string) => {
+    if (status === "Active")
+      return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">{status}</Badge>;
+    if (status === "Trial")
+      return <Badge variant="outline" className="bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400">{status}</Badge>;
+    return <Badge variant="outline" className="bg-primary/10 text-primary hover:bg-primary/10">{status}</Badge>;
+  };
+
+  if (!mod) return null;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={grandchild?.label ?? "Module License"}
+        description="View and manage license status for all 15 Cryptsk modules."
+        icon={<ShieldCheck className="h-5 w-5" />}
+        breadcrumb={breadcrumb}
+        actions={
+          <Button variant="outline" onClick={() => setActive(moduleId, childId, "online-registration")}>
+            <KeySquare className="mr-2 h-4 w-4" /> Register
+          </Button>
+        }
+      />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard label="Total Modules" value={String(MODULE_LICENSES.length)} icon={<ShieldCheck className="h-4 w-4" />} accent />
+        <KpiCard label="Licensed" value={String(MODULE_LICENSES.filter((m) => m.licensed).length)} icon={<CheckCircle2 className="h-4 w-4" />} />
+        <KpiCard label="Active" value={String(MODULE_LICENSES.filter((m) => m.status === "Active").length)} icon={<ShieldCheck className="h-4 w-4" />} />
+        <KpiCard label="Expired / Trial" value={String(MODULE_LICENSES.filter((m) => m.status !== "Active").length)} icon={<AlertCircle className="h-4 w-4" />} />
+      </div>
+      <SectionCard title="Module Licenses" description={`${filtered.length} of ${MODULE_LICENSES.length} modules`}>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Search modules…" className="pl-9" value={search}
+              onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="sm:w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Trial">Trial</SelectItem>
+              <SelectItem value="Expired">Expired</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {filtered.length === 0 ? (
+          <EmptyState icon={<ShieldCheck className="h-5 w-5" />} title="No modules match" description="Adjust filters to see modules." />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Module</TableHead>
+                  <TableHead>Licensed</TableHead>
+                  <TableHead>Expiry</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell>
+                      <p className="font-medium text-foreground">{m.name}</p>
+                      <p className="font-mono text-[10px] text-muted-foreground">{m.id}</p>
+                    </TableCell>
+                    <TableCell>
+                      {m.licensed ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{m.expiry}</TableCell>
+                    <TableCell>{statusBadge(m.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => handleRenew(m.name)} disabled={renewing === m.name}>
+                        {renewing === m.name ? (
+                          <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> Renewing…</>
+                        ) : (
+                          <><RefreshCw className="mr-1 h-3.5 w-3.5" /> Renew</>
+                        )}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </SectionCard>
     </div>
   );
 }

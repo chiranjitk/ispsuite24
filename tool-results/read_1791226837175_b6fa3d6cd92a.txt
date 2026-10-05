@@ -1,0 +1,1449 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { ViewProps, useModuleHeader, useViewRouter, ChildOverview, LeafPlaceholder } from "./_shared";
+     5→import { PageHeader, KpiCard, SectionCard, EmptyState, ActionBar } from "@/components/app/shared";
+     6→import { useAppStore } from "@/lib/store";
+     7→import { useToast } from "@/hooks/use-toast";
+     8→import {
+     9→  Table,
+    10→  TableBody,
+    11→  TableCell,
+    12→  TableHead,
+    13→  TableHeader,
+    14→  TableRow,
+    15→} from "@/components/ui/table";
+    16→import {
+    17→  Select,
+    18→  SelectContent,
+    19→  SelectItem,
+    20→  SelectTrigger,
+    21→  SelectValue,
+    22→} from "@/components/ui/select";
+    23→import { Input } from "@/components/ui/input";
+    24→import { Label } from "@/components/ui/label";
+    25→import { Textarea } from "@/components/ui/textarea";
+    26→import { Button } from "@/components/ui/button";
+    27→import { Badge } from "@/components/ui/badge";
+    28→import { Checkbox } from "@/components/ui/checkbox";
+    29→import { Switch } from "@/components/ui/switch";
+    30→import {
+    31→  Dialog,
+    32→  DialogContent,
+    33→  DialogHeader,
+    34→  DialogTitle,
+    35→  DialogFooter,
+    36→} from "@/components/ui/dialog";
+    37→import {
+    38→  Users as UsersIcon,
+    39→  Network,
+    40→  MapPin,
+    41→  Database,
+    42→  Filter,
+    43→  UserPlus,
+    44→  Search,
+    45→  Send,
+    46→  Power,
+    47→  Download,
+    48→  Pencil,
+    49→  Trash2,
+    50→  Save,
+    51→  X,
+    52→  AlertCircle,
+    53→  Loader2,
+    54→  RefreshCw,
+    55→  Activity,
+    56→} from "lucide-react";
+    57→import { usersApi, liveUsersApi, zonesApi, type User, type LiveUser, type Zone } from "@/lib/api";
+    58→import { ZONES, POOLS } from "@/lib/mock-data";
+    59→
+    60→export function UserView({ moduleId, childId, grandchildId }: ViewProps) {
+    61→  const router = useViewRouter(moduleId, childId, grandchildId);
+    62→
+    63→  if (router.state === "loading") return null;
+    64→  if (router.state === "module-overview") return <UserOverview moduleId={moduleId} />;
+    65→  if (router.state === "child-overview")
+    66→    return <ChildOverview moduleId={moduleId} childId={router.childId} />;
+    67→
+    68→  if (router.state === "grandchild") {
+    69→    // Bespoke grandchild handlers for the User module
+    70→    if (childId === "manage-users" && grandchildId === "add-user")
+    71→      return <AddUserPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    72→    if (childId === "manage-users" && grandchildId === "search-user")
+    73→      return <SearchUserPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    74→    if (childId === "manage-users" && grandchildId === "advance-search")
+    75→      return <SearchUserPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    76→    if (childId === "live-users" && grandchildId === "manage-live-users")
+    77→      return <ManageLiveUsersPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    78→    if (childId === "live-users" && grandchildId === "search-live-users")
+    79→      return <SearchLiveUsersPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    80→    if (childId === "zone" && grandchildId === "create-zone")
+    81→      return <CreateZonePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    82→    if (childId === "zone" && grandchildId === "manage-zone")
+    83→      return <ManageZonesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    84→    if (childId === "zone" && grandchildId === "search-zone-admin")
+    85→      return <ManageZonesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    86→
+    87→    return (
+    88→      <LeafPlaceholder
+    89→        moduleId={moduleId}
+    90→        childId={router.childId}
+    91→        grandchildId={router.grandchildId}
+    92→      />
+    93→    );
+    94→  }
+    95→
+    96→  // state === "child" — children without grandchildren
+    97→  switch (childId) {
+    98→    case "zone":
+    99→      return <ZoneManagement moduleId={moduleId} childId={childId} />;
+   100→    case "pool":
+   101→      return <PoolManagement moduleId={moduleId} childId={childId} />;
+   102→    case "customers":
+   103→      return <ManageCustomers moduleId={moduleId} childId={childId} />;
+   104→    default:
+   105→      return <UserOverview moduleId={moduleId} />;
+   106→  }
+   107→}
+   108→
+   109→/* ---------------- Overview ---------------- */
+   110→
+   111→function UserOverview({ moduleId }: { moduleId: string }) {
+   112→  const { mod } = useModuleHeader(moduleId);
+   113→  const setActive = useAppStore((s) => s.setActive);
+   114→  const [userCount, setUserCount] = React.useState<number | null>(null);
+   115→  const [liveCount, setLiveCount] = React.useState<number | null>(null);
+   116→
+   117→  React.useEffect(() => {
+   118→    usersApi.list().then((res) => setUserCount(res.data?.length ?? 0));
+   119→    liveUsersApi.list().then((res) => setLiveCount(res.total ?? 0));
+   120→  }, []);
+   121→
+   122→  if (!mod) return null;
+   123→  const cards = [
+   124→    { label: "Manage Users", desc: "Add, search & manage subscribers", icon: UsersIcon, child: "manage-users" },
+   125→    { label: "Live Users", desc: `${liveCount ?? "…"} live sessions`, icon: Network, child: "live-users" },
+   126→    { label: "Zone Management", desc: `${ZONES.length} zones configured`, icon: MapPin, child: "zone" },
+   127→    { label: "Pool Management", desc: `${POOLS.length} IP pools`, icon: Database, child: "pool" },
+   128→    { label: "Manage Customers", desc: "Customer accounts", icon: UsersIcon, child: "customers" },
+   129→    { label: "Dynamize Fields", desc: "Dynamic user fields", icon: Filter, child: "dynamize" },
+   130→    { label: "Demographic Fields", desc: "Demographic config", icon: Filter, child: "demographic" },
+   131→  ];
+   132→
+   133→  return (
+   134→    <div className="space-y-6">
+   135→      <PageHeader title={mod.label} description={mod.desc} icon={<mod.icon className="h-5 w-5" />} />
+   136→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+   137→        <KpiCard label="Total Users" value={userCount == null ? "…" : String(userCount)} icon={<UsersIcon className="h-4 w-4" />} accent />
+   138→        <KpiCard label="Live Sessions" value={liveCount == null ? "…" : String(liveCount)} icon={<Activity className="h-4 w-4" />} />
+   139→        <KpiCard label="Zones" value={String(ZONES.length)} icon={<MapPin className="h-4 w-4" />} />
+   140→        <KpiCard label="IP Pools" value={String(POOLS.length)} icon={<Database className="h-4 w-4" />} />
+   141→      </div>
+   142→      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   143→        {cards.map((c) => (
+   144→          <button
+   145→            key={c.child}
+   146→            onClick={() => setActive(moduleId, c.child, "")}
+   147→            className="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+   148→          >
+   149→            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+   150→              <c.icon className="h-5 w-5" />
+   151→            </div>
+   152→            <div className="min-w-0 flex-1">
+   153→              <p className="font-medium text-foreground">{c.label}</p>
+   154→              <p className="mt-0.5 text-xs text-muted-foreground">{c.desc}</p>
+   155→            </div>
+   156→          </button>
+   157→        ))}
+   158→      </div>
+   159→    </div>
+   160→  );
+   161→}
+   162→
+   163→/* ================ ADD USER (REAL FUNCTIONAL) ================ */
+   164→
+   165→function AddUserPage({ moduleId, childId, grandchildId }: ViewProps) {
+   166→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   167→  const setActive = useAppStore((s) => s.setActive);
+   168→  const { toast } = useToast();
+   169→  const [saving, setSaving] = React.useState(false);
+   170→  const [errors, setErrors] = React.useState<Record<string, string>>({});
+   171→
+   172→  // Form state — mirrors SubscriberHelper.sendCreateUserReqMap fields
+   173→  const [form, setForm] = React.useState({
+   174→    username: "",
+   175→    name: "",
+   176→    password: "",
+   177→    emailid: "",
+   178→    phone: "",
+   179→    userType: "User",
+   180→    packageName: "unlimited hours 30 days",
+   181→    zoneName: "Bhiwani-Core",
+   182→    poolName: "Pool-Bhiwani0",
+   183→    address1: "",
+   184→    address2: "",
+   185→    city: "",
+   186→    state: "",
+   187→    country: "India",
+   188→    zip: "",
+   189→    macaddress: "",
+   190→    ipaddress: "",
+   191→    bindToMacStatus: "No" as "Yes" | "No",
+   192→    loginRestrictionType: "Open" as "Open" | "Individual" | "Pool" | "Vlan" | "Network",
+   193→    invoiceGenerateStatus: "No" as "Yes" | "No",
+   194→    multipleLoginLimit: "1",
+   195→    nasIdentifier: "",
+   196→    vlanTag: "1",
+   197→    birthdate: "",
+   198→  });
+   199→
+   200→  const set = (field: string, value: string) => {
+   201→    setForm((f) => ({ ...f, [field]: value }));
+   202→    setErrors((e) => { const n = { ...e }; delete n[field]; return n; });
+   203→  };
+   204→
+   205→  const handleSubmit = async (e: React.FormEvent) => {
+   206→    e.preventDefault();
+   207→    setSaving(true);
+   208→    setErrors({});
+   209→
+   210→    const res = await usersApi.create({
+   211→      ...form,
+   212→      multipleLoginLimit: Number(form.multipleLoginLimit),
+   213→      vlanTag: Number(form.vlanTag),
+   214→    });
+   215→
+   216→    setSaving(false);
+   217→
+   218→    if (res.responseCode === "0") {
+   219→      toast({
+   220→        title: "User created",
+   221→        description: `Subscriber "${form.username}" has been created successfully.`,
+   222→      });
+   223→      setActive(moduleId, "manage-users", "search-user");
+   224→    } else {
+   225→      if (res.errors) setErrors(res.errors);
+   226→      toast({
+   227→        title: "Failed to create user",
+   228→        description: res.responseMsg,
+   229→        variant: "destructive",
+   230→      });
+   231→    }
+   232→  };
+   233→
+   234→  if (!mod || !child) return null;
+   235→
+   236→  return (
+   237→    <div className="space-y-6">
+   238→      <PageHeader
+   239→        title={grandchild?.label ?? "Add User"}
+   240→        description="Register a new subscriber. Fields mirror the accsium UserService.createUser API."
+   241→        icon={<mod.icon className="h-5 w-5" />}
+   242→        breadcrumb={[
+   243→          { label: "Cryptsk" },
+   244→          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+   245→          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+   246→          { label: grandchild?.label ?? "Add User" },
+   247→        ]}
+   248→        actions={
+   249→          <Button variant="outline" onClick={() => setActive(moduleId, "manage-users", "search-user")}>
+   250→            <X className="mr-2 h-4 w-4" /> Cancel
+   251→          </Button>
+   252→        }
+   253→      />
+   254→
+   255→      <form onSubmit={handleSubmit} className="space-y-6">
+   256→        {/* Account Information */}
+   257→        <SectionCard title="Account Information" description="Login credentials and user type">
+   258→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   259→            <div className="space-y-2">
+   260→              <Label htmlFor="username">
+   261→                Username <span className="text-primary">*</span>
+   262→              </Label>
+   263→              <Input
+   264→                id="username"
+   265→                value={form.username}
+   266→                onChange={(e) => set("username", e.target.value)}
+   267→                placeholder="e.g. john.doe"
+   268→                className={errors.username ? "border-primary" : ""}
+   269→              />
+   270→              {errors.username && (
+   271→                <p className="text-xs text-primary flex items-center gap-1">
+   272→                  <AlertCircle className="h-3 w-3" /> {errors.username}
+   273→                </p>
+   274→              )}
+   275→            </div>
+   276→            <div className="space-y-2">
+   277→              <Label htmlFor="password">
+   278→                Password <span className="text-primary">*</span>
+   279→              </Label>
+   280→              <Input
+   281→                id="password"
+   282→                type="password"
+   283→                value={form.password}
+   284→                onChange={(e) => set("password", e.target.value)}
+   285→                placeholder="••••••••"
+   286→                className={errors.password ? "border-primary" : ""}
+   287→              />
+   288→              {errors.password && (
+   289→                <p className="text-xs text-primary flex items-center gap-1">
+   290→                  <AlertCircle className="h-3 w-3" /> {errors.password}
+   291→                </p>
+   292→              )}
+   293→            </div>
+   294→            <div className="space-y-2">
+   295→              <Label htmlFor="name">
+   296→                Customer Name <span className="text-primary">*</span>
+   297→              </Label>
+   298→              <Input
+   299→                id="name"
+   300→                value={form.name}
+   301→                onChange={(e) => set("name", e.target.value)}
+   302→                placeholder="Full name"
+   303→                className={errors.name ? "border-primary" : ""}
+   304→              />
+   305→              {errors.name && (
+   306→                <p className="text-xs text-primary flex items-center gap-1">
+   307→                  <AlertCircle className="h-3 w-3" /> {errors.name}
+   308→                </p>
+   309→              )}
+   310→            </div>
+   311→            <div className="space-y-2">
+   312→              <Label>
+   313→                User Type <span className="text-primary">*</span>
+   314→              </Label>
+   315→              <Select value={form.userType} onValueChange={(v) => set("userType", v)}>
+   316→                <SelectTrigger className={errors.userType ? "border-primary" : ""}>
+   317→                  <SelectValue />
+   318→                </SelectTrigger>
+   319→                <SelectContent>
+   320→                  <SelectItem value="User">User (Normal)</SelectItem>
+   321→                  <SelectItem value="Administrator">Administrator</SelectItem>
+   322→                  <SelectItem value="Manager">Manager</SelectItem>
+   323→                  <SelectItem value="Operator">Operator</SelectItem>
+   324→                  <SelectItem value="PopManager">POP Manager</SelectItem>
+   325→                  <SelectItem value="Zone Manager">Zone Manager</SelectItem>
+   326→                  <SelectItem value="Zone Operator">Zone Operator</SelectItem>
+   327→                  <SelectItem value="Leased Line">Leased Line</SelectItem>
+   328→                </SelectContent>
+   329→              </Select>
+   330→              {errors.userType && (
+   331→                <p className="text-xs text-primary">{errors.userType}</p>
+   332→              )}
+   333→            </div>
+   334→          </div>
+   335→        </SectionCard>
+   336→
+   337→        {/* Package & Zone */}
+   338→        <SectionCard title="Package & Zone" description="Billing plan and network assignment">
+   339→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   340→            <div className="space-y-2">
+   341→              <Label>
+   342→                Package <span className="text-primary">*</span>
+   343→              </Label>
+   344→              <Select value={form.packageName} onValueChange={(v) => set("packageName", v)}>
+   345→                <SelectTrigger className={errors.packageName ? "border-primary" : ""}>
+   346→                  <SelectValue />
+   347→                </SelectTrigger>
+   348→                <SelectContent>
+   349→                  <SelectItem value="Zero hours Zero days">Zero hours Zero days</SelectItem>
+   350→                  <SelectItem value="1 hour 1 day">1 hour 1 day</SelectItem>
+   351→                  <SelectItem value="3 hours 1 day">3 hours 1 day</SelectItem>
+   352→                  <SelectItem value="unlimited hours 1 day">Unlimited hours 1 day</SelectItem>
+   353→                  <SelectItem value="unlimited hours 3 days">Unlimited hours 3 days</SelectItem>
+   354→                  <SelectItem value="unlimited hours 7 days">Unlimited hours 7 days</SelectItem>
+   355→                  <SelectItem value="unlimited hours 30 days">Unlimited hours 30 days</SelectItem>
+   356→                  <SelectItem value="1 hour">1 hour</SelectItem>
+   357→                </SelectContent>
+   358→              </Select>
+   359→              {errors.packageName && (
+   360→                <p className="text-xs text-primary">{errors.packageName}</p>
+   361→              )}
+   362→            </div>
+   363→            <div className="space-y-2">
+   364→              <Label>Zone</Label>
+   365→              <Select value={form.zoneName} onValueChange={(v) => set("zoneName", v)}>
+   366→                <SelectTrigger><SelectValue /></SelectTrigger>
+   367→                <SelectContent>
+   368→                  {ZONES.map((z) => (
+   369→                    <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+   370→                  ))}
+   371→                </SelectContent>
+   372→              </Select>
+   373→            </div>
+   374→            <div className="space-y-2">
+   375→              <Label>IP Pool</Label>
+   376→              <Select value={form.poolName} onValueChange={(v) => set("poolName", v)}>
+   377→                <SelectTrigger><SelectValue /></SelectTrigger>
+   378→                <SelectContent>
+   379→                  {POOLS.map((p) => (
+   380→                    <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+   381→                  ))}
+   382→                </SelectContent>
+   383→              </Select>
+   384→            </div>
+   385→            <div className="space-y-2">
+   386→              <Label>Login Restriction</Label>
+   387→              <Select value={form.loginRestrictionType} onValueChange={(v) => set("loginRestrictionType", v)}>
+   388→                <SelectTrigger><SelectValue /></SelectTrigger>
+   389→                <SelectContent>
+   390→                  <SelectItem value="Open">Open</SelectItem>
+   391→                  <SelectItem value="Individual">Individual (IP)</SelectItem>
+   392→                  <SelectItem value="Pool">Pool</SelectItem>
+   393→                  <SelectItem value="Vlan">VLAN</SelectItem>
+   394→                  <SelectItem value="Network">Network</SelectItem>
+   395→                </SelectContent>
+   396→              </Select>
+   397→            </div>
+   398→          </div>
+   399→        </SectionCard>
+   400→
+   401→        {/* Contact Information */}
+   402→        <SectionCard title="Contact Information" description="Subscriber contact details">
+   403→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   404→            <div className="space-y-2">
+   405→              <Label htmlFor="emailid">Email</Label>
+   406→              <Input id="emailid" type="email" value={form.emailid} onChange={(e) => set("emailid", e.target.value)} placeholder="user@example.com" />
+   407→            </div>
+   408→            <div className="space-y-2">
+   409→              <Label htmlFor="phone">Phone</Label>
+   410→              <Input id="phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+91-98xxxxxxxx" />
+   411→            </div>
+   412→            <div className="space-y-2 md:col-span-2">
+   413→              <Label htmlFor="address1">Address Line 1</Label>
+   414→              <Input id="address1" value={form.address1} onChange={(e) => set("address1", e.target.value)} placeholder="House no, Street" />
+   415→            </div>
+   416→            <div className="space-y-2">
+   417→              <Label htmlFor="city">City</Label>
+   418→              <Input id="city" value={form.city} onChange={(e) => set("city", e.target.value)} />
+   419→            </div>
+   420→            <div className="space-y-2">
+   421→              <Label htmlFor="state">State</Label>
+   422→              <Input id="state" value={form.state} onChange={(e) => set("state", e.target.value)} />
+   423→            </div>
+   424→            <div className="space-y-2">
+   425→              <Label htmlFor="zip">ZIP / Postal Code</Label>
+   426→              <Input id="zip" value={form.zip} onChange={(e) => set("zip", e.target.value)} />
+   427→            </div>
+   428→            <div className="space-y-2">
+   429→              <Label htmlFor="country">Country</Label>
+   430→              <Input id="country" value={form.country} onChange={(e) => set("country", e.target.value)} />
+   431→            </div>
+   432→          </div>
+   433→        </SectionCard>
+   434→
+   435→        {/* Network & Session */}
+   436→        <SectionCard title="Network & Session" description="MAC, IP, and login settings">
+   437→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   438→            <div className="space-y-2">
+   439→              <Label htmlFor="macaddress">MAC Address</Label>
+   440→              <Input id="macaddress" value={form.macaddress} onChange={(e) => set("macaddress", e.target.value)} placeholder="00:1A:2B:3C:4D:5E" />
+   441→            </div>
+   442→            <div className="space-y-2">
+   443→              <Label htmlFor="ipaddress">IP Address</Label>
+   444→              <Input id="ipaddress" value={form.ipaddress} onChange={(e) => set("ipaddress", e.target.value)} placeholder="10.172.0.x" />
+   445→            </div>
+   446→            <div className="space-y-2">
+   447→              <Label htmlFor="multipleLoginLimit">Multiple Login Limit</Label>
+   448→              <Input
+   449→                id="multipleLoginLimit"
+   450→                type="number"
+   451→                min="1"
+   452→                value={form.multipleLoginLimit}
+   453→                onChange={(e) => set("multipleLoginLimit", e.target.value)}
+   454→                disabled={form.userType === "Leased Line"}
+   455→                className={errors.multipleLoginLimit ? "border-primary" : ""}
+   456→              />
+   457→              {errors.multipleLoginLimit && (
+   458→                <p className="text-xs text-primary">{errors.multipleLoginLimit}</p>
+   459→              )}
+   460→            </div>
+   461→            <div className="space-y-2">
+   462→              <Label htmlFor="nasIdentifier">NAS Identifier</Label>
+   463→              <Input
+   464→                id="nasIdentifier"
+   465→                value={form.nasIdentifier}
+   466→                onChange={(e) => set("nasIdentifier", e.target.value)}
+   467→                placeholder={form.userType === "Leased Line" ? "Required for Leased Line" : "Optional"}
+   468→                className={errors.nasIdentifier ? "border-primary" : ""}
+   469→              />
+   470→              {errors.nasIdentifier && (
+   471→                <p className="text-xs text-primary">{errors.nasIdentifier}</p>
+   472→              )}
+   473→            </div>
+   474→            <div className="flex items-center gap-3 md:col-span-2">
+   475→              <Switch
+   476→                id="bindToMac"
+   477→                checked={form.bindToMacStatus === "Yes"}
+   478→                onCheckedChange={(v) => set("bindToMacStatus", v ? "Yes" : "No")}
+   479→              />
+   480→              <div>
+   481→                <Label htmlFor="bindToMac" className="cursor-pointer">Bind to MAC</Label>
+   482→                <p className="text-xs text-muted-foreground">Require user to connect from the specified MAC address</p>
+   483→              </div>
+   484→            </div>
+   485→            <div className="flex items-center gap-3 md:col-span-2">
+   486→              <Switch
+   487→                id="invoiceGen"
+   488→                checked={form.invoiceGenerateStatus === "Yes"}
+   489→                onCheckedChange={(v) => set("invoiceGenerateStatus", v ? "Yes" : "No")}
+   490→              />
+   491→              <div>
+   492→                <Label htmlFor="invoiceGen" className="cursor-pointer">Generate Invoice on Creation</Label>
+   493→                <p className="text-xs text-muted-foreground">Automatically create an invoice when the user is created</p>
+   494→              </div>
+   495→            </div>
+   496→          </div>
+   497→        </SectionCard>
+   498→
+   499→        {/* Actions */}
+   500→        <div className="flex items-center justify-end gap-3">
+   501→          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "manage-users", "search-user")}>
+   502→            Cancel
+   503→          </Button>
+   504→          <Button type="submit" disabled={saving}>
+   505→            {saving ? (
+   506→              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating…</>
+   507→            ) : (
+   508→              <><Save className="mr-2 h-4 w-4" /> Create User</>
+   509→            )}
+   510→          </Button>
+   511→        </div>
+   512→      </form>
+   513→    </div>
+   514→  );
+   515→}
+   516→
+   517→/* ================ SEARCH USER (REAL FUNCTIONAL) ================ */
+   518→
+   519→function SearchUserPage({ moduleId, childId, grandchildId }: ViewProps) {
+   520→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   521→  const setActive = useAppStore((s) => s.setActive);
+   522→  const { toast } = useToast();
+   523→  const [users, setUsers] = React.useState<User[]>([]);
+   524→  const [loading, setLoading] = React.useState(true);
+   525→  const [search, setSearch] = React.useState("");
+   526→  const [userTypeFilter, setUserTypeFilter] = React.useState("all");
+   527→  const [statusFilter, setStatusFilter] = React.useState("all");
+   528→  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+   529→  const [deleteTarget, setDeleteTarget] = React.useState<User | null>(null);
+   530→  const [deleting, setDeleting] = React.useState(false);
+   531→
+   532→  const load = React.useCallback(() => {
+   533→    setLoading(true);
+   534→    usersApi
+   535→      .list({
+   536→        search: search || undefined,
+   537→        userType: userTypeFilter !== "all" ? userTypeFilter : undefined,
+   538→        status: statusFilter !== "all" ? statusFilter : undefined,
+   539→      })
+   540→      .then((res) => {
+   541→        setUsers(res.data ?? []);
+   542→        setLoading(false);
+   543→      });
+   544→  }, [search, userTypeFilter, statusFilter]);
+   545→
+   546→  React.useEffect(() => {
+   547→    const t = setTimeout(load, 300);
+   548→    return () => clearTimeout(t);
+   549→  }, [load]);
+   550→
+   551→  const toggleAll = () => {
+   552→    if (selected.size === users.length) setSelected(new Set());
+   553→    else setSelected(new Set(users.map((u) => u.userid)));
+   554→  };
+   555→  const toggleOne = (id: number) => {
+   556→    setSelected((s) => {
+   557→      const n = new Set(s);
+   558→      if (n.has(id)) n.delete(id);
+   559→      else n.add(id);
+   560→      return n;
+   561→    });
+   562→  };
+   563→
+   564→  const handleStatusChange = async (newStatus: "Y" | "D" | "N") => {
+   565→    if (selected.size === 0) return;
+   566→    const res = await usersApi.changeStatus(Array.from(selected), newStatus);
+   567→    if (res.responseCode === "0") {
+   568→      toast({ title: "Status updated", description: res.responseMsg });
+   569→      setSelected(new Set());
+   570→      load();
+   571→    }
+   572→  };
+   573→
+   574→  const handleDelete = async () => {
+   575→    if (!deleteTarget) return;
+   576→    setDeleting(true);
+   577→    const res = await usersApi.delete(deleteTarget.userid);
+   578→    setDeleting(false);
+   579→    if (res.responseCode === "0") {
+   580→      toast({ title: "User deleted", description: `"${deleteTarget.username}" was deleted.` });
+   581→      setDeleteTarget(null);
+   582→      load();
+   583→    } else {
+   584→      toast({ title: "Delete failed", description: res.responseMsg, variant: "destructive" });
+   585→    }
+   586→  };
+   587→
+   588→  if (!mod || !child) return null;
+   589→
+   590→  return (
+   591→    <div className="space-y-6">
+   592→      <PageHeader
+   593→        title={grandchild?.label ?? "Search User"}
+   594→        description="Search subscribers by username, account number, name, mobile, IP or MAC. Data is backed by the users API."
+   595→        icon={<mod.icon className="h-5 w-5" />}
+   596→        breadcrumb={[
+   597→          { label: "Cryptsk" },
+   598→          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+   599→          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+   600→          { label: grandchild?.label ?? "Search" },
+   601→        ]}
+   602→        actions={
+   603→          <Button onClick={() => setActive(moduleId, "manage-users", "add-user")}>
+   604→            <UserPlus className="mr-2 h-4 w-4" /> Add User
+   605→          </Button>
+   606→        }
+   607→      />
+   608→
+   609→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+   610→        <KpiCard label="Total Users" value={String(users.length)} icon={<UsersIcon className="h-4 w-4" />} accent />
+   611→        <KpiCard label="Active" value={String(users.filter((u) => u.active === "Y").length)} icon={<Activity className="h-4 w-4" />} />
+   612→        <KpiCard label="Deactive" value={String(users.filter((u) => u.active === "D").length)} icon={<UsersIcon className="h-4 w-4" />} />
+   613→        <KpiCard label="Selected" value={String(selected.size)} icon={<Filter className="h-4 w-4" />} />
+   614→      </div>
+   615→
+   616→      <ActionBar>
+   617→        <div className="relative flex-1 max-w-xs">
+   618→          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+   619→          <Input
+   620→            placeholder="Search username, name, IP, MAC…"
+   621→            className="h-8 pl-8 text-xs"
+   622→            value={search}
+   623→            onChange={(e) => setSearch(e.target.value)}
+   624→          />
+   625→        </div>
+   626→        <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
+   627→          <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+   628→          <SelectContent>
+   629→            <SelectItem value="all">All types</SelectItem>
+   630→            <SelectItem value="User">User</SelectItem>
+   631→            <SelectItem value="Administrator">Administrator</SelectItem>
+   632→            <SelectItem value="Manager">Manager</SelectItem>
+   633→            <SelectItem value="Operator">Operator</SelectItem>
+   634→            <SelectItem value="Leased Line">Leased Line</SelectItem>
+   635→          </SelectContent>
+   636→        </Select>
+   637→        <Select value={statusFilter} onValueChange={setStatusFilter}>
+   638→          <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
+   639→          <SelectContent>
+   640→            <SelectItem value="all">All status</SelectItem>
+   641→            <SelectItem value="Y">Active</SelectItem>
+   642→            <SelectItem value="D">Deactive</SelectItem>
+   643→            <SelectItem value="N">Suspended</SelectItem>
+   644→          </SelectContent>
+   645→        </Select>
+   646→        <Button variant="outline" size="sm" className="h-8" onClick={load}>
+   647→          <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
+   648→        </Button>
+   649→        {selected.size > 0 && (
+   650→          <>
+   651→            <Button size="sm" className="h-8" onClick={() => handleStatusChange("Y")}>
+   652→              <Power className="mr-1.5 h-3.5 w-3.5" /> Activate
+   653→            </Button>
+   654→            <Button size="sm" variant="destructive" className="h-8" onClick={() => handleStatusChange("N")}>
+   655→              <Power className="mr-1.5 h-3.5 w-3.5" /> Suspend
+   656→            </Button>
+   657→          </>
+   658→        )}
+   659→      </ActionBar>
+   660→
+   661→      <SectionCard>
+   662→        {loading ? (
+   663→          <div className="flex items-center justify-center py-12">
+   664→            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+   665→          </div>
+   666→        ) : users.length === 0 ? (
+   667→          <EmptyState
+   668→            icon={<Search className="h-5 w-5" />}
+   669→            title="No users found"
+   670→            description="Try adjusting your search or filters."
+   671→            action={<Button onClick={() => setActive(moduleId, "manage-users", "add-user")}><UserPlus className="mr-2 h-4 w-4" /> Add User</Button>}
+   672→          />
+   673→        ) : (
+   674→          <div className="overflow-x-auto">
+   675→            <Table>
+   676→              <TableHeader>
+   677→                <TableRow>
+   678→                  <TableHead className="w-8">
+   679→                    <Checkbox checked={users.length > 0 && selected.size === users.length} onCheckedChange={toggleAll} />
+   680→                  </TableHead>
+   681→                  <TableHead>Account No</TableHead>
+   682→                  <TableHead>Username</TableHead>
+   683→                  <TableHead>Name</TableHead>
+   684→                  <TableHead>Type</TableHead>
+   685→                  <TableHead>Package</TableHead>
+   686→                  <TableHead>Zone</TableHead>
+   687→                  <TableHead>Contact</TableHead>
+   688→                  <TableHead>Status</TableHead>
+   689→                  <TableHead className="text-right">Actions</TableHead>
+   690→                </TableRow>
+   691→              </TableHeader>
+   692→              <TableBody>
+   693→                {users.map((u) => (
+   694→                  <TableRow key={u.userid} data-state={selected.has(u.userid) ? "selected" : undefined}>
+   695→                    <TableCell><Checkbox checked={selected.has(u.userid)} onCheckedChange={() => toggleOne(u.userid)} /></TableCell>
+   696→                    <TableCell className="font-mono text-xs">{u.accountid}</TableCell>
+   697→                    <TableCell className="font-medium text-primary">{u.username}</TableCell>
+   698→                    <TableCell>{u.name}</TableCell>
+   699→                    <TableCell><Badge variant="outline" className="text-[10px]">{u.userType}</Badge></TableCell>
+   700→                    <TableCell className="text-xs text-muted-foreground max-w-[140px] truncate">{u.packageName}</TableCell>
+   701→                    <TableCell className="text-xs text-muted-foreground">{u.zoneName}</TableCell>
+   702→                    <TableCell className="text-xs">
+   703→                      <div>{u.emailid || "—"}</div>
+   704→                      <div className="text-muted-foreground">{u.phone || "—"}</div>
+   705→                    </TableCell>
+   706→                    <TableCell>
+   707→                      <Badge
+   708→                        variant={u.active === "Y" ? "default" : u.active === "D" ? "secondary" : "destructive"}
+   709→                        className={
+   710→                          u.active === "Y"
+   711→                            ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
+   712→                            : u.active === "N"
+   713→                            ? "bg-primary/10 text-primary hover:bg-primary/10"
+   714→                            : ""
+   715→                        }
+   716→                      >
+   717→                        {u.active === "Y" ? "Active" : u.active === "D" ? "Deactive" : "Suspended"}
+   718→                      </Badge>
+   719→                    </TableCell>
+   720→                    <TableCell className="text-right">
+   721→                      <div className="flex items-center justify-end gap-1">
+   722→                        <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit user", description: `Editing ${u.username}` })}>
+   723→                          <Pencil className="h-3.5 w-3.5" />
+   724→                        </Button>
+   725→                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(u)}>
+   726→                          <Trash2 className="h-3.5 w-3.5" />
+   727→                        </Button>
+   728→                      </div>
+   729→                    </TableCell>
+   730→                  </TableRow>
+   731→                ))}
+   732→              </TableBody>
+   733→            </Table>
+   734→          </div>
+   735→        )}
+   736→      </SectionCard>
+   737→
+   738→      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+   739→        <DialogContent>
+   740→          <DialogHeader><DialogTitle>Delete User</DialogTitle></DialogHeader>
+   741→          <p className="text-sm text-muted-foreground">
+   742→            Are you sure you want to delete <span className="font-medium text-foreground">{deleteTarget?.username}</span> ({deleteTarget?.name})? This action cannot be undone.
+   743→          </p>
+   744→          <DialogFooter>
+   745→            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+   746→            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+   747→              {deleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…</> : <><Trash2 className="mr-2 h-4 w-4" /> Delete</>}
+   748→            </Button>
+   749→          </DialogFooter>
+   750→        </DialogContent>
+   751→      </Dialog>
+   752→    </div>
+   753→  );
+   754→}
+   755→
+   756→/* ================ MANAGE LIVE USERS (REAL FUNCTIONAL) ================ */
+   757→
+   758→function ManageLiveUsersPage({ moduleId, childId, grandchildId }: ViewProps) {
+   759→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   760→  const setActive = useAppStore((s) => s.setActive);
+   761→  const { toast } = useToast();
+   762→  const [users, setUsers] = React.useState<LiveUser[]>([]);
+   763→  const [totalConnected, setTotalConnected] = React.useState(0);
+   764→  const [loading, setLoading] = React.useState(true);
+   765→  const [search, setSearch] = React.useState("");
+   766→  const [typeFilter, setTypeFilter] = React.useState("all");
+   767→  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+   768→  const [messageOpen, setMessageOpen] = React.useState(false);
+   769→  const [message, setMessage] = React.useState("");
+   770→  const [sending, setSending] = React.useState(false);
+   771→
+   772→  const load = React.useCallback(() => {
+   773→    setLoading(true);
+   774→    liveUsersApi
+   775→      .list({ search: search || undefined, type: typeFilter !== "all" ? typeFilter : undefined })
+   776→      .then((res) => {
+   777→        setUsers(res.data ?? []);
+   778→        setTotalConnected(res.totalConnected ?? 0);
+   779→        setLoading(false);
+   780→      });
+   781→  }, [search, typeFilter]);
+   782→
+   783→  React.useEffect(() => {
+   784→    const t = setTimeout(load, 300);
+   785→    return () => clearTimeout(t);
+   786→  }, [load]);
+   787→
+   788→  const toggleAll = () => {
+   789→    if (selected.size === users.length) setSelected(new Set());
+   790→    else setSelected(new Set(users.map((u) => u.sessionid)));
+   791→  };
+   792→  const toggleOne = (sid: string) => {
+   793→    setSelected((s) => {
+   794→      const n = new Set(s);
+   795→      if (n.has(sid)) n.delete(sid);
+   796→      else n.add(sid);
+   797→      return n;
+   798→    });
+   799→  };
+   800→
+   801→  const handleDisconnect = async () => {
+   802→    if (selected.size === 0) return;
+   803→    const res = await liveUsersApi.disconnect(Array.from(selected));
+   804→    if (res.responseCode === "0") {
+   805→      toast({ title: "Users disconnected", description: res.responseMsg, variant: "destructive" });
+   806→      setSelected(new Set());
+   807→      load();
+   808→    }
+   809→  };
+   810→
+   811→  const handleSendMessage = async () => {
+   812→    setSending(true);
+   813→    const res = await liveUsersApi.sendMessage(Array.from(selected), message);
+   814→    setSending(false);
+   815→    if (res.responseCode === "0") {
+   816→      toast({ title: "Message sent", description: res.responseMsg });
+   817→      setMessageOpen(false);
+   818→      setMessage("");
+   819→    }
+   820→  };
+   821→
+   822→  if (!mod || !child) return null;
+   823→
+   824→  return (
+   825→    <div className="space-y-6">
+   826→      <PageHeader
+   827→        title={grandchild?.label ?? "Manage Live Users"}
+   828→        description={`Total users connected: ${totalConnected} · Current system time: ${new Date().toLocaleString()}`}
+   829→        icon={<mod.icon className="h-5 w-5" />}
+   830→        breadcrumb={[
+   831→          { label: "Cryptsk" },
+   832→          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+   833→          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+   834→          { label: grandchild?.label ?? "Manage" },
+   835→        ]}
+   836→      />
+   837→
+   838→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+   839→        <KpiCard label="Live Sessions" value={String(totalConnected)} icon={<Network className="h-4 w-4" />} accent />
+   840→        <KpiCard label="Showing" value={String(users.length)} icon={<Activity className="h-4 w-4" />} />
+   841→        <KpiCard label="PPPoE" value={String(users.filter((u) => u.userType === "PPPoE").length)} icon={<Network className="h-4 w-4" />} />
+   842→        <KpiCard label="Selected" value={String(selected.size)} icon={<UsersIcon className="h-4 w-4" />} />
+   843→      </div>
+   844→
+   845→      <ActionBar>
+   846→        <Button size="sm" onClick={() => setMessageOpen(true)}>
+   847→          <Send className="mr-2 h-3.5 w-3.5" /> Send Message to All
+   848→        </Button>
+   849→        <Button size="sm" variant="destructive" disabled={!selected.size} onClick={handleDisconnect}>
+   850→          <Power className="mr-2 h-3.5 w-3.5" /> Disconnect ({selected.size})
+   851→        </Button>
+   852→        <div className="ml-auto flex items-center gap-2">
+   853→          <Select value={typeFilter} onValueChange={setTypeFilter}>
+   854→            <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+   855→            <SelectContent>
+   856→              <SelectItem value="all">All types</SelectItem>
+   857→              <SelectItem value="PPPoE">PPPoE</SelectItem>
+   858→              <SelectItem value="Leased Line">Leased Line</SelectItem>
+   859→              <SelectItem value="Hotspot">Hotspot</SelectItem>
+   860→            </SelectContent>
+   861→          </Select>
+   862→          <div className="relative">
+   863→            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+   864→            <Input placeholder="Search user / IP / MAC" className="h-8 w-[220px] pl-8 text-xs" value={search} onChange={(e) => setSearch(e.target.value)} />
+   865→          </div>
+   866→          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={load}>
+   867→            <RefreshCw className="h-3.5 w-3.5" />
+   868→          </Button>
+   869→        </div>
+   870→      </ActionBar>
+   871→
+   872→      <SectionCard>
+   873→        {loading ? (
+   874→          <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+   875→        ) : users.length === 0 ? (
+   876→          <EmptyState icon={<Search className="h-5 w-5" />} title="No live users match your filters" />
+   877→        ) : (
+   878→          <div className="overflow-x-auto">
+   879→            <Table>
+   880→              <TableHeader>
+   881→                <TableRow>
+   882→                  <TableHead className="w-8"><Checkbox checked={users.length > 0 && selected.size === users.length} onCheckedChange={toggleAll} /></TableHead>
+   883→                  <TableHead className="w-12">Sr.</TableHead>
+   884→                  <TableHead>Account No</TableHead>
+   885→                  <TableHead>User Name</TableHead>
+   886→                  <TableHead>Type</TableHead>
+   887→                  <TableHead>Connected From</TableHead>
+   888→                  <TableHead>Public IP</TableHead>
+   889→                  <TableHead>MAC Address</TableHead>
+   890→                  <TableHead>Start Time</TableHead>
+   891→                  <TableHead>Time</TableHead>
+   892→                  <TableHead>Upload</TableHead>
+   893→                  <TableHead>Download</TableHead>
+   894→                  <TableHead>Bandwidth</TableHead>
+   895→                  <TableHead>Device</TableHead>
+   896→                </TableRow>
+   897→              </TableHeader>
+   898→              <TableBody>
+   899→                {users.map((u) => (
+   900→                  <TableRow key={u.sr} data-state={selected.has(u.sessionid) ? "selected" : undefined}>
+   901→                    <TableCell><Checkbox checked={selected.has(u.sessionid)} onCheckedChange={() => toggleOne(u.sessionid)} /></TableCell>
+   902→                    <TableCell className="text-muted-foreground">{u.sr}</TableCell>
+   903→                    <TableCell className="font-mono text-xs">{u.accountNo}</TableCell>
+   904→                    <TableCell className="font-medium text-primary">{u.userName}</TableCell>
+   905→                    <TableCell><Badge variant="outline" className="text-[10px]">{u.userType}</Badge></TableCell>
+   906→                    <TableCell className="max-w-[180px] truncate font-mono text-xs text-muted-foreground">{u.connectedFrom}</TableCell>
+   907→                    <TableCell className="font-mono text-xs">{u.publicIp}</TableCell>
+   908→                    <TableCell className="font-mono text-xs text-muted-foreground">{u.mac}</TableCell>
+   909→                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{u.startTime}</TableCell>
+   910→                    <TableCell className="font-mono text-xs">{u.duration}</TableCell>
+   911→                    <TableCell className="text-xs">{u.upload}</TableCell>
+   912→                    <TableCell className="text-xs">{u.download}</TableCell>
+   913→                    <TableCell className="font-mono text-xs font-semibold text-primary">{u.bandwidth}</TableCell>
+   914→                    <TableCell className="text-xs text-muted-foreground">{u.deviceType}</TableCell>
+   915→                  </TableRow>
+   916→                ))}
+   917→              </TableBody>
+   918→            </Table>
+   919→          </div>
+   920→        )}
+   921→        <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
+   922→          <span>Showing {users.length} of {totalConnected} live users</span>
+   923→          <div className="flex items-center gap-2">
+   924→            <Button variant="outline" size="sm" disabled>Previous</Button>
+   925→            <span>Page 1 / {Math.ceil(totalConnected / 250)}</span>
+   926→            <Button variant="outline" size="sm">Next »</Button>
+   927→          </div>
+   928→        </div>
+   929→      </SectionCard>
+   930→
+   931→      {/* Send Message Dialog */}
+   932→      <Dialog open={messageOpen} onOpenChange={setMessageOpen}>
+   933→        <DialogContent>
+   934→          <DialogHeader><DialogTitle>Send Message to Live Users</DialogTitle></DialogHeader>
+   935→          <p className="text-sm text-muted-foreground">
+   936→            {selected.size > 0
+   937→              ? `Sending to ${selected.size} selected user(s).`
+   938→              : `Sending to all ${totalConnected} live users.`}
+   939→          </p>
+   940→          <Textarea
+   941→            placeholder="Type your message…"
+   942→            value={message}
+   943→            onChange={(e) => setMessage(e.target.value)}
+   944→            rows={4}
+   945→          />
+   946→          <DialogFooter>
+   947→            <Button variant="outline" onClick={() => setMessageOpen(false)}>Cancel</Button>
+   948→            <Button onClick={handleSendMessage} disabled={sending || !message.trim()}>
+   949→              {sending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…</> : <><Send className="mr-2 h-4 w-4" /> Send</>}
+   950→            </Button>
+   951→          </DialogFooter>
+   952→        </DialogContent>
+   953→      </Dialog>
+   954→    </div>
+   955→  );
+   956→}
+   957→
+   958→/* ================ SEARCH LIVE USERS (REAL FUNCTIONAL - same data, search-focused) ================ */
+   959→
+   960→function SearchLiveUsersPage({ moduleId, childId, grandchildId }: ViewProps) {
+   961→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   962→  const setActive = useAppStore((s) => s.setActive);
+   963→  const [users, setUsers] = React.useState<LiveUser[]>([]);
+   964→  const [totalConnected, setTotalConnected] = React.useState(0);
+   965→  const [loading, setLoading] = React.useState(true);
+   966→  const [search, setSearch] = React.useState("");
+   967→
+   968→  const load = React.useCallback(() => {
+   969→    setLoading(true);
+   970→    liveUsersApi.list({ search: search || undefined }).then((res) => {
+   971→      setUsers(res.data ?? []);
+   972→      setTotalConnected(res.totalConnected ?? 0);
+   973→      setLoading(false);
+   974→    });
+   975→  }, [search]);
+   976→
+   977→  React.useEffect(() => {
+   978→    const t = setTimeout(load, 300);
+   979→    return () => clearTimeout(t);
+   980→  }, [load]);
+   981→
+   982→  if (!mod || !child) return null;
+   983→
+   984→  return (
+   985→    <div className="space-y-6">
+   986→      <PageHeader
+   987→        title={grandchild?.label ?? "Search Live Users"}
+   988→        description="Search active sessions by username, IP, or MAC address."
+   989→        icon={<mod.icon className="h-5 w-5" />}
+   990→        breadcrumb={[
+   991→          { label: "Cryptsk" },
+   992→          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+   993→          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+   994→          { label: grandchild?.label ?? "Search" },
+   995→        ]}
+   996→      />
+   997→
+   998→      <SectionCard title="Search Criteria" description="Enter username, IP, or MAC to find live sessions">
+   999→        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+  1000→          <div className="relative flex-1">
+  1001→            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+  1002→            <Input
+  1003→              placeholder="Enter username, IP address, or MAC address"
+  1004→              className="pl-9"
+  1005→              value={search}
+  1006→              onChange={(e) => setSearch(e.target.value)}
+  1007→            />
+  1008→          </div>
+  1009→          <Button onClick={load}><Search className="mr-2 h-4 w-4" /> Search</Button>
+  1010→        </div>
+  1011→      </SectionCard>
+  1012→
+  1013→      <SectionCard title="Search Results" description={`${users.length} live session(s) found`}>
+  1014→        {loading ? (
+  1015→          <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+  1016→        ) : users.length === 0 ? (
+  1017→          <EmptyState icon={<Search className="h-5 w-5" />} title="No live sessions found" description="Enter a search term above." />
+  1018→        ) : (
+  1019→          <div className="overflow-x-auto">
+  1020→            <Table>
+  1021→              <TableHeader>
+  1022→                <TableRow>
+  1023→                  <TableHead>Account No</TableHead>
+  1024→                  <TableHead>User Name</TableHead>
+  1025→                  <TableHead>Type</TableHead>
+  1026→                  <TableHead>Public IP</TableHead>
+  1027→                  <TableHead>MAC Address</TableHead>
+  1028→                  <TableHead>Start Time</TableHead>
+  1029→                  <TableHead>Duration</TableHead>
+  1030→                  <TableHead>Bandwidth</TableHead>
+  1031→                </TableRow>
+  1032→              </TableHeader>
+  1033→              <TableBody>
+  1034→                {users.map((u) => (
+  1035→                  <TableRow key={u.sr}>
+  1036→                    <TableCell className="font-mono text-xs">{u.accountNo}</TableCell>
+  1037→                    <TableCell className="font-medium text-primary">{u.userName}</TableCell>
+  1038→                    <TableCell><Badge variant="outline" className="text-[10px]">{u.userType}</Badge></TableCell>
+  1039→                    <TableCell className="font-mono text-xs">{u.publicIp}</TableCell>
+  1040→                    <TableCell className="font-mono text-xs text-muted-foreground">{u.mac}</TableCell>
+  1041→                    <TableCell className="text-xs text-muted-foreground">{u.startTime}</TableCell>
+  1042→                    <TableCell className="font-mono text-xs">{u.duration}</TableCell>
+  1043→                    <TableCell className="font-mono text-xs font-semibold text-primary">{u.bandwidth}</TableCell>
+  1044→                  </TableRow>
+  1045→                ))}
+  1046→              </TableBody>
+  1047→            </Table>
+  1048→          </div>
+  1049→        )}
+  1050→      </SectionCard>
+  1051→    </div>
+  1052→  );
+  1053→}
+  1054→
+  1055→/* ================ Zone Management (existing, uses mock) ================ */
+  1056→
+  1057→function ZoneManagement({ moduleId, childId }: ViewProps) {
+  1058→  // Delegate to the real ManageZonesPage (legacy entry point)
+  1059→  return <ManageZonesPage moduleId={moduleId} childId={childId} grandchildId="" />;
+  1060→}
+  1061→
+  1062→/* ================ CREATE ZONE (REAL FUNCTIONAL) ================ */
+  1063→
+  1064→function CreateZonePage({ moduleId, childId, grandchildId }: ViewProps) {
+  1065→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  1066→  const setActive = useAppStore((s) => s.setActive);
+  1067→  const { toast } = useToast();
+  1068→  const [saving, setSaving] = React.useState(false);
+  1069→  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  1070→
+  1071→  const [form, setForm] = React.useState({
+  1072→    zonename: "",
+  1073→    description: "",
+  1074→    billingname: "",
+  1075→    maxconcurrentusers: "500",
+  1076→    pindiscount: "0",
+  1077→    packagediscount: "0",
+  1078→    discounton: "TOTAL" as "TOTAL" | "PACKAGE" | "PIN",
+  1079→    popname: "Bhiwani-POP1",
+  1080→    mincreditbalance: "0",
+  1081→    taxondiscount: "N" as "Y" | "N",
+  1082→    bandwidth: "100 Mbps",
+  1083→    status: "Y" as "Y" | "N",
+  1084→  });
+  1085→
+  1086→  const set = (field: string, value: string) => {
+  1087→    setForm((f) => ({ ...f, [field]: value }));
+  1088→    setErrors((e) => { const n = { ...e }; delete n[field]; return n; });
+  1089→  };
+  1090→
+  1091→  const handleSubmit = async (e: React.FormEvent) => {
+  1092→    e.preventDefault();
+  1093→    setSaving(true);
+  1094→    setErrors({});
+  1095→    const res = await zonesApi.create({
+  1096→      ...form,
+  1097→      maxconcurrentusers: Number(form.maxconcurrentusers),
+  1098→      pindiscount: Number(form.pindiscount),
+  1099→      packagediscount: Number(form.packagediscount),
+  1100→      mincreditbalance: Number(form.mincreditbalance),
+  1101→    });
+  1102→    setSaving(false);
+  1103→    if (res.responseCode === "0") {
+  1104→      toast({ title: "Zone created", description: `"${form.zonename}" has been created successfully.` });
+  1105→      setActive(moduleId, "zone", "manage-zone");
+  1106→    } else {
+  1107→      if (res.errors) setErrors(res.errors);
+  1108→      toast({ title: "Failed to create zone", description: res.responseMsg, variant: "destructive" });
+  1109→    }
+  1110→  };
+  1111→
+  1112→  if (!mod || !child) return null;
+  1113→
+  1114→  return (
+  1115→    <div className="space-y-6">
+  1116→      <PageHeader
+  1117→        title={grandchild?.label ?? "Create Zone"}
+  1118→        description="Create a new network zone. Fields mirror the accsium ZoneService.createZone API."
+  1119→        icon={<mod.icon className="h-5 w-5" />}
+  1120→        breadcrumb={[
+  1121→          { label: "Cryptsk" },
+  1122→          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+  1123→          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+  1124→          { label: grandchild?.label ?? "Create" },
+  1125→        ]}
+  1126→        actions={<Button variant="outline" onClick={() => setActive(moduleId, "zone", "manage-zone")}><X className="mr-2 h-4 w-4" /> Cancel</Button>}
+  1127→      />
+  1128→      <form onSubmit={handleSubmit} className="space-y-6">
+  1129→        <SectionCard title="Zone Information" description="Name and description">
+  1130→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  1131→            <div className="space-y-2">
+  1132→              <Label htmlFor="zonename">Zone Name <span className="text-primary">*</span></Label>
+  1133→              <Input id="zonename" value={form.zonename} onChange={(e) => set("zonename", e.target.value)} placeholder="e.g. Bhiwani-North" className={errors.zonename ? "border-primary" : ""} />
+  1134→              {errors.zonename && <p className="text-xs text-primary flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.zonename}</p>}
+  1135→            </div>
+  1136→            <div className="space-y-2">
+  1137→              <Label htmlFor="billingname">Billing Name</Label>
+  1138→              <Input id="billingname" value={form.billingname} onChange={(e) => set("billingname", e.target.value)} placeholder="Name for invoices" />
+  1139→            </div>
+  1140→            <div className="space-y-2 md:col-span-2">
+  1141→              <Label htmlFor="description">Description</Label>
+  1142→              <Textarea id="description" value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Zone description…" rows={2} />
+  1143→            </div>
+  1144→          </div>
+  1145→        </SectionCard>
+  1146→
+  1147→        <SectionCard title="Capacity & Bandwidth" description="Concurrent user limits and bandwidth">
+  1148→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  1149→            <div className="space-y-2">
+  1150→              <Label htmlFor="maxconcurrentusers">Max Concurrent Users</Label>
+  1151→              <Input id="maxconcurrentusers" type="number" min="0" value={form.maxconcurrentusers} onChange={(e) => set("maxconcurrentusers", e.target.value)} className={errors.maxconcurrentusers ? "border-primary" : ""} />
+  1152→              {errors.maxconcurrentusers && <p className="text-xs text-primary">{errors.maxconcurrentusers}</p>}
+  1153→            </div>
+  1154→            <div className="space-y-2">
+  1155→              <Label htmlFor="bandwidth">Bandwidth</Label>
+  1156→              <Input id="bandwidth" value={form.bandwidth} onChange={(e) => set("bandwidth", e.target.value)} placeholder="e.g. 1 Gbps" />
+  1157→            </div>
+  1158→            <div className="space-y-2">
+  1159→              <Label>POP (Point of Presence)</Label>
+  1160→              <Select value={form.popname} onValueChange={(v) => set("popname", v)}>
+  1161→                <SelectTrigger><SelectValue /></SelectTrigger>
+  1162→                <SelectContent>
+  1163→                  <SelectItem value="Bhiwani-POP1">Bhiwani-POP1</SelectItem>
+  1164→                  <SelectItem value="Bhiwani-POP2">Bhiwani-POP2</SelectItem>
+  1165→                  <SelectItem value="Bhiwani-POP3">Bhiwani-POP3</SelectItem>
+  1166→                  <SelectItem value="Rohtak-POP1">Rohtak-POP1</SelectItem>
+  1167→                </SelectContent>
+  1168→              </Select>
+  1169→            </div>
+  1170→            <div className="space-y-2">
+  1171→              <Label htmlFor="status">Status</Label>
+  1172→              <Select value={form.status} onValueChange={(v) => set("status", v)}>
+  1173→                <SelectTrigger><SelectValue /></SelectTrigger>
+  1174→                <SelectContent>
+  1175→                  <SelectItem value="Y">Active</SelectItem>
+  1176→                  <SelectItem value="N">Inactive</SelectItem>
+  1177→                </SelectContent>
+  1178→              </Select>
+  1179→            </div>
+  1180→          </div>
+  1181→        </SectionCard>
+  1182→
+  1183→        <SectionCard title="Discount & Billing" description="Pin/package discounts and credit settings">
+  1184→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  1185→            <div className="space-y-2">
+  1186→              <Label htmlFor="pindiscount">Pin Discount (%)</Label>
+  1187→              <Input id="pindiscount" type="number" step="0.01" min="0" value={form.pindiscount} onChange={(e) => set("pindiscount", e.target.value)} />
+  1188→            </div>
+  1189→            <div className="space-y-2">
+  1190→              <Label htmlFor="packagediscount">Package Discount (%)</Label>
+  1191→              <Input id="packagediscount" type="number" step="0.01" min="0" value={form.packagediscount} onChange={(e) => set("packagediscount", e.target.value)} />
+  1192→            </div>
+  1193→            <div className="space-y-2">
+  1194→              <Label>Discount On</Label>
+  1195→              <Select value={form.discounton} onValueChange={(v) => set("discounton", v)}>
+  1196→                <SelectTrigger className={errors.discounton ? "border-primary" : ""}><SelectValue /></SelectTrigger>
+  1197→                <SelectContent>
+  1198→                  <SelectItem value="TOTAL">Total Amount</SelectItem>
+  1199→                  <SelectItem value="PACKAGE">Package</SelectItem>
+  1200→                  <SelectItem value="PIN">Pin</SelectItem>
+  1201→                </SelectContent>
+  1202→              </Select>
+  1203→            </div>
+  1204→            <div className="space-y-2">
+  1205→              <Label htmlFor="mincreditbalance">Min Credit Balance</Label>
+  1206→              <Input id="mincreditbalance" type="number" step="0.01" min="0" value={form.mincreditbalance} onChange={(e) => set("mincreditbalance", e.target.value)} />
+  1207→            </div>
+  1208→            <div className="flex items-center gap-3 md:col-span-2">
+  1209→              <Switch id="taxondiscount" checked={form.taxondiscount === "Y"} onCheckedChange={(v) => set("taxondiscount", v ? "Y" : "N")} />
+  1210→              <div>
+  1211→                <Label htmlFor="taxondiscount" className="cursor-pointer">Tax on Discount</Label>
+  1212→                <p className="text-xs text-muted-foreground">Apply tax on the discounted amount</p>
+  1213→              </div>
+  1214→            </div>
+  1215→          </div>
+  1216→        </SectionCard>
+  1217→
+  1218→        <div className="flex items-center justify-end gap-3">
+  1219→          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "zone", "manage-zone")}>Cancel</Button>
+  1220→          <Button type="submit" disabled={saving}>
+  1221→            {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating…</> : <><Save className="mr-2 h-4 w-4" /> Create Zone</>}
+  1222→          </Button>
+  1223→        </div>
+  1224→      </form>
+  1225→    </div>
+  1226→  );
+  1227→}
+  1228→
+  1229→/* ================ MANAGE ZONES (REAL FUNCTIONAL) ================ */
+  1230→
+  1231→function ManageZonesPage({ moduleId, childId, grandchildId }: ViewProps) {
+  1232→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  1233→  const setActive = useAppStore((s) => s.setActive);
+  1234→  const { toast } = useToast();
+  1235→  const [zones, setZones] = React.useState<Zone[]>([]);
+  1236→  const [loading, setLoading] = React.useState(true);
+  1237→  const [search, setSearch] = React.useState("");
+  1238→  const [deleteTarget, setDeleteTarget] = React.useState<Zone | null>(null);
+  1239→  const [deleting, setDeleting] = React.useState(false);
+  1240→
+  1241→  const load = React.useCallback(() => {
+  1242→    setLoading(true);
+  1243→    zonesApi.list({ search: search || undefined }).then((res) => {
+  1244→      setZones(res.data ?? []);
+  1245→      setLoading(false);
+  1246→    });
+  1247→  }, [search]);
+  1248→
+  1249→  React.useEffect(() => {
+  1250→    const t = setTimeout(load, 300);
+  1251→    return () => clearTimeout(t);
+  1252→  }, [load]);
+  1253→
+  1254→  const handleDelete = async () => {
+  1255→    if (!deleteTarget) return;
+  1256→    setDeleting(true);
+  1257→    const res = await zonesApi.delete(deleteTarget.zoneid);
+  1258→    setDeleting(false);
+  1259→    if (res.responseCode === "0") {
+  1260→      toast({ title: "Zone deleted", description: `"${deleteTarget.zonename}" was deleted.` });
+  1261→      setDeleteTarget(null);
+  1262→      load();
+  1263→    } else {
+  1264→      toast({ title: "Delete failed", description: res.responseMsg, variant: "destructive" });
+  1265→    }
+  1266→  };
+  1267→
+  1268→  if (!mod || !child) return null;
+  1269→
+  1270→  return (
+  1271→    <div className="space-y-6">
+  1272→      <PageHeader
+  1273→        title={grandchild?.label ?? "Manage Zones"}
+  1274→        description="View, search and manage all network zones. Data is backed by the zones API."
+  1275→        icon={<mod.icon className="h-5 w-5" />}
+  1276→        breadcrumb={[
+  1277→          { label: "Cryptsk" },
+  1278→          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+  1279→          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+  1280→          { label: grandchild?.label ?? "Manage" },
+  1281→        ]}
+  1282→        actions={<Button onClick={() => setActive(moduleId, "zone", "create-zone")}><MapPin className="mr-2 h-4 w-4" /> Create Zone</Button>}
+  1283→      />
+  1284→
+  1285→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+  1286→        <KpiCard label="Total Zones" value={String(zones.length)} icon={<MapPin className="h-4 w-4" />} accent />
+  1287→        <KpiCard label="Active" value={String(zones.filter((z) => z.status === "Y").length)} icon={<Activity className="h-4 w-4" />} />
+  1288→        <KpiCard label="Total Users" value={String(zones.reduce((a, z) => a + z.users, 0))} icon={<UsersIcon className="h-4 w-4" />} />
+  1289→        <KpiCard label="Max Capacity" value={String(zones.reduce((a, z) => a + z.maxconcurrentusers, 0))} icon={<Network className="h-4 w-4" />} />
+  1290→      </div>
+  1291→
+  1292→      <ActionBar>
+  1293→        <div className="relative flex-1 max-w-xs">
+  1294→          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+  1295→          <Input placeholder="Search zones…" className="h-8 pl-8 text-xs" value={search} onChange={(e) => setSearch(e.target.value)} />
+  1296→        </div>
+  1297→        <Button variant="outline" size="sm" className="h-8" onClick={load}><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh</Button>
+  1298→      </ActionBar>
+  1299→
+  1300→      <SectionCard>
+  1301→        {loading ? (
+  1302→          <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+  1303→        ) : zones.length === 0 ? (
+  1304→          <EmptyState icon={<MapPin className="h-5 w-5" />} title="No zones found" description="Create your first zone to get started."
+  1305→            action={<Button onClick={() => setActive(moduleId, "zone", "create-zone")}><MapPin className="mr-2 h-4 w-4" /> Create Zone</Button>} />
+  1306→        ) : (
+  1307→          <div className="overflow-x-auto">
+  1308→            <Table>
+  1309→              <TableHeader><TableRow>
+  1310→                <TableHead>ID</TableHead><TableHead>Zone Name</TableHead><TableHead>Description</TableHead>
+  1311→                <TableHead>POP</TableHead><TableHead>Users</TableHead><TableHead>Max Capacity</TableHead>
+  1312→                <TableHead>Bandwidth</TableHead><TableHead>Discount</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
+  1313→              </TableRow></TableHeader>
+  1314→              <TableBody>
+  1315→                {zones.map((z) => (
+  1316→                  <TableRow key={z.zoneid}>
+  1317→                    <TableCell className="font-mono text-xs">{z.zoneid}</TableCell>
+  1318→                    <TableCell>
+  1319→                      <p className="font-medium">{z.zonename}</p>
+  1320→                      <p className="text-xs text-muted-foreground">{z.billingname}</p>
+  1321→                    </TableCell>
+  1322→                    <TableCell className="text-muted-foreground">{z.description}</TableCell>
+  1323→                    <TableCell className="text-xs">{z.popname}</TableCell>
+  1324→                    <TableCell>{z.users}</TableCell>
+  1325→                    <TableCell>{z.maxconcurrentusers}</TableCell>
+  1326→                    <TableCell className="font-mono text-xs">{z.bandwidth}</TableCell>
+  1327→                    <TableCell className="text-xs">
+  1328→                      {z.pindiscount > 0 && <Badge variant="secondary" className="mr-1 text-[10px]">Pin {z.pindiscount}%</Badge>}
+  1329→                      {z.packagediscount > 0 && <Badge variant="secondary" className="text-[10px]">Pkg {z.packagediscount}%</Badge>}
+  1330→                      {z.pindiscount === 0 && z.packagediscount === 0 && <span className="text-muted-foreground">—</span>}
+  1331→                    </TableCell>
+  1332→                    <TableCell><Badge variant={z.status === "Y" ? "default" : "secondary"} className={z.status === "Y" ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" : ""}>{z.status === "Y" ? "Active" : "Inactive"}</Badge></TableCell>
+  1333→                    <TableCell className="text-right">
+  1334→                      <div className="flex items-center justify-end gap-1">
+  1335→                        <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit zone", description: z.zonename })}><Pencil className="h-3.5 w-3.5" /></Button>
+  1336→                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(z)}><Trash2 className="h-3.5 w-3.5" /></Button>
+  1337→                      </div>
+  1338→                    </TableCell>
+  1339→                  </TableRow>
+  1340→                ))}
+  1341→              </TableBody>
+  1342→            </Table>
+  1343→          </div>
+  1344→        )}
+  1345→      </SectionCard>
+  1346→
+  1347→      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+  1348→        <DialogContent>
+  1349→          <DialogHeader><DialogTitle>Delete Zone</DialogTitle></DialogHeader>
+  1350→          <p className="text-sm text-muted-foreground">Are you sure you want to delete <span className="font-medium text-foreground">{deleteTarget?.zonename}</span>? This action cannot be undone.</p>
+  1351→          <DialogFooter>
+  1352→            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+  1353→            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+  1354→              {deleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…</> : <><Trash2 className="mr-2 h-4 w-4" /> Delete</>}
+  1355→            </Button>
+  1356→          </DialogFooter>
+  1357→        </DialogContent>
+  1358→      </Dialog>
+  1359→    </div>
+  1360→  );
+  1361→}
+  1362→
+  1363→function PoolManagement({ moduleId, childId }: ViewProps) {
+  1364→  const { mod, child } = useModuleHeader(moduleId, childId);
+  1365→  const { toast } = useToast();
+  1366→  if (!mod || !child) return null;
+  1367→  return (
+  1368→    <div className="space-y-6">
+  1369→      <PageHeader title={child.label} description={child.desc} icon={<mod.icon className="h-5 w-5" />}
+  1370→        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child.label }]}
+  1371→        actions={<Button onClick={() => toast({ title: "Create pool" })}><Database className="mr-2 h-4 w-4" /> Create Pool</Button>} />
+  1372→      <SectionCard title="IP Pools" description={`${POOLS.length} pools`}>
+  1373→        <div className="overflow-x-auto">
+  1374→          <Table>
+  1375→            <TableHeader><TableRow>
+  1376→              <TableHead>ID</TableHead><TableHead>Pool Name</TableHead><TableHead>Zone</TableHead>
+  1377→              <TableHead>Subnet</TableHead><TableHead>Gateway</TableHead><TableHead>Utilization</TableHead><TableHead className="text-right">Actions</TableHead>
+  1378→            </TableRow></TableHeader>
+  1379→            <TableBody>
+  1380→              {POOLS.map((p) => {
+  1381→                const pct = Math.round((p.used / p.total) * 100);
+  1382→                return (
+  1383→                  <TableRow key={p.id}>
+  1384→                    <TableCell className="font-mono text-xs">{p.id}</TableCell>
+  1385→                    <TableCell className="font-medium">{p.name}</TableCell>
+  1386→                    <TableCell className="text-muted-foreground">{p.zone}</TableCell>
+  1387→                    <TableCell className="font-mono text-xs">{p.subnet}</TableCell>
+  1388→                    <TableCell className="font-mono text-xs">{p.gateway}</TableCell>
+  1389→                    <TableCell>
+  1390→                      <div className="flex items-center gap-2">
+  1391→                        <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+  1392→                          <div className={pct > 80 ? "h-full bg-primary" : "h-full bg-emerald-500"} style={{ width: `${pct}%` }} />
+  1393→                        </div>
+  1394→                        <span className="text-xs text-muted-foreground">{p.used}/{p.total}</span>
+  1395→                      </div>
+  1396→                    </TableCell>
+  1397→                    <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit pool", description: p.name })}>Edit</Button></TableCell>
+  1398→                  </TableRow>
+  1399→                );
+  1400→              })}
+  1401→            </TableBody>
+  1402→          </Table>
+  1403→        </div>
+  1404→      </SectionCard>
+  1405→    </div>
+  1406→  );
+  1407→}
+  1408→
+  1409→function ManageCustomers({ moduleId, childId }: ViewProps) {
+  1410→  const { mod, child } = useModuleHeader(moduleId, childId);
+  1411→  if (!mod || !child) return null;
+  1412→  const customers = [
+  1413→    { id: "CUST001", name: "Shubham Kumar", mobile: "+91-98xxxxxx12", email: "shubham@example.com", area: "Bhiwani-Core", accounts: 1, status: "Active" },
+  1414→    { id: "CUST002", name: "Rajesh Verma", mobile: "+91-99xxxxxx87", email: "rajesh@example.com", area: "Bhiwani-North", accounts: 2, status: "Active" },
+  1415→    { id: "CUST003", name: "Suresh Yadav", mobile: "+91-97xxxxxx45", email: "suresh@example.com", area: "Bhiwani-South", accounts: 1, status: "Active" },
+  1416→    { id: "CUST004", name: "Sweety Devi", mobile: "+91-96xxxxxx33", email: "sweety@example.com", area: "Bhiwani-East", accounts: 1, status: "Suspended" },
+  1417→    { id: "CUST005", name: "Manish Sharma", mobile: "+91-90xxxxxx19", email: "manish@example.com", area: "Bhiwani-West", accounts: 3, status: "Active" },
+  1418→  ];
+  1419→  return (
+  1420→    <div className="space-y-6">
+  1421→      <PageHeader title={child.label} description={child.desc} icon={<mod.icon className="h-5 w-5" />}
+  1422→        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child.label }]} />
+  1423→      <SectionCard title="Customers" description={`${customers.length} customers`}>
+  1424→        <div className="overflow-x-auto">
+  1425→          <Table>
+  1426→            <TableHeader><TableRow>
+  1427→              <TableHead>ID</TableHead><TableHead>Name</TableHead><TableHead>Mobile</TableHead>
+  1428→              <TableHead>Email</TableHead><TableHead>Area</TableHead><TableHead>Accounts</TableHead><TableHead>Status</TableHead>
+  1429→            </TableRow></TableHeader>
+  1430→            <TableBody>
+  1431→              {customers.map((c) => (
+  1432→                <TableRow key={c.id}>
+  1433→                  <TableCell className="font-mono text-xs">{c.id}</TableCell>
+  1434→                  <TableCell className="font-medium">{c.name}</TableCell>
+  1435→                  <TableCell className="text-muted-foreground">{c.mobile}</TableCell>
+  1436→                  <TableCell className="text-muted-foreground">{c.email}</TableCell>
+  1437→                  <TableCell className="text-muted-foreground">{c.area}</TableCell>
+  1438→                  <TableCell>{c.accounts}</TableCell>
+  1439→                  <TableCell><Badge variant={c.status === "Active" ? "default" : "secondary"} className={c.status === "Active" ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" : "bg-primary/10 text-primary hover:bg-primary/10"}>{c.status}</Badge></TableCell>
+  1440→                </TableRow>
+  1441→              ))}
+  1442→            </TableBody>
+  1443→          </Table>
+  1444→        </div>
+  1445→      </SectionCard>
+  1446→    </div>
+  1447→  );
+  1448→}
+  1449→

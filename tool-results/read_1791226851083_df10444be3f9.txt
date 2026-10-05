@@ -1,0 +1,593 @@
+     1→import type { LucideIcon } from "lucide-react";
+     2→import {
+     3→  Settings2,
+     4→  ShieldCheck,
+     5→  Boxes,
+     6→  CreditCard,
+     7→  Users,
+     8→  Ticket,
+     9→  ShoppingCart,
+    10→  PackageSearch,
+    11→  BellRing,
+    12→  Tv,
+    13→  Wallet,
+    14→  Globe,
+    15→  Radar,
+    16→  BarChart3,
+    17→  HelpCircle,
+    18→  LayoutDashboard,
+    19→  type Icon,
+    20→} from "lucide-react";
+    21→
+    22→export interface NavGrandchild {
+    23→  id: string;
+    24→  label: string;
+    25→  /** JSP/Action URL on the reference 24online site (for documentation) */
+    26→  refUrl?: string;
+    27→  desc?: string;
+    28→}
+    29→
+    30→export interface NavChild {
+    31→  id: string;
+    32→  label: string;
+    33→  desc: string;
+    34→  /** reference URL on 24online site */
+    35→  refUrl?: string;
+    36→  /** third-level sub-pages (sub-submenus). Empty array = leaf. */
+    37→  grandchildren?: NavGrandchild[];
+    38→}
+    39→
+    40→export interface NavModule {
+    41→  id: string;
+    42→  label: string;
+    43→  icon: LucideIcon;
+    44→  desc: string;
+    45→  children: NavChild[];
+    46→}
+    47→
+    48→/**
+    49→ * Full Cryptsk navigation tree — mirrors the 24online module structure
+    50→ * with ALL THREE LEVELS:
+    51→ *   - 15 top-level modules
+    52→ *   - 67 submenus (level 2)
+    53→ *   - 139 sub-submenus (level 3)
+    54→ *
+    55→ * Each leaf (level-2 without grandchildren, or level-3 grandchild) is a
+    56→ * navigable page. refUrl is the original 24online URL for future reference.
+    57→ */
+    58→export const NAV_MODULES: NavModule[] = [
+    59→  {
+    60→    id: "system",
+    61→    label: "System",
+    62→    icon: Settings2,
+    63→    desc: "Network, firewall, DHCP, PPPoE, NAS, captive portal and system settings.",
+    64→    children: [
+    65→      {
+    66→        id: "network", label: "Network", desc: "Interfaces, gateways, DNS, routes, priorities",
+    67→        refUrl: "/24online/system/interfaceconfiguration.do",
+    68→        grandchildren: [
+    69→          { id: "interface", label: "Interface", refUrl: "/24online/system/interfaceconfiguration.do", desc: "View & configure network interfaces" },
+    70→          { id: "gateway", label: "Gateway", refUrl: "/24online/system/managegateway.do", desc: "Manage gateways" },
+    71→          { id: "priorities", label: "Priorities", refUrl: "/24online/webpages/sysmgt/managepriorities.jsp", desc: "Traffic priorities" },
+    72→          { id: "dns", label: "DNS", refUrl: "/24online/webpages/sysmgt/configuredns.jsp", desc: "DNS configuration" },
+    73→          { id: "static-route", label: "Static Route", refUrl: "/24online/webpages/sysmgt/routeconfig/addroute.jsp", desc: "Static routes" },
+    74→        ],
+    75→      },
+    76→      {
+    77→        id: "firewall", label: "Firewall", desc: "Create & manage rules, DoS, free sites",
+    78→        grandchildren: [
+    79→          { id: "create", label: "Create", refUrl: "/24online/webpages/sysmgt/createfirewall.jsp", desc: "Create firewall rule" },
+    80→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/sysmgt/managefirewall.jsp", desc: "Manage firewall rules" },
+    81→          { id: "dos-settings", label: "DoS Settings", refUrl: "/24online/webpages/sysmgt/dosattacksconfiguration.jsp", desc: "DoS protection settings" },
+    82→          { id: "dos-bypass", label: "DoS Bypass", refUrl: "/24online/webpages/sysmgt/dosattacksbypassmgt.jsp", desc: "DoS bypass hosts" },
+    83→          { id: "free-sites", label: "Free Sites", refUrl: "/24online/webpages/sysmgt/managefreesites.jsp", desc: "Zero-rated sites" },
+    84→        ],
+    85→      },
+    86→      {
+    87→        id: "dhcp", label: "DHCP", desc: "Manage DHCP scopes and IP leasing reports",
+    88→        grandchildren: [
+    89→          { id: "manage-dhcp", label: "Manage DHCP", refUrl: "/24online/webpages/sysmgt/managedhcp.jsp", desc: "DHCP scopes" },
+    90→          { id: "ip-leasing", label: "IP Leasing Report", refUrl: "/24online/webpages/sysmgt/dhcpleasereport.jsp", desc: "IP lease report" },
+    91→        ],
+    92→      },
+    93→      { id: "services", label: "Services", desc: "Control running system services", refUrl: "/24online/webpages/sysmgt/controlservices.jsp" },
+    94→      {
+    95→        id: "pppoe", label: "PPPoE", desc: "Manage PPPoE configuration",
+    96→        grandchildren: [
+    97→          { id: "manage-pppoe", label: "Manage PPPoE", refUrl: "/24online/webpages/sysmgt/managepppoe.jsp", desc: "PPPoE config" },
+    98→        ],
+    99→      },
+   100→      { id: "console", label: "Console", desc: "Reset console password", refUrl: "/24online/webpages/sysmgt/resetconsolepass.jsp" },
+   101→      {
+   102→        id: "manage-data", label: "Manage Data", desc: "Backup, restore, purge, migration, auth logs",
+   103→        grandchildren: [
+   104→          { id: "backup", label: "Backup", refUrl: "/24online/webpages/sysmgt/backupdata.jsp", desc: "Backup data" },
+   105→          { id: "backup-schedule", label: "Backup Schedule", refUrl: "/24online/webpages/sysmgt/backupschedule.jsp", desc: "Schedule backups" },
+   106→          { id: "restore", label: "Restore", refUrl: "/24online/webpages/sysmgt/restoredata.jsp", desc: "Restore data" },
+   107→          { id: "auto-purge", label: "Auto Purge", refUrl: "/24online/webpages/sysmgt/autopurge.jsp", desc: "Auto purge config" },
+   108→          { id: "manual-purge", label: "Manual Purge", refUrl: "/24online/webpages/sysmgt/purgedata.jsp", desc: "Manual purge" },
+   109→          { id: "migrate-user", label: "Migrate User", refUrl: "/24online/webpages/sysmgt/migrateuser.jsp", desc: "Migrate users" },
+   110→          { id: "auth-logs", label: "Authentication Logs", refUrl: "/24online/webpages/sysmgt/radiusauthlog.jsp", desc: "RADIUS auth logs" },
+   111→        ],
+   112→      },
+   113→      {
+   114→        id: "client-services", label: "Client Services", desc: "Client GUI, web service, password config",
+   115→        grandchildren: [
+   116→          { id: "parameters", label: "Parameters", refUrl: "/24online/webpages/sysmgt/clientservices.jsp", desc: "Client service parameters" },
+   117→          { id: "customized-images", label: "Customized Images", refUrl: "/24online/webpages/sysmgt/myaccountimages.jsp", desc: "Custom images" },
+   118→          { id: "forgot-password", label: "Forgot Password", refUrl: "/24online/webpages/usermgt/forgotpassword.jsp", desc: "Forgot password config" },
+   119→          { id: "clientgui-urls", label: "ClientGUI URLs", refUrl: "/24online/webpages/sysmgt/manageclientguiurls.jsp", desc: "Client GUI URLs" },
+   120→          { id: "webservice-config", label: "Webservice Config", refUrl: "/24online/webpages/sysmgt/webserviceconfig.jsp", desc: "Web service config" },
+   121→          { id: "password-config", label: "Password Config", refUrl: "/24online/webpages/sysmgt/passwordconfig.jsp", desc: "Password policy" },
+   122→          { id: "configuration", label: "Configuration", refUrl: "/24online/webpages/sysmgt/clientconfiguration.jsp", desc: "Client configuration" },
+   123→        ],
+   124→      },
+   125→      {
+   126→        id: "acl", label: "ACL", desc: "Access control, user types, console ACL",
+   127→        grandchildren: [
+   128→          { id: "access-control", label: "Access Control", refUrl: "/24online/webpages/sysmgt/aclmoduledetail.jsp", desc: "Module access control" },
+   129→          { id: "user-type", label: "User Type", refUrl: "/24online/webpages/sysmgt/aclrolemgt.jsp", desc: "User types/roles" },
+   130→          { id: "user-access", label: "User Access", refUrl: "/24online/webpages/sysmgt/aclsecuritymgt.jsp", desc: "User access rights" },
+   131→          { id: "console-acl", label: "Console ACL", refUrl: "/24online/webpages/sysmgt/consoleacl.jsp", desc: "Console ACL" },
+   132→        ],
+   133→      },
+   134→      {
+   135→        id: "dynamic-dns", label: "Dynamic DNS", desc: "Register & manage dynamic DNS hosts",
+   136→        grandchildren: [
+   137→          { id: "register-host", label: "Register Host", refUrl: "/24online/webpages/sysmgt/adddynamicdnsservice.jsp", desc: "Register DDNS host" },
+   138→          { id: "manage-hosts", label: "Manage Hosts", refUrl: "/24online/webpages/sysmgt/managedynamicdnsservices.jsp", desc: "Manage DDNS hosts" },
+   139→        ],
+   140→      },
+   141→      {
+   142→        id: "captive-portal", label: "Captive Portal", desc: "Client login, templates, portal config",
+   143→        grandchildren: [
+   144→          { id: "create", label: "Create", refUrl: "/24online/webpages/sysmgt/createclientlogin.jsp", desc: "Create client login template" },
+   145→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/sysmgt/manageclientlogin.jsp", desc: "Manage client login templates" },
+   146→          { id: "client-page", label: "Client Page", refUrl: "/24online/webpages/sysmgt/clientpage.jsp", desc: "Client page design" },
+   147→          { id: "portal-networks", label: "Portal Networks", refUrl: "/24online/webpages/sysmgt/templatezonerel.jsp", desc: "Template-zone relation" },
+   148→          { id: "leased-line-page", label: "Leased Line Page", refUrl: "/24online/webpages/sysmgt/leasedlineusertemplate.jsp", desc: "Leased line template" },
+   149→          { id: "messages", label: "Messages", refUrl: "/24online/webpages/sysmgt/cpMessages.jsp", desc: "Portal messages" },
+   150→          { id: "portal-config", label: "Portal Config", refUrl: "/24online/webpages/sysmgt/portalconfig.jsp", desc: "Portal configuration" },
+   151→          { id: "configure-profile", label: "Configure Profile", refUrl: "/24online/webpages/sysmgt/configureprofile.jsp", desc: "Profile configuration" },
+   152→          { id: "security-config", label: "Security Configuration", refUrl: "/24online/webpages/sysmgt/cpsecurityconfig.jsp", desc: "Security config" },
+   153→          { id: "social-media", label: "Social Media Config", refUrl: "/24online/webpages/sysmgt/cpsocialmedia.jsp", desc: "Social media login" },
+   154→          { id: "cp-registration", label: "CP Registration Policy", refUrl: "/24online/webpages/sysmgt/cpregistrationpolicy.jsp", desc: "Registration policy" },
+   155→        ],
+   156→      },
+   157→      {
+   158→        id: "nas", label: "NAS Management", desc: "RADIUS clients, attribute mapping, connectivity",
+   159→        grandchildren: [
+   160→          { id: "nas-ip-config", label: "NAS IP Configuration", refUrl: "/24online/webpages/sysmgt/createnasconfig.jsp", desc: "NAS IP config" },
+   161→          { id: "radius-config", label: "Radius Configuration", refUrl: "/24online/webpages/sysmgt/manageglobalradiusconfig.jsp", desc: "Global RADIUS config" },
+   162→          { id: "nas-configuration", label: "NAS Configuration", refUrl: "/24online/webpages/sysmgt/nasconfiguration.jsp", desc: "NAS configuration" },
+   163→          { id: "preferences", label: "Preferences", refUrl: "/24online/webpages/sysmgt/naspreferences.jsp", desc: "NAS preferences" },
+   164→          { id: "connectivity", label: "Connectivity", refUrl: "/24online/webpages/sysmgt/managenasconnectivity.jsp", desc: "NAS connectivity" },
+   165→          { id: "nas-client-config", label: "NAS Client Config", refUrl: "/24online/webpages/sysmgt/managenasclientconfig.jsp", desc: "NAS client config" },
+   166→          { id: "attribute-mapping", label: "Attribute Mapping", refUrl: "/24online/webpages/sysmgt/attributemapping.jsp", desc: "RADIUS attribute mapping" },
+   167→        ],
+   168→      },
+   169→      {
+   170→        id: "status-tracker", label: "Status Tracker", desc: "Devices, logs, packet capture",
+   171→        grandchildren: [
+   172→          { id: "add-device", label: "Add Device", refUrl: "/24online/webpages/sysmgt/adddevice.jsp", desc: "Add tracked device" },
+   173→          { id: "manage-devices", label: "Manage Devices", refUrl: "/24online/webpages/sysmgt/managedevices.jsp", desc: "Manage devices" },
+   174→          { id: "device-logs", label: "Device Logs Details", refUrl: "/24online/webpages/sysmgt/devicelogs.jsp", desc: "Device log details" },
+   175→        ],
+   176→      },
+   177→      { id: "system-settings", label: "System Settings", desc: "Proactive reports, GUI preferences", refUrl: "/24online/webpages/sysmgt/manageproactivereports.jsp" },
+   178→      { id: "dashboard-conf", label: "Dashboard Conf", desc: "Configure dashboard layouts", refUrl: "/24online/webpages/sysmgt/dashboardconfig.jsp" },
+   179→      {
+   180→        id: "system-tools", label: "System Tools", desc: "Diagnostics and utilities",
+   181→        grandchildren: [
+   182→          { id: "packet-capture", label: "Packet Capture", refUrl: "/24online/webpages/sysmgt/packetcapture.jsp", desc: "Packet capture tool" },
+   183→        ],
+   184→      },
+   185→    ],
+   186→  },
+   187→  {
+   188→    id: "policy",
+   189→    label: "Policy",
+   190→    icon: ShieldCheck,
+   191→    desc: "Surfing, access, bandwidth, data transfer, FAP and QoS policies.",
+   192→    children: [
+   193→      {
+   194→        id: "surfing-quota", label: "Surfing Quota", desc: "Create & manage surfing quota policies",
+   195→        grandchildren: [
+   196→          { id: "create", label: "Create", refUrl: "/24online/webpages/polmgt/createsurfpolicy.jsp", desc: "Create surf policy" },
+   197→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/polmgt/managesurfpolicy.jsp", desc: "Manage surf policies" },
+   198→        ],
+   199→      },
+   200→      {
+   201→        id: "access-time", label: "Access Time", desc: "Time-based access policies",
+   202→        grandchildren: [
+   203→          { id: "create", label: "Create", refUrl: "/24online/webpages/polmgt/createaccesspolicy.jsp", desc: "Create access policy" },
+   204→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/polmgt/manageaccesspolicy.jsp", desc: "Manage access policies" },
+   205→        ],
+   206→      },
+   207→      {
+   208→        id: "bandwidth", label: "Bandwidth", desc: "Bandwidth restriction policies",
+   209→        grandchildren: [
+   210→          { id: "create", label: "Create", refUrl: "/24online/webpages/polmgt/createbandwidthrestriction.jsp", desc: "Create bandwidth policy" },
+   211→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/polmgt/managebandwidthpolicy.jsp", desc: "Manage bandwidth policies" },
+   212→          { id: "schedule", label: "Schedule", refUrl: "/24online/webpages/polmgt/manageschedule.jsp", desc: "Bandwidth schedules" },
+   213→        ],
+   214→      },
+   215→      {
+   216→        id: "data-transfer", label: "Data Transfer Policy", desc: "Data transfer quotas",
+   217→        grandchildren: [
+   218→          { id: "create", label: "Create", refUrl: "/24online/webpages/polmgt/createdatatransferpolicy.jsp", desc: "Create data transfer policy" },
+   219→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/polmgt/managedatatransferpolicy.jsp", desc: "Manage data transfer policies" },
+   220→        ],
+   221→      },
+   222→      {
+   223→        id: "fap", label: "Fair Access Policy", desc: "FAP rules and thresholds",
+   224→        grandchildren: [
+   225→          { id: "create-fap", label: "Create FAP Details", refUrl: "/24online/webpages/fap/createfapdetails.jsp", desc: "Create FAP" },
+   226→          { id: "manage-fap", label: "Manage FAP Details", refUrl: "/24online/webpages/fap/managefapdetails.jsp", desc: "Manage FAP" },
+   227→        ],
+   228→      },
+   229→      {
+   230→        id: "qos", label: "QoS Policy", desc: "Cache & QoS scheduling",
+   231→        grandchildren: [
+   232→          { id: "create-cache", label: "Create Cache Policy", refUrl: "/24online/webpages/polmgt/createcachepolicy.jsp", desc: "Create cache policy" },
+   233→          { id: "manage-cache", label: "Manage Cache Policy", refUrl: "/24online/webpages/polmgt/managecachepolicy.jsp", desc: "Manage cache policies" },
+   234→        ],
+   235→      },
+   236→    ],
+   237→  },
+   238→  {
+   239→    id: "package",
+   240→    label: "Package",
+   241→    icon: Boxes,
+   242→    desc: "Plans, invoices, templates, ancillary services and tax.",
+   243→    children: [
+   244→      {
+   245→        id: "package", label: "Package", desc: "Create & manage billing plans",
+   246→        grandchildren: [
+   247→          { id: "create", label: "Create", refUrl: "/24online/webpages/grpmgt/addupdategroup.jsp", desc: "Create plan" },
+   248→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/grpmgt/managegroups.jsp", desc: "Manage plans" },
+   249→        ],
+   250→      },
+   251→      {
+   252→        id: "invoice", label: "Invoice", desc: "Invoice front page, purge, reports, zone invoice",
+   253→        grandchildren: [
+   254→          { id: "custom-invoice", label: "Custom Invoice", refUrl: "/24online/webpages/grpmgt/custominvoice.jsp", desc: "Custom invoices" },
+   255→          { id: "purge-invoice", label: "Purge Invoice", refUrl: "/24online/webpages/grpmgt/purgeinvoice.jsp", desc: "Purge invoices" },
+   256→          { id: "invoice-reports", label: "Invoice Reports", refUrl: "/24online/webpages/grpmgt/invoicefrontpage.jsp?mode=reports", desc: "Invoice reports" },
+   257→          { id: "create-invoice", label: "Create Invoice", refUrl: "/24online/webpages/grpmgt/createinvoice.jsp", desc: "Create invoice" },
+   258→          { id: "configuration", label: "Configuration", refUrl: "/24online/webpages/grpmgt/invoiceconfiguration.jsp", desc: "Invoice configuration" },
+   259→          { id: "zone-invoice", label: "Zone Invoice", refUrl: "/24online/webpages/grpmgt/zoneinvoice.jsp", desc: "Zone-wise invoices" },
+   260→        ],
+   261→      },
+   262→      {
+   263→        id: "invoice-template", label: "Invoice Template", desc: "Invoice template designer",
+   264→        grandchildren: [
+   265→          { id: "create", label: "Create", refUrl: "/24online/webpages/grpmgt/createinvoicetemplate.jsp", desc: "Create template" },
+   266→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/grpmgt/manageinvoicetemplate.jsp", desc: "Manage templates" },
+   267→        ],
+   268→      },
+   269→      {
+   270→        id: "ancillary", label: "Ancillary Service", desc: "Add-on services",
+   271→        grandchildren: [
+   272→          { id: "add-service", label: "Add Service", refUrl: "/24online/webpages/grpmgt/createancillaryservice.jsp", desc: "Add ancillary service" },
+   273→          { id: "manage-service", label: "Manage Service", refUrl: "/24online/webpages/grpmgt/manageancillaryservice.jsp", desc: "Manage ancillary services" },
+   274→          { id: "default-service", label: "Default Service", refUrl: "/24online/webpages/grpmgt/configureancservice.jsp", desc: "Default ancillary services" },
+   275→        ],
+   276→      },
+   277→      {
+   278→        id: "tax", label: "Tax Information", desc: "Tax configuration",
+   279→        grandchildren: [
+   280→          { id: "add", label: "Add", refUrl: "/24online/webpages/grpmgt/createtaxinfo.jsp", desc: "Add tax" },
+   281→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/grpmgt/managetaxinfo.jsp", desc: "Manage taxes" },
+   282→          { id: "default-tax", label: "Default Tax", refUrl: "/24online/webpages/grpmgt/configuretaxinfo.jsp", desc: "Default tax config" },
+   283→        ],
+   284→      },
+   285→    ],
+   286→  },
+   287→  {
+   288→    id: "payment-gateway",
+   289→    label: "Payment Gateway",
+   290→    icon: CreditCard,
+   291→    desc: "Configure online payment gateways and merchants.",
+   292→    children: [
+   293→      { id: "configure", label: "Configure", desc: "Gateway configuration", refUrl: "/24online/webpages/paymentgateway/configure.jsp" },
+   294→      {
+   295→        id: "merchant", label: "Merchant", desc: "Merchant accounts",
+   296→        grandchildren: [
+   297→          { id: "create", label: "Create", refUrl: "/24online/webpages/paymentgateway/createmerchant.jsp", desc: "Create merchant" },
+   298→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/paymentgateway/managemerchant.jsp", desc: "Manage merchants" },
+   299→        ],
+   300→      },
+   301→      { id: "search-transactions", label: "Search Transactions", desc: "Search gateway transactions", refUrl: "/24online/webpages/paymentgateway/searchtransactions.jsp" },
+   302→    ],
+   303→  },
+   304→  {
+   305→    id: "user",
+   306→    label: "User",
+   307→    icon: Users,
+   308→    desc: "Subscribers, live sessions, zones, pools, customers.",
+   309→    children: [
+   310→      {
+   311→        id: "manage-users", label: "Manage Users", desc: "Add, search, advance search, leased line users",
+   312→        grandchildren: [
+   313→          { id: "add-user", label: "Add User", refUrl: "/24online/webpages/usermgt/registration.jsp", desc: "Register new user" },
+   314→          { id: "search-user", label: "Search User", refUrl: "/24online/webpages/usermgt/searchuser.jsp", desc: "Search users" },
+   315→          { id: "advance-search", label: "Advance Search User", refUrl: "/24online/webpages/usermgt/advancesearchuser.jsp", desc: "Advanced user search" },
+   316→          { id: "leased-line-users", label: "Leased Line Users", refUrl: "/24online/webpages/usermgt/reloginleasedlineusers.jsp", desc: "Leased line users" },
+   317→        ],
+   318→      },
+   319→      {
+   320→        id: "live-users", label: "Live Users", desc: "Active sessions and bandwidth",
+   321→        grandchildren: [
+   322→          { id: "manage-live-users", label: "Manage Live Users", refUrl: "/24online/webpages/usermgt/liveusers.jsp", desc: "Manage live sessions" },
+   323→          { id: "search-live-users", label: "Search Live Users", refUrl: "/24online/webpages/usermgt/searchliveusers.jsp", desc: "Search live sessions" },
+   324→        ],
+   325→      },
+   326→      {
+   327→        id: "zone", label: "Zone Management", desc: "Network zones",
+   328→        grandchildren: [
+   329→          { id: "create-zone", label: "Create Zone", refUrl: "/24online/webpages/usermgt/createzone.jsp", desc: "Create zone" },
+   330→          { id: "manage-zone", label: "Manage Zone", refUrl: "/24online/webpages/usermgt/managezone.jsp", desc: "Manage zones" },
+   331→          { id: "search-zone-admin", label: "Search Zone Admin", refUrl: "/24online/webpages/usermgt/searchzone.jsp", desc: "Search zone admins" },
+   332→        ],
+   333→      },
+   334→      {
+   335→        id: "pool", label: "Pool Management", desc: "IP pools",
+   336→        grandchildren: [
+   337→          { id: "create-pool", label: "Create Pool", refUrl: "/24online/webpages/usermgt/createpool.jsp", desc: "Create IP pool" },
+   338→          { id: "manage-pool", label: "Manage Pool", refUrl: "/24online/webpages/usermgt/managepool.jsp", desc: "Manage IP pools" },
+   339→          { id: "search-node", label: "Search Node", refUrl: "/24online/webpages/usermgt/searchnode.jsp", desc: "Search nodes" },
+   340→          { id: "search-network", label: "Search Network", refUrl: "/24online/webpages/usermgt/searchnetwork.jsp", desc: "Search networks" },
+   341→        ],
+   342→      },
+   343→      {
+   344→        id: "customers", label: "Manage Customers", desc: "Customer accounts",
+   345→        grandchildren: [
+   346→          { id: "edit-customers", label: "Edit Customers", refUrl: "/24online/webpages/usermgt/editcustomer.jsp", desc: "Edit customers" },
+   347→          { id: "purge-customers", label: "Purge Customers", refUrl: "/24online/webpages/usermgt/purgecustomer.jsp", desc: "Purge customers" },
+   348→        ],
+   349→      },
+   350→      { id: "dynamize", label: "Dynamize Fields", desc: "Dynamic user fields", refUrl: "/24online/webpages/usermgt/dynamizefields.jsp" },
+   351→      { id: "demographic", label: "Demographic Fields", desc: "Demographic field config", refUrl: "/24online/webpages/usermgt/demographicfields.jsp" },
+   352→    ],
+   353→  },
+   354→  {
+   355→    id: "ticket",
+   356→    label: "Ticket Management",
+   357→    icon: Ticket,
+   358→    desc: "Support ticket search and creation.",
+   359→    children: [
+   360→      { id: "search-ticket", label: "Search Ticket", desc: "Find and manage tickets", refUrl: "/24online/webpages/ticketmgt/searchticket.jsp" },
+   361→      { id: "create-ticket", label: "Create Ticket", desc: "Open a new support ticket", refUrl: "/24online/webpages/ticketmgt/createticket.jsp" },
+   362→    ],
+   363→  },
+   364→  {
+   365→    id: "sales",
+   366→    label: "Sales Management",
+   367→    icon: ShoppingCart,
+   368→    desc: "Leads and service requests.",
+   369→    children: [
+   370→      {
+   371→        id: "lead", label: "Lead Management", desc: "Sales leads pipeline",
+   372→        grandchildren: [
+   373→          { id: "create", label: "Create", refUrl: "/24online/webpages/salesmgt/createlead.jsp", desc: "Create lead" },
+   374→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/salesmgt/managelead.jsp", desc: "Manage leads" },
+   375→        ],
+   376→      },
+   377→      {
+   378→        id: "service-request", label: "Service Request", desc: "Customer service requests",
+   379→        grandchildren: [
+   380→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/salesmgt/manageservicerequest.jsp", desc: "Manage service requests" },
+   381→        ],
+   382→      },
+   383→    ],
+   384→  },
+   385→  {
+   386→    id: "inventory",
+   387→    label: "Inventory",
+   388→    icon: PackageSearch,
+   389→    desc: "Stock transactions and master items.",
+   390→    children: [
+   391→      {
+   392→        id: "transaction", label: "Transaction", desc: "Indent, PO, receipt, issue, transfers, returns",
+   393→        grandchildren: [
+   394→          { id: "indent", label: "Indent", refUrl: "/24online/webpages/inventorymgt/indent.jsp", desc: "Indents" },
+   395→          { id: "purchase-order", label: "Purchase Order", refUrl: "/24online/webpages/inventorymgt/purchaseorder.jsp", desc: "Purchase orders" },
+   396→          { id: "receipt", label: "Receipt", refUrl: "/24online/webpages/inventorymgt/receipt.jsp", desc: "Goods receipt" },
+   397→          { id: "issue", label: "Issue", refUrl: "/24online/webpages/inventorymgt/issue.jsp", desc: "Stock issue" },
+   398→          { id: "stock-transfer", label: "Stock Transfer", refUrl: "/24online/webpages/inventorymgt/stocktransfer.jsp", desc: "Stock transfers" },
+   399→          { id: "customer-return", label: "Customer Return", refUrl: "/24online/webpages/inventorymgt/customerreturn.jsp", desc: "Customer returns" },
+   400→          { id: "supplier-return", label: "Supplier Return", refUrl: "/24online/webpages/inventorymgt/supplierreturn.jsp", desc: "Supplier returns" },
+   401→        ],
+   402→      },
+   403→      {
+   404→        id: "master", label: "Master", desc: "Item, warehouse, vendor, UOM, stock view",
+   405→        grandchildren: [
+   406→          { id: "item-master", label: "Item Master", refUrl: "/24online/webpages/inventorymgt/itemmaster.jsp", desc: "Item master" },
+   407→          { id: "ware-house", label: "Ware House", refUrl: "/24online/webpages/inventorymgt/warehouse.jsp", desc: "Warehouses" },
+   408→          { id: "vendor", label: "Vendor", refUrl: "/24online/webpages/inventorymgt/vendor.jsp", desc: "Vendors" },
+   409→          { id: "uom", label: "Unit of Measure", refUrl: "/24online/webpages/inventorymgt/uom.jsp", desc: "Units of measure" },
+   410→          { id: "view-stock", label: "View Stock", refUrl: "/24online/webpages/inventorymgt/viewstock.jsp", desc: "View stock" },
+   411→          { id: "emi-master", label: "EMI Master", refUrl: "/24online/webpages/inventorymgt/emimaster.jsp", desc: "EMI master" },
+   412→        ],
+   413→      },
+   414→    ],
+   415→  },
+   416→  {
+   417→    id: "alert",
+   418→    label: "Alert",
+   419→    icon: BellRing,
+   420→    desc: "SMS gateway, email and alert configuration.",
+   421→    children: [
+   422→      {
+   423→        id: "sms-gateway", label: "SMS Gateway", desc: "SMS logs and bulk SMS",
+   424→        grandchildren: [
+   425→          { id: "manage", label: "Manage", refUrl: "/24online/webpages/smsgateway/managesmsgateway.jsp", desc: "Manage SMS gateway" },
+   426→          { id: "configure-details", label: "Configure Details", refUrl: "/24online/webpages/smsgateway/configuredetails.jsp", desc: "Configure SMS gateway" },
+   427→          { id: "bulk-sms", label: "Bulk SMS", refUrl: "/24online/webpages/smsgateway/searchcriteriaforbulksms.jsp", desc: "Bulk SMS" },
+   428→          { id: "sms-log-report", label: "SMS Log Report", refUrl: "/24online/webpages/smsgateway/smslogreport.jsp", desc: "SMS log report" },
+   429→          { id: "purge-sms-logs", label: "Purge SMS Logs", refUrl: "/24online/webpages/smsgateway/purgesmslogs.jsp", desc: "Purge SMS logs" },
+   430→        ],
+   431→      },
+   432→      {
+   433→        id: "email", label: "Email Management", desc: "SMTP configuration and templates",
+   434→        grandchildren: [
+   435→          { id: "create-template", label: "Create Template", refUrl: "/24online/webpages/alert/createemailtemplate.jsp", desc: "Create email template" },
+   436→          { id: "manage-template", label: "Manage Template", refUrl: "/24online/webpages/alert/manageemailtemplate.jsp", desc: "Manage email templates" },
+   437→          { id: "configure", label: "Configure", refUrl: "/24online/webpages/alert/configureemail.jsp", desc: "Configure email" },
+   438→          { id: "proactive-reports", label: "Proactive Reports", refUrl: "/24online/webpages/alert/proactivereports.jsp", desc: "Proactive reports" },
+   439→          { id: "smtp-configuration", label: "SMTP Configuration", refUrl: "/24online/webpages/alert/smtpconfiguration.jsp", desc: "SMTP configuration" },
+   440→          { id: "system-alerts", label: "System Alerts", refUrl: "/24online/webpages/alert/systemalerts.jsp", desc: "System alerts" },
+   441→        ],
+   442→      },
+   443→      { id: "alert-config", label: "Alert Configuration", desc: "Alert rules and triggers", refUrl: "/24online/webpages/alert/alertconfiguration.jsp" },
+   444→    ],
+   445→  },
+   446→  {
+   447→    id: "ott",
+   448→    label: "OTT Service",
+   449→    icon: Tv,
+   450→    desc: "OTT platforms, utilities and partner keys.",
+   451→    children: [
+   452→      { id: "platforms", label: "Platforms", desc: "OTT platforms", refUrl: "/24online/webpages/usermgt/ottplatform.jsp" },
+   453→      { id: "platform-utility", label: "Platform Utility", desc: "Utility mappings" },
+   454→      { id: "platform-utility-relation", label: "Platform Utility Relation", desc: "Relations" },
+   455→      { id: "partner-key", label: "Add Partner Key", desc: "Partner API keys" },
+   456→      { id: "bind-ott", label: "Bind OTT Name", desc: "Bind OTT names", refUrl: "/24online/webpages/usermgt/ottplayboxtv.jsp" },
+   457→    ],
+   458→  },
+   459→  {
+   460→    id: "payment-tracking",
+   461→    label: "Payment Tracking",
+   462→    icon: Wallet,
+   463→    desc: "Manual payment tracking and reconciliation.",
+   464→    children: [
+   465→      {
+   466→        id: "manage-accounts", label: "Manage Accounts", desc: "Customer & zone accounts",
+   467→        grandchildren: [
+   468→          { id: "customers", label: "Customers", refUrl: "/24online/webpages/paymenttracking/managecustomeraccounts.jsp", desc: "Customer accounts" },
+   469→          { id: "zone", label: "Zone", refUrl: "/24online/webpages/paymenttracking/managezoneaccounts.jsp", desc: "Zone accounts" },
+   470→        ],
+   471→      },
+   472→      {
+   473→        id: "search-accounts", label: "Search Accounts", desc: "Search customer & franchise accounts",
+   474→        grandchildren: [
+   475→          { id: "customer", label: "Customer", refUrl: "/24online/webpages/paymenttracking/searchcustomeraccounts.jsp", desc: "Search customer accounts" },
+   476→          { id: "zone", label: "Zone", refUrl: "/24online/webpages/paymenttracking/searchfranchiseaccounts.jsp", desc: "Search zone accounts" },
+   477→        ],
+   478→      },
+   479→      {
+   480→        id: "payment-details", label: "Payment Details", desc: "Payment history & modes",
+   481→        grandchildren: [
+   482→          { id: "search-details", label: "Search Details", refUrl: "/24online/webpages/paymenttracking/searchcustomerpaymentdetails.jsp", desc: "Search payment details" },
+   483→          { id: "payment-mode", label: "Payment Mode", refUrl: "/24online/webpages/paymenttracking/paymentmode.jsp", desc: "Payment modes" },
+   484→        ],
+   485→      },
+   486→      {
+   487→        id: "reverse", label: "Reverse Transactions", desc: "Reverse payments",
+   488→        grandchildren: [
+   489→          { id: "customer", label: "Customer", refUrl: "/24online/webpages/paymenttracking/searchcustomerpaymentdetails.jsp?reversetransaction=Y", desc: "Reverse customer txn" },
+   490→          { id: "zone", label: "Zone", refUrl: "/24online/webpages/paymenttracking/searchfranchiseaccounts.jsp?reversetransaction=Y", desc: "Reverse zone txn" },
+   491→        ],
+   492→      },
+   493→      {
+   494→        id: "settle", label: "Settle Transactions", desc: "Settle transactions",
+   495→        grandchildren: [
+   496→          { id: "customers", label: "Customers", refUrl: "/24online/webpages/paymenttracking/searchcustomerpaymentdetails.jsp?searchmode=Y", desc: "Settle customer txn" },
+   497→        ],
+   498→      },
+   499→    ],
+   500→  },
+   501→  {
+   502→    id: "web-surfing",
+   503→    label: "Web Surfing Logger",
+   504→    icon: Globe,
+   505→    desc: "Web surfing log management.",
+   506→    children: [
+   507→      { id: "manage-logger", label: "Manage Logger", desc: "Configure web surfing logger", refUrl: "/24online/webpages/websurfinglogger/managewebsurflogger.jsp" },
+   508→    ],
+   509→  },
+   510→  {
+   511→    id: "net-kapture",
+   512→    label: "Net Kapture",
+   513→    icon: Radar,
+   514→    desc: "Network packet capture service.",
+   515→    children: [
+   516→      { id: "manage-service", label: "Manage Service", desc: "Configure net kapture", refUrl: "/24online/webpages/netkapture/managenetkapture.jsp" },
+   517→    ],
+   518→  },
+   519→  {
+   520→    id: "reports",
+   521→    label: "Reports",
+   522→    icon: BarChart3,
+   523→    desc: "Reports launcher and FTP report configuration.",
+   524→    children: [
+   525→      { id: "reports", label: "Reports", desc: "Report launcher", refUrl: "/24online/webpages/reports/intermediate.jsp" },
+   526→      { id: "ftp-report", label: "FTP Report Configuration", desc: "Scheduled FTP reports", refUrl: "/24online/webpages/sysmgt/manageproactivereports.jsp" },
+   527→    ],
+   528→  },
+   529→  {
+   530→    id: "help",
+   531→    label: "Help",
+   532→    icon: HelpCircle,
+   533→    desc: "Company info, docs, modules and about.",
+   534→    children: [
+   535→      { id: "company-info", label: "Company Info", desc: "Company details", refUrl: "/24online/webpages/help/companyinfo.jsp" },
+   536→      { id: "client", label: "Cryptsk Client", desc: "Client app info", refUrl: "/24online/webpages/help/24onlineclient.jsp" },
+   537→      { id: "upgrade", label: "Upgrade Version", desc: "Version upgrades", refUrl: "/24online/webpages/help/upgrade.jsp" },
+   538→      {
+   539→        id: "register", label: "Register Cryptsk", desc: "Product registration & module license",
+   540→        grandchildren: [
+   541→          { id: "online-registration", label: "Online Registration", refUrl: "/24online/webpages/help/onlineregistration.jsp", desc: "Online registration" },
+   542→          { id: "module-license", label: "Module License", refUrl: "/24online/webpages/help/modulelicense.jsp", desc: "Module licenses" },
+   543→        ],
+   544→      },
+   545→      { id: "customization", label: "Manage Customization", desc: "Module licenses", refUrl: "/24online/webpages/help/managecustomization.jsp" },
+   546→      { id: "documentation", label: "Documentation", desc: "User documentation", refUrl: "/24online/webpages/help/dochelp.jsp" },
+   547→      { id: "about", label: "About", desc: "About Cryptsk", refUrl: "/24online/webpages/help/about.jsp" },
+   548→    ],
+   549→  },
+   550→];
+   551→
+   552→/** Special top-level views (not part of the 15 modules) */
+   553→export interface TopLink {
+   554→  id: string;
+   555→  label: string;
+   556→  icon: Icon;
+   557→}
+   558→
+   559→export const TOP_LINKS: TopLink[] = [
+   560→  { id: "home", label: "Home", icon: LayoutDashboard },
+   561→  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+   562→];
+   563→
+   564→export function findModule(moduleId: string): NavModule | undefined {
+   565→  return NAV_MODULES.find((m) => m.id === moduleId);
+   566→}
+   567→
+   568→export function findChild(moduleId: string, childId: string): NavChild | undefined {
+   569→  return findModule(moduleId)?.children.find((c) => c.id === childId);
+   570→}
+   571→
+   572→export function findGrandchild(
+   573→  moduleId: string,
+   574→  childId: string,
+   575→  grandchildId: string
+   576→): NavGrandchild | undefined {
+   577→  return findChild(moduleId, childId)?.grandchildren?.find(
+   578→    (g) => g.id === grandchildId
+   579→  );
+   580→}
+   581→
+   582→/** Count all leaf pages (level-2 without grandchildren + all level-3 grandchildren) */
+   583→export function countLeafPages(): number {
+   584→  let count = 0;
+   585→  for (const m of NAV_MODULES) {
+   586→    for (const c of m.children) {
+   587→      if (!c.grandchildren || c.grandchildren.length === 0) count += 1;
+   588→      else count += c.grandchildren.length;
+   589→    }
+   590→  }
+   591→  return count;
+   592→}
+   593→

@@ -1,0 +1,952 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import * as React from "react";
+     4→     4→import {
+     5→     5→  ViewProps,
+     6→     6→  useModuleHeader,
+     7→     7→  useViewRouter,
+     8→     8→  ChildOverview,
+     9→     9→  LeafPlaceholder,
+    10→    10→} from "./_shared";
+    11→    11→import {
+    12→    12→  PageHeader,
+    13→    13→  KpiCard,
+    14→    14→  SectionCard,
+    15→    15→  EmptyState,
+    16→    16→  ActionBar,
+    17→    17→} from "@/components/app/shared";
+    18→    18→import { useAppStore } from "@/lib/store";
+    19→    19→import { useToast } from "@/hooks/use-toast";
+    20→    20→import {
+    21→    21→  Table,
+    22→    22→  TableBody,
+    23→    23→  TableCell,
+    24→    24→  TableHead,
+    25→    25→  TableHeader,
+    26→    26→  TableRow,
+    27→    27→} from "@/components/ui/table";
+    28→    28→import {
+    29→    29→  Select,
+    30→    30→  SelectContent,
+    31→    31→  SelectItem,
+    32→    32→  SelectTrigger,
+    33→    33→  SelectValue,
+    34→    34→} from "@/components/ui/select";
+    35→    35→import { Input } from "@/components/ui/input";
+    36→    36→import { Label } from "@/components/ui/label";
+    37→    37→import { Textarea } from "@/components/ui/textarea";
+    38→    38→import { Button } from "@/components/ui/button";
+    39→    39→import { Badge } from "@/components/ui/badge";
+    40→    40→import { Checkbox } from "@/components/ui/checkbox";
+    41→    41→import { Switch } from "@/components/ui/switch";
+    42→    42→import {
+    43→    43→  ShieldCheck,
+    44→    44→  Plus,
+    45→    45→  Trash2,
+    46→    46→  Save,
+    47→    47→  X,
+    48→    48→  Search,
+    49→    49→  Loader2,
+    50→    50→  AlertCircle,
+    51→    51→  RefreshCw,
+    52→    52→  Clock,
+    53→    53→  Gauge,
+    54→    54→  Database,
+    55→    55→  Zap,
+    56→    56→} from "lucide-react";
+    57→    57→import { policyApi } from "@/lib/api";
+    58→    58→
+    59→    59→export function PolicyView({ moduleId, childId, grandchildId }: ViewProps) {
+    60→    60→  const router = useViewRouter(moduleId, childId, grandchildId);
+    61→    61→
+    62→    62→  if (router.state === "loading") return null;
+    63→    63→  if (router.state === "module-overview")
+    64→    64→    return <PolicyOverview moduleId={moduleId} />;
+    65→    65→  if (router.state === "child-overview")
+    66→    66→    return <ChildOverview moduleId={moduleId} childId={router.childId} />;
+    67→    67→
+    68→    68→  if (router.state === "grandchild") {
+    69→    69→    // Surfing Quota
+    70→    70→    if (childId === "surfing-quota" && grandchildId === "create")
+    71→    71→      return <SurfCreatePage {...{ moduleId, childId, grandchildId }} />;
+    72→    72→    if (childId === "surfing-quota" && grandchildId === "manage")
+    73→    73→      return <SurfManagePage {...{ moduleId, childId, grandchildId }} />;
+    74→    74→
+    75→    75→    // Access Time
+    76→    76→    if (childId === "access-time" && grandchildId === "create")
+    77→    77→      return <AccessCreatePage {...{ moduleId, childId, grandchildId }} />;
+    78→    78→    if (childId === "access-time" && grandchildId === "manage")
+    79→    79→      return <AccessManagePage {...{ moduleId, childId, grandchildId }} />;
+    80→    80→
+    81→    81→    // Bandwidth
+    82→    82→    if (childId === "bandwidth" && grandchildId === "create")
+    83→    83→      return <BwCreatePage {...{ moduleId, childId, grandchildId }} />;
+    84→    84→    if (childId === "bandwidth" && grandchildId === "manage")
+    85→    85→      return <BwManagePage {...{ moduleId, childId, grandchildId }} />;
+    86→    86→    if (childId === "bandwidth" && grandchildId === "schedule")
+    87→    87→      return <BwSchedulePage {...{ moduleId, childId, grandchildId }} />;
+    88→    88→
+    89→    89→    // Data Transfer
+    90→    90→    if (childId === "data-transfer" && grandchildId === "create")
+    91→    91→      return <DtCreatePage {...{ moduleId, childId, grandchildId }} />;
+    92→    92→    if (childId === "data-transfer" && grandchildId === "manage")
+    93→    93→      return <DtManagePage {...{ moduleId, childId, grandchildId }} />;
+    94→    94→
+    95→    95→    // FAP
+    96→    96→    if (childId === "fap" && grandchildId === "create-fap")
+    97→    97→      return <FapCreatePage {...{ moduleId, childId, grandchildId }} />;
+    98→    98→    if (childId === "fap" && grandchildId === "manage-fap")
+    99→    99→      return <FapManagePage {...{ moduleId, childId, grandchildId }} />;
+   100→   100→
+   101→   101→    // QoS
+   102→   102→    if (childId === "qos" && grandchildId === "create-cache")
+   103→   103→      return <QosCreatePage {...{ moduleId, childId, grandchildId }} />;
+   104→   104→    if (childId === "qos" && grandchildId === "manage-cache")
+   105→   105→      return <QosManagePage {...{ moduleId, childId, grandchildId }} />;
+   106→   106→
+   107→   107→    return (
+   108→   108→      <LeafPlaceholder
+   109→   109→        moduleId={moduleId}
+   110→   110→        childId={router.childId}
+   111→   111→        grandchildId={router.grandchildId}
+   112→   112→      />
+   113→   113→    );
+   114→   114→  }
+   115→   115→
+   116→   116→  return <PolicyOverview moduleId={moduleId} />;
+   117→   117→}
+   118→   118→
+   119→   119→/* ================ Shared helpers ================ */
+   120→   120→
+   121→   121→function useBreadcrumb(moduleId: string, childId: string, grandchildId?: string) {
+   122→   122→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   123→   123→  const setActive = useAppStore((s) => s.setActive);
+   124→   124→  return [
+   125→   125→    { label: "Cryptsk" },
+   126→   126→    { label: mod?.label ?? "Policy", onClick: () => setActive(moduleId, "", "") },
+   127→   127→    { label: child?.label ?? childId, onClick: () => setActive(moduleId, childId, "") },
+   128→   128→    ...(grandchild ? [{ label: grandchild.label }] : []),
+   129→   129→  ];
+   130→   130→}
+   131→   131→
+   132→   132→function PageLoader() {
+   133→   133→  return (
+   134→   134→    <div className="flex items-center justify-center py-12">
+   135→   135→      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+   136→   136→    </div>
+   137→   137→  );
+   138→   138→}
+   139→   139→
+   140→   140→function DeleteDialog({
+   141→   141→  open,
+   142→   142→  onOpenChange,
+   143→   143→  onConfirm,
+   144→   144→  title,
+   145→   145→  description,
+   146→   146→}: {
+   147→   147→  open: boolean;
+   148→   148→  onOpenChange: (o: boolean) => void;
+   149→   149→  onConfirm: () => void;
+   150→   150→  title: string;
+   151→   151→  description: string;
+   152→   152→}) {
+   153→   153→  if (!open) return null;
+   154→   154→  return (
+   155→   155→    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => onOpenChange(false)}>
+   156→   156→      <div className="rounded-lg bg-card p-6 shadow-xl max-w-sm" onClick={(e) => e.stopPropagation()}>
+   157→   157→        <h3 className="text-lg font-semibold">{title}</h3>
+   158→   158→        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+   159→   159→        <div className="mt-4 flex justify-end gap-2">
+   160→   160→          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+   161→   161→          <Button variant="destructive" onClick={() => { onConfirm(); onOpenChange(false); }}>
+   162→   162→            <Trash2 className="mr-2 h-4 w-4" /> Delete
+   163→   163→          </Button>
+   164→   164→        </div>
+   165→   165→      </div>
+   166→   166→    </div>
+   167→   167→  );
+   168→   168→}
+   169→   169→
+   170→   170→/* ================ Overview ================ */
+   171→   171→
+   172→   172→function PolicyOverview({ moduleId }: { moduleId: string }) {
+   173→   173→  const { mod } = useModuleHeader(moduleId);
+   174→   174→  const setActive = useAppStore((s) => s.setActive);
+   175→   175→  if (!mod) return null;
+   176→   176→  const cards = [
+   177→   177→    { label: "Surfing Quota", desc: "Create & manage surfing quota policies", icon: Clock, child: "surfing-quota" },
+   178→   178→    { label: "Access Time", desc: "Time-based access policies", icon: ShieldCheck, child: "access-time" },
+   179→   179→    { label: "Bandwidth", desc: "Bandwidth restriction policies", icon: Gauge, child: "bandwidth" },
+   180→   180→    { label: "Data Transfer Policy", desc: "Data transfer quotas", icon: Database, child: "data-transfer" },
+   181→   181→    { label: "Fair Access Policy", desc: "FAP rules and thresholds", icon: ShieldCheck, child: "fap" },
+   182→   182→    { label: "QoS Policy", desc: "Cache & QoS scheduling", icon: Zap, child: "qos" },
+   183→   183→  ];
+   184→   184→  return (
+   185→   185→    <div className="space-y-6">
+   186→   186→      <PageHeader title={mod.label} description={mod.desc} icon={<mod.icon className="h-5 w-5" />} />
+   187→   187→      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   188→   188→        {cards.map((c) => (
+   189→   189→          <button key={c.child} onClick={() => setActive(moduleId, c.child, "")}
+   190→   190→            className="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
+   191→   191→            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+   192→   192→              <c.icon className="h-5 w-5" />
+   193→   193→            </div>
+   194→   194→            <div className="min-w-0 flex-1">
+   195→   195→              <p className="font-medium text-foreground">{c.label}</p>
+   196→   196→              <p className="mt-0.5 text-xs text-muted-foreground">{c.desc}</p>
+   197→   197→            </div>
+   198→   198→          </button>
+   199→   199→        ))}
+   200→   200→      </div>
+   201→   201→    </div>
+   202→   202→  );
+   203→   203→}
+   204→   204→
+   205→   205→/* ================ SURFING QUOTA ================ */
+   206→   206→
+   207→   207→function SurfCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+   208→   208→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   209→   209→  const { toast } = useToast();
+   210→   210→  const setActive = useAppStore((s) => s.setActive);
+   211→   211→  const [saving, setSaving] = React.useState(false);
+   212→   212→  const [form, setForm] = React.useState({
+   213→   213→    policyName: "",
+   214→   214→    policyType: "Time-based",
+   215→   215→    allotedhrs: "1",
+   216→   216→    allotedmin: "00",
+   217→   217→    unlimitedtime: false,
+   218→   218→    sessionpulse: "0",
+   219→   219→    setexpireallotedhrs: "0",
+   220→   220→    setexpireallotedmin: "00",
+   221→   221→    setexpirealloteddays: "30",
+   222→   222→    unlimitedvalue: false,
+   223→   223→    cycletype: "Daily",
+   224→   224→    cycleallotedhrs: "0",
+   225→   225→    cycleallotedmin: "00",
+   226→   226→    description: "",
+   227→   227→  });
+   228→   228→  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+   229→   229→
+   230→   230→  const handleSubmit = async (e: React.FormEvent) => {
+   231→   231→    e.preventDefault();
+   232→   232→    if (!form.policyName.trim()) { toast({ title: "Policy name required", variant: "destructive" }); return; }
+   233→   233→    setSaving(true);
+   234→   234→    await policyApi.create("surfingPolicies", {
+   235→   235→      policyName: form.policyName,
+   236→   236→      policyType: form.policyType,
+   237→   237→      timeAllowed: form.unlimitedtime ? "Unlimited" : `${form.allotedhrs}:${form.allotedmin}`,
+   238→   238→      expirationDuration: form.unlimitedvalue ? "Unlimited" : form.setexpirealloteddays,
+   239→   239→      sessionPulse: form.sessionpulse,
+   240→   240→      description: form.description,
+   241→   241→      status: "Active",
+   242→   242→    });
+   243→   243→    setSaving(false);
+   244→   244→    toast({ title: "Surfing policy created", description: form.policyName });
+   245→   245→    setActive(moduleId, "surfing-quota", "manage");
+   246→   246→  };
+   247→   247→
+   248→   248→  return (
+   249→   249→    <div className="space-y-6">
+   250→   250→      <PageHeader title="Create Surfing Quota Policy" description="Create a new surfing quota policy (PolicyManager servlet)." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+   251→   251→        actions={<Button variant="outline" onClick={() => setActive(moduleId, "surfing-quota", "manage")}><X className="mr-2 h-4 w-4" /> Cancel</Button>} />
+   252→   252→      <form onSubmit={handleSubmit} className="space-y-6">
+   253→   253→        <SectionCard title="Create Policy" description="Surfing quota policy details">
+   254→   254→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   255→   255→            <div className="space-y-2">
+   256→   256→              <Label>Policy Name <span className="text-primary">*</span></Label>
+   257→   257→              <Input value={form.policyName} onChange={(e) => set("policyName", e.target.value)} placeholder="e.g. 1 Hour Daily" required />
+   258→   258→            </div>
+   259→   259→            <div className="space-y-2">
+   260→   260→              <Label>Policy Type <span className="text-primary">*</span></Label>
+   261→   261→              <Select value={form.policyType} onValueChange={(v) => set("policyType", v)}>
+   262→   262→                <SelectTrigger><SelectValue /></SelectTrigger>
+   263→   263→                <SelectContent><SelectItem value="Time-based">Time-based</SelectItem><SelectItem value="Unlimited">Unlimited</SelectItem></SelectContent>
+   264→   264→              </Select>
+   265→   265→            </div>
+   266→   266→            {!form.unlimitedtime && form.policyType === "Time-based" && (
+   267→   267→              <>
+   268→   268→                <div className="space-y-2">
+   269→   269→                  <Label>Time Allowed (Hours)</Label>
+   270→   270→                  <Input type="number" min="0" value={form.allotedhrs} onChange={(e) => set("allotedhrs", e.target.value)} />
+   271→   271→                </div>
+   272→   272→                <div className="space-y-2">
+   273→   273→                  <Label>Time Allowed (Minutes)</Label>
+   274→   274→                  <Select value={form.allotedmin} onValueChange={(v) => set("allotedmin", v)}>
+   275→   275→                    <SelectTrigger><SelectValue /></SelectTrigger>
+   276→   276→                    <SelectContent>{Array.from({ length: 60 }, (_, i) => <SelectItem key={i} value={String(i).padStart(2, "0")}>{String(i).padStart(2, "0")}</SelectItem>)}</SelectContent>
+   277→   277→                  </Select>
+   278→   278→                </div>
+   279→   279→              </>
+   280→   280→            )}
+   281→   281→            <div className="flex items-center gap-3">
+   282→   282→              <Switch checked={form.unlimitedtime} onCheckedChange={(v) => set("unlimitedtime", v)} />
+   283→   283→              <Label>Unlimited Time</Label>
+   284→   284→            </div>
+   285→   285→            <div className="space-y-2">
+   286→   286→              <Label>Session Pulse (minutes)</Label>
+   287→   287→              <Input type="number" min="0" value={form.sessionpulse} onChange={(e) => set("sessionpulse", e.target.value)} />
+   288→   288→            </div>
+   289→   289→          </div>
+   290→   290→        </SectionCard>
+   291→   291→        <SectionCard title="Expiration Duration" description="When does the policy expire">
+   292→   292→          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+   293→   293→            <div className="space-y-2"><Label>Expiration (Days)</Label><Input type="number" value={form.setexpirealloteddays} onChange={(e) => set("setexpirealloteddays", e.target.value)} disabled={form.unlimitedvalue} /></div>
+   294→   294→            <div className="space-y-2"><Label>Expiration (Hours)</Label><Input type="number" value={form.setexpireallotedhrs} onChange={(e) => set("setexpireallotedhrs", e.target.value)} disabled={form.unlimitedvalue} /></div>
+   295→   295→            <div className="flex items-center gap-3"><Switch checked={form.unlimitedvalue} onCheckedChange={(v) => set("unlimitedvalue", v)} /><Label>Unlimited Expiration</Label></div>
+   296→   296→          </div>
+   297→   297→        </SectionCard>
+   298→   298→        <SectionCard title="Cycle Settings" description="Reset cycle for the policy">
+   299→   299→          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+   300→   300→            <div className="space-y-2">
+   301→   301→              <Label>Cycle Type</Label>
+   302→   302→              <Select value={form.cycletype} onValueChange={(v) => set("cycletype", v)}>
+   303→   303→                <SelectTrigger><SelectValue /></SelectTrigger>
+   304→   304→                <SelectContent><SelectItem value="Daily">Daily</SelectItem><SelectItem value="Weekly">Weekly</SelectItem><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="Never">Never</SelectItem></SelectContent>
+   305→   305→              </Select>
+   306→   306→            </div>
+   307→   307→            <div className="space-y-2"><Label>Cycle Hours</Label><Input type="number" value={form.cycleallotedhrs} onChange={(e) => set("cycleallotedhrs", e.target.value)} /></div>
+   308→   308→            <div className="space-y-2">
+   309→   309→              <Label>Cycle Minutes</Label>
+   310→   310→              <Select value={form.cycleallotedmin} onValueChange={(v) => set("cycleallotedmin", v)}>
+   311→   311→                <SelectTrigger><SelectValue /></SelectTrigger>
+   312→   312→                <SelectContent>{Array.from({ length: 60 }, (_, i) => <SelectItem key={i} value={String(i).padStart(2, "0")}>{String(i).padStart(2, "0")}</SelectItem>)}</SelectContent>
+   313→   313→              </Select>
+   314→   314→            </div>
+   315→   315→            <div className="space-y-2 md:col-span-3"><Label>Description</Label><Textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={2} placeholder="Policy description…" /></div>
+   316→   316→          </div>
+   317→   317→        </SectionCard>
+   318→   318→        <div className="flex justify-end gap-3">
+   319→   319→          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "surfing-quota", "manage")}>Cancel</Button>
+   320→   320→          <Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button>
+   321→   321→        </div>
+   322→   322→      </form>
+   323→   323→    </div>
+   324→   324→  );
+   325→   325→}
+   326→   326→
+   327→   327→function SurfManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+   328→   328→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   329→   329→  const { toast } = useToast();
+   330→   330→  const setActive = useAppStore((s) => s.setActive);
+   331→   331→  const [rows, setRows] = React.useState<any[]>([]);
+   332→   332→  const [loading, setLoading] = React.useState(true);
+   333→   333→  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+   334→   334→
+   335→   335→  const load = React.useCallback(() => {
+   336→   336→    setLoading(true);
+   337→   337→    policyApi.list("surfingPolicies").then((res) => { setRows(res.data ?? []); setLoading(false); });
+   338→   338→  }, []);
+   339→   339→  React.useEffect(() => { load(); }, [load]);
+   340→   340→
+   341→   341→  const handleDelete = async () => {
+   342→   342→    for (const id of selected) await policyApi.delete("surfingPolicies", id);
+   343→   343→    toast({ title: "Policies deleted", description: `${selected.size} policy(s) deleted.` });
+   344→   344→    setSelected(new Set());
+   345→   345→    load();
+   346→   346→  };
+   347→   347→
+   348→   348→  return (
+   349→   349→    <div className="space-y-6">
+   350→   350→      <PageHeader title="Manage Surfing Quota Policy" description="View, and delete surfing quota policies." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+   351→   351→        actions={<Button onClick={() => setActive(moduleId, "surfing-quota", "create")}><Plus className="mr-2 h-4 w-4" /> Create</Button>} />
+   352→   352→      {loading ? <PageLoader /> : (
+   353→   353→        <SectionCard title="Surfing Quota Policies" description={`${rows.length} policies`}>
+   354→   354→          <div className="overflow-x-auto">
+   355→   355→            <Table>
+   356→   356→              <TableHeader><TableRow>
+   357→   357→                <TableHead>Policy Name</TableHead><TableHead>Policy Type</TableHead><TableHead>Time Allowed (HH:mm)</TableHead>
+   358→   358→                <TableHead>Expiration Duration (days)</TableHead><TableHead>Session Pulse (minutes)</TableHead><TableHead>Description</TableHead><TableHead>Del</TableHead>
+   359→   359→              </TableRow></TableHeader>
+   360→   360→              <TableBody>
+   361→   361→                {rows.map((r) => (
+   362→   362→                  <TableRow key={r.id}>
+   363→   363→                    <TableCell className="font-medium">{r.policyName}</TableCell>
+   364→   364→                    <TableCell><Badge variant="outline" className="text-[10px]">{r.policyType}</Badge></TableCell>
+   365→   365→                    <TableCell className="font-mono text-xs">{r.timeAllowed}</TableCell>
+   366→   366→                    <TableCell>{r.expirationDuration}</TableCell>
+   367→   367→                    <TableCell>{r.sessionPulse}</TableCell>
+   368→   368→                    <TableCell className="text-xs text-muted-foreground">{r.description || "—"}</TableCell>
+   369→   369→                    <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => { const n = new Set(selected); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); setSelected(n); }} /></TableCell>
+   370→   370→                  </TableRow>
+   371→   371→                ))}
+   372→   372→              </TableBody>
+   373→   373→            </Table>
+   374→   374→          </div>
+   375→   375→          {selected.size > 0 && <div className="mt-3 flex justify-end"><Button variant="destructive" size="sm" onClick={handleDelete}><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Policy ({selected.size})</Button></div>}
+   376→   376→        </SectionCard>
+   377→   377→      )}
+   378→   378→    </div>
+   379→   379→  );
+   380→   380→}
+   381→   381→
+   382→   382→/* ================ ACCESS TIME ================ */
+   383→   383→
+   384→   384→function AccessCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+   385→   385→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   386→   386→  const { toast } = useToast();
+   387→   387→  const setActive = useAppStore((s) => s.setActive);
+   388→   388→  const [saving, setSaving] = React.useState(false);
+   389→   389→  const [form, setForm] = React.useState({ policyName: "", defaultStrategy: "Allow", description: "" });
+   390→   390→
+   391→   391→  const handleSubmit = async (e: React.FormEvent) => {
+   392→   392→    e.preventDefault();
+   393→   393→    if (!form.policyName.trim()) { toast({ title: "Policy name required", variant: "destructive" }); return; }
+   394→   394→    setSaving(true);
+   395→   395→    await policyApi.create("accessPolicies", { ...form, status: "Active" });
+   396→   396→    setSaving(false);
+   397→   397→    toast({ title: "Access policy created", description: form.policyName });
+   398→   398→    setActive(moduleId, "access-time", "manage");
+   399→   399→  };
+   400→   400→
+   401→   401→  return (
+   402→   402→    <div className="space-y-6">
+   403→   403→      <PageHeader title="Create Access Time Policy" description="Create a new access time policy (PolicyManager servlet)." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+   404→   404→        actions={<Button variant="outline" onClick={() => setActive(moduleId, "access-time", "manage")}><X className="mr-2 h-4 w-4" /> Cancel</Button>} />
+   405→   405→      <form onSubmit={handleSubmit}>
+   406→   406→        <SectionCard title="Access Time Policy Details" description="Configure access time policy">
+   407→   407→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   408→   408→            <div className="space-y-2">
+   409→   409→              <Label>Name <span className="text-primary">*</span></Label>
+   410→   410→              <Input value={form.policyName} onChange={(e) => setForm({ ...form, policyName: e.target.value })} placeholder="e.g. Business Hours" required />
+   411→   411→            </div>
+   412→   412→            <div className="space-y-2">
+   413→   413→              <Label>Default Strategy <span className="text-primary">*</span></Label>
+   414→   414→              <Select value={form.defaultStrategy} onValueChange={(v) => setForm({ ...form, defaultStrategy: v })}>
+   415→   415→                <SelectTrigger><SelectValue /></SelectTrigger>
+   416→   416→                <SelectContent><SelectItem value="Allow">Allow</SelectItem><SelectItem value="Deny">Deny</SelectItem></SelectContent>
+   417→   417→              </Select>
+   418→   418→            </div>
+   419→   419→            <div className="space-y-2 md:col-span-2">
+   420→   420→              <Label>Description</Label>
+   421→   421→              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Policy description…" />
+   422→   422→            </div>
+   423→   423→          </div>
+   424→   424→        </SectionCard>
+   425→   425→        <div className="mt-4 flex justify-end gap-3">
+   426→   426→          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "access-time", "manage")}>Cancel</Button>
+   427→   427→          <Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button>
+   428→   428→        </div>
+   429→   429→      </form>
+   430→   430→    </div>
+   431→   431→  );
+   432→   432→}
+   433→   433→
+   434→   434→function AccessManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+   435→   435→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   436→   436→  const { toast } = useToast();
+   437→   437→  const setActive = useAppStore((s) => s.setActive);
+   438→   438→  const [rows, setRows] = React.useState<any[]>([]);
+   439→   439→  const [loading, setLoading] = React.useState(true);
+   440→   440→  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+   441→   441→
+   442→   442→  const load = React.useCallback(() => { setLoading(true); policyApi.list("accessPolicies").then((res) => { setRows(res.data ?? []); setLoading(false); }); }, []);
+   443→   443→  React.useEffect(() => { load(); }, [load]);
+   444→   444→
+   445→   445→  const handleDelete = async () => { for (const id of selected) await policyApi.delete("accessPolicies", id); toast({ title: "Policies deleted" }); setSelected(new Set()); load(); };
+   446→   446→
+   447→   447→  return (
+   448→   448→    <div className="space-y-6">
+   449→   449→      <PageHeader title="Manage Access Time Policy" description="View and delete access time policies." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+   450→   450→        actions={<Button onClick={() => setActive(moduleId, "access-time", "create")}><Plus className="mr-2 h-4 w-4" /> Create</Button>} />
+   451→   451→      {loading ? <PageLoader /> : (
+   452→   452→        <SectionCard title="Access Time Policies" description={`${rows.length} policies`}>
+   453→   453→          <div className="overflow-x-auto">
+   454→   454→            <Table>
+   455→   455→              <TableHeader><TableRow><TableHead>Access Time Policy Name</TableHead><TableHead>Default Strategy</TableHead><TableHead>Description</TableHead><TableHead>Del</TableHead></TableRow></TableHeader>
+   456→   456→              <TableBody>
+   457→   457→                {rows.map((r) => (
+   458→   458→                  <TableRow key={r.id}>
+   459→   459→                    <TableCell className="font-medium">{r.policyName}</TableCell>
+   460→   460→                    <TableCell><Badge variant={r.defaultStrategy === "Allow" ? "default" : "destructive"} className={r.defaultStrategy === "Allow" ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" : ""}>{r.defaultStrategy}</Badge></TableCell>
+   461→   461→                    <TableCell className="text-xs text-muted-foreground">{r.description || "—"}</TableCell>
+   462→   462→                    <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => { const n = new Set(selected); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); setSelected(n); }} /></TableCell>
+   463→   463→                  </TableRow>
+   464→   464→                ))}
+   465→   465→              </TableBody>
+   466→   466→            </Table>
+   467→   467→          </div>
+   468→   468→          {selected.size > 0 && <div className="mt-3 flex justify-end"><Button variant="destructive" size="sm" onClick={handleDelete}><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Policy ({selected.size})</Button></div>}
+   469→   469→        </SectionCard>
+   470→   470→      )}
+   471→   471→    </div>
+   472→   472→  );
+   473→   473→}
+   474→   474→
+   475→   475→/* ================ BANDWIDTH ================ */
+   476→   476→
+   477→   477→function BwCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+   478→   478→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   479→   479→  const { toast } = useToast();
+   480→   480→  const setActive = useAppStore((s) => s.setActive);
+   481→   481→  const [saving, setSaving] = React.useState(false);
+   482→   482→  const [form, setForm] = React.useState({
+   483→   483→    policyName: "", polbase: "User", policytype: "Strict", implementationtype: "Individual",
+   484→   484→    sttotbandwidth: "1024", stexclupbandwidth: "512", stexcldownbandwidth: "512",
+   485→   485→    comtotgrntdbandwidth: "", comtotburstbandwidth: "", comexclgrntdupbandwidth: "",
+   486→   486→    selectpriority: "3", scheduleType: "Always",
+   487→   487→  });
+   488→   488→  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+   489→   489→
+   490→   490→  const handleSubmit = async (e: React.FormEvent) => {
+   491→   491→    e.preventDefault();
+   492→   492→    if (!form.policyName.trim()) { toast({ title: "Policy name required", variant: "destructive" }); return; }
+   493→   493→    setSaving(true);
+   494→   494→    await policyApi.create("bandwidthPolicies", {
+   495→   495→      policyName: form.policyName, policyBasedOn: form.polbase,
+   496→   496→      totalBandwidth: form.sttotbandwidth, uploadBandwidth: form.stexclupbandwidth,
+   497→   497→      downloadBandwidth: form.stexcldownbandwidth, priority: Number(form.selectpriority),
+   498→   498→      scheduleType: form.scheduleType, status: "Active",
+   499→   499→    });
+   500→   500→    setSaving(false);
+   501→   501→    toast({ title: "Bandwidth policy created", description: form.policyName });
+   502→   502→    setActive(moduleId, "bandwidth", "manage");
+   503→   503→  };
+   504→   504→
+   505→   505→  return (
+   506→   506→    <div className="space-y-6">
+   507→   507→      <PageHeader title="Create Bandwidth Policy" description="Create a new bandwidth restriction policy (BandwidthPolicyManager servlet)." icon={<Gauge className="h-5 w-5" />} breadcrumb={breadcrumb}
+   508→   508→        actions={<Button variant="outline" onClick={() => setActive(moduleId, "bandwidth", "manage")}><X className="mr-2 h-4 w-4" /> Cancel</Button>} />
+   509→   509→      <form onSubmit={handleSubmit} className="space-y-6">
+   510→   510→        <SectionCard title="Bandwidth Policy Details" description="Basic policy configuration">
+   511→   511→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   512→   512→            <div className="space-y-2"><Label>Policy Name <span className="text-primary">*</span></Label><Input value={form.policyName} onChange={(e) => set("policyName", e.target.value)} placeholder="e.g. 10MBPS Plan" required /></div>
+   513→   513→            <div className="space-y-2"><Label>Policy For</Label><Select value={form.polbase} onValueChange={(v) => set("polbase", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="User">User Based</SelectItem><SelectItem value="Pool">Pool Based</SelectItem></SelectContent></Select></div>
+   514→   514→            <div className="space-y-2"><Label>Policy Type</Label><Select value={form.policytype} onValueChange={(v) => set("policytype", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Strict">Strict</SelectItem><SelectItem value="Shared">Shared</SelectItem></SelectContent></Select></div>
+   515→   515→            <div className="space-y-2"><Label>Implementation Type</Label><Select value={form.implementationtype} onValueChange={(v) => set("implementationtype", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Individual">Individual</SelectItem><SelectItem value="Pool">Pool</SelectItem></SelectContent></Select></div>
+   516→   516→            <div className="space-y-2"><Label>Priority</Label><Select value={form.selectpriority} onValueChange={(v) => set("selectpriority", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[0,1,2,3,4,5,6,7].map((p) => <SelectItem key={p} value={String(p)}>{p}</SelectItem>)}</SelectContent></Select></div>
+   517→   517→            <div className="space-y-2"><Label>Schedule Type</Label><Select value={form.scheduleType} onValueChange={(v) => set("scheduleType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Always">Always</SelectItem><SelectItem value="All Days 9:00 AM to 21:00 PM">All Days 9:00 AM to 21:00 PM</SelectItem><SelectItem value="All Days 21:00 PM to 9:00 AM">All Days 21:00 PM to 9:00 AM</SelectItem><SelectItem value="Weekend Only">Weekend Only</SelectItem></SelectContent></Select></div>
+   518→   518→          </div>
+   519→   519→        </SectionCard>
+   520→   520→        <SectionCard title="Bandwidth Limits (Kbit/s)" description="Upload, Download and Total bandwidth limits">
+   521→   521→          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+   522→   522→            <div className="space-y-2"><Label>Total Bandwidth (Kbit/s)</Label><Input type="number" value={form.sttotbandwidth} onChange={(e) => set("sttotbandwidth", e.target.value)} /></div>
+   523→   523→            <div className="space-y-2"><Label>Upload Bandwidth (Kbit/s)</Label><Input type="number" value={form.stexclupbandwidth} onChange={(e) => set("stexclupbandwidth", e.target.value)} /></div>
+   524→   524→            <div className="space-y-2"><Label>Download Bandwidth (Kbit/s)</Label><Input type="number" value={form.stexcldownbandwidth} onChange={(e) => set("stexcldownbandwidth", e.target.value)} /></div>
+   525→   525→          </div>
+   526→   526→        </SectionCard>
+   527→   527→        <div className="flex justify-end gap-3">
+   528→   528→          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "bandwidth", "manage")}>Cancel</Button>
+   529→   529→          <Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button>
+   530→   530→        </div>
+   531→   531→      </form>
+   532→   532→    </div>
+   533→   533→  );
+   534→   534→}
+   535→   535→
+   536→   536→function BwManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+   537→   537→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   538→   538→  const { toast } = useToast();
+   539→   539→  const setActive = useAppStore((s) => s.setActive);
+   540→   540→  const [rows, setRows] = React.useState<any[]>([]);
+   541→   541→  const [loading, setLoading] = React.useState(true);
+   542→   542→  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+   543→   543→
+   544→   544→  const load = React.useCallback(() => { setLoading(true); policyApi.list("bandwidthPolicies").then((res) => { setRows(res.data ?? []); setLoading(false); }); }, []);
+   545→   545→  React.useEffect(() => { load(); }, [load]);
+   546→   546→
+   547→   547→  const handleDelete = async () => { for (const id of selected) await policyApi.delete("bandwidthPolicies", id); toast({ title: "Policies deleted" }); setSelected(new Set()); load(); };
+   548→   548→
+   549→   549→  return (
+   550→   550→    <div className="space-y-6">
+   551→   551→      <PageHeader title="Manage Bandwidth Policy" description="View and delete bandwidth policies." icon={<Gauge className="h-5 w-5" />} breadcrumb={breadcrumb}
+   552→   552→        actions={<Button onClick={() => setActive(moduleId, "bandwidth", "create")}><Plus className="mr-2 h-4 w-4" /> Create</Button>} />
+   553→   553→      {loading ? <PageLoader /> : (
+   554→   554→        <SectionCard title="Bandwidth Policies" description={`${rows.length} policies`}>
+   555→   555→          <div className="overflow-x-auto">
+   556→   556→            <Table>
+   557→   557→              <TableHeader><TableRow>
+   558→   558→                <TableHead>Policy Name</TableHead><TableHead>Policy Based on</TableHead>
+   559→   559→                <TableHead>Total Bandwidth (Kbit/s)(Min/Max)</TableHead><TableHead>Upload Bandwidth (Kbit/s)(Min/Max)</TableHead>
+   560→   560→                <TableHead>Download Bandwidth (Kbit/s)(Min/Max)</TableHead><TableHead>Priority</TableHead><TableHead>Schedule Type</TableHead><TableHead>Del</TableHead>
+   561→   561→              </TableRow></TableHeader>
+   562→   562→              <TableBody>
+   563→   563→                {rows.map((r) => (
+   564→   564→                  <TableRow key={r.id}>
+   565→   565→                    <TableCell className="font-medium">{r.policyName}</TableCell>
+   566→   566→                    <TableCell><Badge variant="outline" className="text-[10px]">{r.policyBasedOn}</Badge></TableCell>
+   567→   567→                    <TableCell className="font-mono text-xs">{r.totalBandwidth}</TableCell>
+   568→   568→                    <TableCell className="font-mono text-xs">{r.uploadBandwidth}</TableCell>
+   569→   569→                    <TableCell className="font-mono text-xs">{r.downloadBandwidth}</TableCell>
+   570→   570→                    <TableCell>{r.priority}</TableCell>
+   571→   571→                    <TableCell className="text-xs">{r.scheduleType}</TableCell>
+   572→   572→                    <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => { const n = new Set(selected); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); setSelected(n); }} /></TableCell>
+   573→   573→                  </TableRow>
+   574→   574→                ))}
+   575→   575→              </TableBody>
+   576→   576→            </Table>
+   577→   577→          </div>
+   578→   578→          {selected.size > 0 && <div className="mt-3 flex justify-end"><Button variant="destructive" size="sm" onClick={handleDelete}><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete ({selected.size})</Button></div>}
+   579→   579→        </SectionCard>
+   580→   580→      )}
+   581→   581→    </div>
+   582→   582→  );
+   583→   583→}
+   584→   584→
+   585→   585→function BwSchedulePage({ moduleId, childId, grandchildId }: ViewProps) {
+   586→   586→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   587→   587→  const { toast } = useToast();
+   588→   588→  const [rows, setRows] = React.useState<any[]>([]);
+   589→   589→  const [loading, setLoading] = React.useState(true);
+   590→   590→  const [showForm, setShowForm] = React.useState(false);
+   591→   591→  const [form, setForm] = React.useState({ scheduleName: "", description: "" });
+   592→   592→
+   593→   593→  const load = React.useCallback(() => { setLoading(true); policyApi.list("schedules").then((res) => { setRows(res.data ?? []); setLoading(false); }); }, []);
+   594→   594→  React.useEffect(() => { load(); }, [load]);
+   595→   595→
+   596→   596→  const handleCreate = async () => {
+   597→   597→    if (!form.scheduleName.trim()) return;
+   598→   598→    await policyApi.create("schedules", form);
+   599→   599→    toast({ title: "Schedule created", description: form.scheduleName });
+   600→   600→    setForm({ scheduleName: "", description: "" }); setShowForm(false); load();
+   601→   601→  };
+   602→   602→  const handleDelete = async (r: any) => { await policyApi.delete("schedules", r.id); toast({ title: "Schedule deleted", description: r.scheduleName }); load(); };
+   603→   603→
+   604→   604→  return (
+   605→   605→    <div className="space-y-6">
+   606→   606→      <PageHeader title="Manage Schedule" description="Create and manage bandwidth schedules (ScheduleManager servlet)." icon={<Clock className="h-5 w-5" />} breadcrumb={breadcrumb} />
+   607→   607→      <ActionBar>
+   608→   608→        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Create Schedule"}</Button>
+   609→   609→      </ActionBar>
+   610→   610→      {showForm && (
+   611→   611→        <SectionCard title="Create Schedule" description="Define a new bandwidth schedule">
+   612→   612→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   613→   613→            <div className="space-y-2"><Label>Schedule Name <span className="text-primary">*</span></Label><Input value={form.scheduleName} onChange={(e) => setForm({ ...form, scheduleName: e.target.value })} placeholder="e.g. All Days 9:00 AM to 21:00 PM" /></div>
+   614→   614→            <div className="space-y-2"><Label>Description</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Schedule description" /></div>
+   615→   615→          </div>
+   616→   616→          <div className="mt-4 flex justify-end"><Button onClick={handleCreate}><Save className="mr-2 h-4 w-4" /> Create</Button></div>
+   617→   617→        </SectionCard>
+   618→   618→      )}
+   619→   619→      {loading ? <PageLoader /> : (
+   620→   620→        <SectionCard title="Schedules" description={`${rows.length} schedules`}>
+   621→   621→          <div className="overflow-x-auto">
+   622→   622→            <Table>
+   623→   623→              <TableHeader><TableRow><TableHead>Schedule Name</TableHead><TableHead>Description</TableHead><TableHead>Del</TableHead></TableRow></TableHeader>
+   624→   624→              <TableBody>
+   625→   625→                {rows.map((r) => (
+   626→   626→                  <TableRow key={r.id}>
+   627→   627→                    <TableCell className="font-medium">{r.scheduleName}</TableCell>
+   628→   628→                    <TableCell className="text-xs text-muted-foreground">{r.description || "—"}</TableCell>
+   629→   629→                    <TableCell><Button variant="ghost" size="sm" className="text-primary" onClick={() => handleDelete(r)}><Trash2 className="h-3.5 w-3.5" /></Button></TableCell>
+   630→   630→                  </TableRow>
+   631→   631→                ))}
+   632→   632→              </TableBody>
+   633→   633→            </Table>
+   634→   634→          </div>
+   635→   635→        </SectionCard>
+   636→   636→      )}
+   637→   637→    </div>
+   638→   638→  );
+   639→   639→}
+   640→   640→
+   641→   641→/* ================ DATA TRANSFER ================ */
+   642→   642→
+   643→   643→function DtCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+   644→   644→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   645→   645→  const { toast } = useToast();
+   646→   646→  const setActive = useAppStore((s) => s.setActive);
+   647→   647→  const [saving, setSaving] = React.useState(false);
+   648→   648→  const [form, setForm] = React.useState({
+   649→   649→    policyName: "", scheme: "Absolute", restriction: "Both", cycletype: "Monthly",
+   650→   650→    cycletotallimit: "", cycleuploadlimit: "", chk_cycleuploadlimit: false,
+   651→   651→    cycledownloadlimit: "", chk_cycledownloadlimit: false,
+   652→   652→    uploadlimit: "", chk_uploadlimit: false, downloadlimit: "", chk_downloadlimit: false,
+   653→   653→    description: "",
+   654→   654→  });
+   655→   655→  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+   656→   656→
+   657→   657→  const handleSubmit = async (e: React.FormEvent) => {
+   658→   658→    e.preventDefault();
+   659→   659→    if (!form.policyName.trim()) { toast({ title: "Policy name required", variant: "destructive" }); return; }
+   660→   660→    setSaving(true);
+   661→   661→    await policyApi.create("dataTransferPolicies", {
+   662→   662→      policyName: form.policyName, scheme: form.scheme,
+   663→   663→      uploadLimit: form.chk_uploadlimit ? "Unlimited" : `${form.uploadlimit} MB`,
+   664→   664→      downloadLimit: form.chk_downloadlimit ? "Unlimited" : `${form.downloadlimit} MB`,
+   665→   665→      totalLimit: form.cycletotallimit ? `${form.cycletotallimit} MB` : "Unlimited",
+   666→   666→      description: form.description, status: "Active",
+   667→   667→    });
+   668→   668→    setSaving(false);
+   669→   669→    toast({ title: "Data transfer policy created", description: form.policyName });
+   670→   670→    setActive(moduleId, "data-transfer", "manage");
+   671→   671→  };
+   672→   672→
+   673→   673→  return (
+   674→   674→    <div className="space-y-6">
+   675→   675→      <PageHeader title="Create Data Transfer Policy" description="Create a new data transfer policy (DataTransferPolicyManager servlet)." icon={<Database className="h-5 w-5" />} breadcrumb={breadcrumb}
+   676→   676→        actions={<Button variant="outline" onClick={() => setActive(moduleId, "data-transfer", "manage")}><X className="mr-2 h-4 w-4" /> Cancel</Button>} />
+   677→   677→      <form onSubmit={handleSubmit} className="space-y-6">
+   678→   678→        <SectionCard title="Data Transfer Policy Details" description="Basic policy configuration">
+   679→   679→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   680→   680→            <div className="space-y-2"><Label>Policy Name <span className="text-primary">*</span></Label><Input value={form.policyName} onChange={(e) => set("policyName", e.target.value)} placeholder="e.g. 100MB Policy" required /></div>
+   681→   681→            <div className="space-y-2"><Label>Scheme <span className="text-primary">*</span></Label><Select value={form.scheme} onValueChange={(v) => set("scheme", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Absolute">Absolute</SelectItem><SelectItem value="Ratebased">Rate based</SelectItem></SelectContent></Select></div>
+   682→   682→            <div className="space-y-2"><Label>Restriction</Label><Select value={form.restriction} onValueChange={(v) => set("restriction", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Both">Both (Upload + Download)</SelectItem><SelectItem value="Upload">Upload Only</SelectItem><SelectItem value="Download">Download Only</SelectItem></SelectContent></Select></div>
+   683→   683→            <div className="space-y-2"><Label>Cycle Type <span className="text-primary">*</span></Label><Select value={form.cycletype} onValueChange={(v) => set("cycletype", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Daily">Daily</SelectItem><SelectItem value="Weekly">Weekly</SelectItem><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="Never">Never</SelectItem></SelectContent></Select></div>
+   684→   684→          </div>
+   685→   685→        </SectionCard>
+   686→   686→        <SectionCard title="Cycle Limits" description="Data transfer limits per cycle">
+   687→   687→          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+   688→   688→            <div className="space-y-2"><Label>Cycle Total Data Limit (MB) <span className="text-primary">*</span></Label><Input type="number" value={form.cycletotallimit} onChange={(e) => set("cycletotallimit", e.target.value)} placeholder="100" /></div>
+   689→   689→            <div className="space-y-2"><Label>Cycle Upload Data Limit (MB)</Label><Input type="number" value={form.cycleuploadlimit} onChange={(e) => set("cycleuploadlimit", e.target.value)} disabled={form.chk_cycleuploadlimit} /></div>
+   690→   690→            <div className="flex items-center gap-3"><Switch checked={form.chk_cycleuploadlimit} onCheckedChange={(v) => set("chk_cycleuploadlimit", v)} /><Label>Unlimited Cycle Upload</Label></div>
+   691→   691→            <div className="space-y-2"><Label>Cycle Download Data Limit (MB)</Label><Input type="number" value={form.cycledownloadlimit} onChange={(e) => set("cycledownloadlimit", e.target.value)} disabled={form.chk_cycledownloadlimit} /></div>
+   692→   692→            <div className="flex items-center gap-3"><Switch checked={form.chk_cycledownloadlimit} onCheckedChange={(v) => set("chk_cycledownloadlimit", v)} /><Label>Unlimited Cycle Download</Label></div>
+   693→   693→          </div>
+   694→   694→        </SectionCard>
+   695→   695→        <SectionCard title="Restriction Details" description="Upload and download limits">
+   696→   696→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   697→   697→            <div className="space-y-2"><Label>Upload Limit (MB)</Label><Input type="number" value={form.uploadlimit} onChange={(e) => set("uploadlimit", e.target.value)} disabled={form.chk_uploadlimit} /></div>
+   698→   698→            <div className="flex items-center gap-3"><Switch checked={form.chk_uploadlimit} onCheckedChange={(v) => set("chk_uploadlimit", v)} /><Label>Unlimited Upload</Label></div>
+   699→   699→            <div className="space-y-2"><Label>Download Limit (MB)</Label><Input type="number" value={form.downloadlimit} onChange={(e) => set("downloadlimit", e.target.value)} disabled={form.chk_downloadlimit} /></div>
+   700→   700→            <div className="flex items-center gap-3"><Switch checked={form.chk_downloadlimit} onCheckedChange={(v) => set("chk_downloadlimit", v)} /><Label>Unlimited Download</Label></div>
+   701→   701→            <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={2} placeholder="Policy description…" /></div>
+   702→   702→          </div>
+   703→   703→        </SectionCard>
+   704→   704→        <div className="flex justify-end gap-3">
+   705→   705→          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "data-transfer", "manage")}>Cancel</Button>
+   706→   706→          <Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button>
+   707→   707→        </div>
+   708→   708→      </form>
+   709→   709→    </div>
+   710→   710→  );
+   711→   711→}
+   712→   712→
+   713→   713→function DtManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+   714→   714→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   715→   715→  const { toast } = useToast();
+   716→   716→  const setActive = useAppStore((s) => s.setActive);
+   717→   717→  const [rows, setRows] = React.useState<any[]>([]);
+   718→   718→  const [loading, setLoading] = React.useState(true);
+   719→   719→  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+   720→   720→
+   721→   721→  const load = React.useCallback(() => { setLoading(true); policyApi.list("dataTransferPolicies").then((res) => { setRows(res.data ?? []); setLoading(false); }); }, []);
+   722→   722→  React.useEffect(() => { load(); }, [load]);
+   723→   723→
+   724→   724→  const handleDelete = async () => { for (const id of selected) await policyApi.delete("dataTransferPolicies", id); toast({ title: "Policies deleted" }); setSelected(new Set()); load(); };
+   725→   725→
+   726→   726→  return (
+   727→   727→    <div className="space-y-6">
+   728→   728→      <PageHeader title="Manage Data Transfer Policy" description="View and delete data transfer policies." icon={<Database className="h-5 w-5" />} breadcrumb={breadcrumb}
+   729→   729→        actions={<Button onClick={() => setActive(moduleId, "data-transfer", "create")}><Plus className="mr-2 h-4 w-4" /> Create</Button>} />
+   730→   730→      {loading ? <PageLoader /> : (
+   731→   731→        <SectionCard title="Data Transfer Policies" description={`${rows.length} policies`}>
+   732→   732→          <div className="overflow-x-auto">
+   733→   733→            <Table>
+   734→   734→              <TableHeader><TableRow><TableHead>Policy Name</TableHead><TableHead>Scheme</TableHead><TableHead>Upload Limit</TableHead><TableHead>Download Limit</TableHead><TableHead>Total Limit</TableHead><TableHead>Description</TableHead><TableHead>Del</TableHead></TableRow></TableHeader>
+   735→   735→              <TableBody>
+   736→   736→                {rows.map((r) => (
+   737→   737→                  <TableRow key={r.id}>
+   738→   738→                    <TableCell className="font-medium">{r.policyName}</TableCell>
+   739→   739→                    <TableCell><Badge variant="outline" className="text-[10px]">{r.scheme}</Badge></TableCell>
+   740→   740→                    <TableCell className="font-mono text-xs">{r.uploadLimit}</TableCell>
+   741→   741→                    <TableCell className="font-mono text-xs">{r.downloadLimit}</TableCell>
+   742→   742→                    <TableCell className="font-mono text-xs">{r.totalLimit}</TableCell>
+   743→   743→                    <TableCell className="text-xs text-muted-foreground">{r.description || "—"}</TableCell>
+   744→   744→                    <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => { const n = new Set(selected); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); setSelected(n); }} /></TableCell>
+   745→   745→                  </TableRow>
+   746→   746→                ))}
+   747→   747→              </TableBody>
+   748→   748→            </Table>
+   749→   749→          </div>
+   750→   750→          {selected.size > 0 && <div className="mt-3 flex justify-end"><Button variant="destructive" size="sm" onClick={handleDelete}><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete ({selected.size})</Button></div>}
+   751→   751→        </SectionCard>
+   752→   752→      )}
+   753→   753→    </div>
+   754→   754→  );
+   755→   755→}
+   756→   756→
+   757→   757→/* ================ FAP (Fair Access Policy) ================ */
+   758→   758→
+   759→   759→function FapCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+   760→   760→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   761→   761→  const { toast } = useToast();
+   762→   762→  const setActive = useAppStore((s) => s.setActive);
+   763→   763→  const [saving, setSaving] = React.useState(false);
+   764→   764→  const [form, setForm] = React.useState({
+   765→   765→    fapName: "", fapType: "Time", cycletype: "Monthly", multiplier: "1",
+   766→   766→    hours: "00", minutes: "00", seconds: "00",
+   767→   767→    dataTransferType: "Total", dataTransferLimit: "", limittype: "GB",
+   768→   768→    switchoverbwpolicyid: "512KBPS",
+   769→   769→  });
+   770→   770→  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+   771→   771→
+   772→   772→  const handleSubmit = async (e: React.FormEvent) => {
+   773→   773→    e.preventDefault();
+   774→   774→    if (!form.fapName.trim()) { toast({ title: "FAP name required", variant: "destructive" }); return; }
+   775→   775→    setSaving(true);
+   776→   776→    await policyApi.create("fapDetails", {
+   777→   777→      fapName: form.fapName, resetType: form.fapType === "Time" ? form.cycletype : "Data",
+   778→   778→      resetCycleMultiplier: form.multiplier, dataTransferType: form.dataTransferType,
+   779→   779→      dataTransferLimit: `${form.dataTransferLimit} ${form.limittype}`,
+   780→   780→      switchoverBwPolicy: form.switchoverbwpolicyid,
+   781→   781→      resetTime: `${form.hours}:${form.minutes}:${form.seconds}`, status: "Active",
+   782→   782→    });
+   783→   783→    setSaving(false);
+   784→   784→    toast({ title: "FAP created", description: form.fapName });
+   785→   785→    setActive(moduleId, "fap", "manage-fap");
+   786→   786→  };
+   787→   787→
+   788→   788→  const bwPolicies = ["Select Here", "User based Strict Individual Policy", "Default", "512KBPS", "20MBPS", "15MBPS", "10MBPS", "256KBPS", "128KBPS"];
+   789→   789→
+   790→   790→  return (
+   791→   791→    <div className="space-y-6">
+   792→   792→      <PageHeader title="Create FAP Details" description="Create a new Fair Access Policy (FAPDetailsManager servlet)." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+   793→   793→        actions={<Button variant="outline" onClick={() => setActive(moduleId, "fap", "manage-fap")}><X className="mr-2 h-4 w-4" /> Cancel</Button>} />
+   794→   794→      <form onSubmit={handleSubmit} className="space-y-6">
+   795→   795→        <SectionCard title="Create FAP Details" description="FAP configuration">
+   796→   796→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   797→   797→            <div className="space-y-2"><Label>FAP Name <span className="text-primary">*</span></Label><Input value={form.fapName} onChange={(e) => set("fapName", e.target.value)} placeholder="e.g. Default FAP" required /></div>
+   798→   798→            <div className="space-y-2"><Label>FAP Type <span className="text-primary">*</span></Label><Select value={form.fapType} onValueChange={(v) => set("fapType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Time">Time Based</SelectItem><SelectItem value="Data">Data Based</SelectItem></SelectContent></Select></div>
+   799→   799→            <div className="space-y-2"><Label>Reset Cycle Multiplier <span className="text-primary">*</span></Label><Input type="number" min="1" value={form.multiplier} onChange={(e) => set("multiplier", e.target.value)} /></div>
+   800→   800→            <div className="space-y-2"><Label>Cycle Type</Label><Select value={form.cycletype} onValueChange={(v) => set("cycletype", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Daily">Daily</SelectItem><SelectItem value="Weekly">Weekly</SelectItem><SelectItem value="Monthly">Monthly</SelectItem></SelectContent></Select></div>
+   801→   801→          </div>
+   802→   802→        </SectionCard>
+   803→   803→        <SectionCard title="Reset Time" description="When the FAP counter resets">
+   804→   804→          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+   805→   805→            <div className="space-y-2"><Label>Hours</Label><Select value={form.hours} onValueChange={(v) => set("hours", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 24 }, (_, i) => <SelectItem key={i} value={String(i).padStart(2, "0")}>{String(i).padStart(2, "0")}</SelectItem>)}</SelectContent></Select></div>
+   806→   806→            <div className="space-y-2"><Label>Minutes</Label><Select value={form.minutes} onValueChange={(v) => set("minutes", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 60 }, (_, i) => <SelectItem key={i} value={String(i).padStart(2, "0")}>{String(i).padStart(2, "0")}</SelectItem>)}</SelectContent></Select></div>
+   807→   807→            <div className="space-y-2"><Label>Seconds</Label><Select value={form.seconds} onValueChange={(v) => set("seconds", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 60 }, (_, i) => <SelectItem key={i} value={String(i).padStart(2, "0")}>{String(i).padStart(2, "0")}</SelectItem>)}</SelectContent></Select></div>
+   808→   808→          </div>
+   809→   809→        </SectionCard>
+   810→   810→        <SectionCard title="Data Transfer Limit" description="When data transfer exceeds this limit, switch to lower bandwidth">
+   811→   811→          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+   812→   812→            <div className="space-y-2"><Label>Data Transfer Type</Label><Select value={form.dataTransferType} onValueChange={(v) => set("dataTransferType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Total">Total</SelectItem><SelectItem value="Upload">Upload</SelectItem><SelectItem value="Download">Download</SelectItem></SelectContent></Select></div>
+   813→   813→            <div className="space-y-2"><Label>Data Transfer Limit <span className="text-primary">*</span></Label><Input type="number" value={form.dataTransferLimit} onChange={(e) => set("dataTransferLimit", e.target.value)} placeholder="100" required /></div>
+   814→   814→            <div className="space-y-2"><Label>Limit Type</Label><Select value={form.limittype} onValueChange={(v) => set("limittype", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MB">MB</SelectItem><SelectItem value="GB">GB</SelectItem><SelectItem value="TB">TB</SelectItem></SelectContent></Select></div>
+   815→   815→          </div>
+   816→   816→        </SectionCard>
+   817→   817→        <SectionCard title="Switch Over Bandwidth Policy" description="The bandwidth policy applied when FAP limit is reached">
+   818→   818→          <div className="space-y-2">
+   819→   819→            <Label>Switch Over Bandwidth Policy <span className="text-primary">*</span></Label>
+   820→   820→            <Select value={form.switchoverbwpolicyid} onValueChange={(v) => set("switchoverbwpolicyid", v)}>
+   821→   821→              <SelectTrigger><SelectValue /></SelectTrigger>
+   822→   822→              <SelectContent>{bwPolicies.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+   823→   823→            </Select>
+   824→   824→          </div>
+   825→   825→        </SectionCard>
+   826→   826→        <div className="flex justify-end gap-3">
+   827→   827→          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "fap", "manage-fap")}>Cancel</Button>
+   828→   828→          <Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button>
+   829→   829→        </div>
+   830→   830→      </form>
+   831→   831→    </div>
+   832→   832→  );
+   833→   833→}
+   834→   834→
+   835→   835→function FapManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+   836→   836→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   837→   837→  const { toast } = useToast();
+   838→   838→  const setActive = useAppStore((s) => s.setActive);
+   839→   839→  const [rows, setRows] = React.useState<any[]>([]);
+   840→   840→  const [loading, setLoading] = React.useState(true);
+   841→   841→  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+   842→   842→
+   843→   843→  const load = React.useCallback(() => { setLoading(true); policyApi.list("fapDetails").then((res) => { setRows(res.data ?? []); setLoading(false); }); }, []);
+   844→   844→  React.useEffect(() => { load(); }, [load]);
+   845→   845→
+   846→   846→  const handleDelete = async () => { for (const id of selected) await policyApi.delete("fapDetails", id); toast({ title: "FAP deleted" }); setSelected(new Set()); load(); };
+   847→   847→
+   848→   848→  return (
+   849→   849→    <div className="space-y-6">
+   850→   850→      <PageHeader title="Manage FAP Details" description="View and delete Fair Access Policy details." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+   851→   851→        actions={<Button onClick={() => setActive(moduleId, "fap", "create-fap")}><Plus className="mr-2 h-4 w-4" /> Create FAP</Button>} />
+   852→   852→      {loading ? <PageLoader /> : (
+   853→   853→        <SectionCard title="FAP Details" description={`${rows.length} entries`}>
+   854→   854→          <div className="overflow-x-auto">
+   855→   855→            <Table>
+   856→   856→              <TableHeader><TableRow>
+   857→   857→                <TableHead>FAP Name</TableHead><TableHead>Reset Type</TableHead><TableHead>Reset Cycle Multiplier</TableHead>
+   858→   858→                <TableHead>Data Transfer Type</TableHead><TableHead>Data Transfer Limit</TableHead><TableHead>Switch Over Bandwidth Policy</TableHead>
+   859→   859→                <TableHead>Reset Time (HH:MM:SS)</TableHead><TableHead>Del</TableHead>
+   860→   860→              </TableRow></TableHeader>
+   861→   861→              <TableBody>
+   862→   862→                {rows.map((r) => (
+   863→   863→                  <TableRow key={r.id}>
+   864→   864→                    <TableCell className="font-medium">{r.fapName}</TableCell>
+   865→   865→                    <TableCell><Badge variant="outline" className="text-[10px]">{r.resetType}</Badge></TableCell>
+   866→   866→                    <TableCell>{r.resetCycleMultiplier}</TableCell>
+   867→   867→                    <TableCell className="text-xs">{r.dataTransferType}</TableCell>
+   868→   868→                    <TableCell className="font-mono text-xs">{r.dataTransferLimit}</TableCell>
+   869→   869→                    <TableCell className="text-xs">{r.switchoverBwPolicy}</TableCell>
+   870→   870→                    <TableCell className="font-mono text-xs">{r.resetTime}</TableCell>
+   871→   871→                    <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => { const n = new Set(selected); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); setSelected(n); }} /></TableCell>
+   872→   872→                  </TableRow>
+   873→   873→                ))}
+   874→   874→              </TableBody>
+   875→   875→            </Table>
+   876→   876→          </div>
+   877→   877→          {selected.size > 0 && <div className="mt-3 flex justify-end"><Button variant="destructive" size="sm" onClick={handleDelete}><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete ({selected.size})</Button></div>}
+   878→   878→        </SectionCard>
+   879→   879→      )}
+   880→   880→    </div>
+   881→   881→  );
+   882→   882→}
+   883→   883→
+   884→   884→/* ================ QoS POLICY ================ */
+   885→   885→
+   886→   886→function QosCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+   887→   887→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   888→   888→  const { toast } = useToast();
+   889→   889→  const [saving, setSaving] = React.useState(false);
+   890→   890→  const [form, setForm] = React.useState({ policyName: "", cacheType: "Enable", description: "" });
+   891→   891→
+   892→   892→  const handleSubmit = async (e: React.FormEvent) => {
+   893→   893→    e.preventDefault();
+   894→   894→    if (!form.policyName.trim()) { toast({ title: "Policy name required", variant: "destructive" }); return; }
+   895→   895→    setSaving(true);
+   896→   896→    await policyApi.create("qosPolicies", { ...form, status: "Active" });
+   897→   897→    setSaving(false);
+   898→   898→    toast({ title: "Cache policy created", description: form.policyName });
+   899→   899→    setForm({ policyName: "", cacheType: "Enable", description: "" });
+   900→   900→  };
+   901→   901→
+   902→   902→  return (
+   903→   903→    <div className="space-y-6">
+   904→   904→      <PageHeader title="Create Cache Policy" description="Create a new QoS cache policy." icon={<Zap className="h-5 w-5" />} breadcrumb={breadcrumb} />
+   905→   905→      <form onSubmit={handleSubmit}>
+   906→   906→        <SectionCard title="Cache Policy Details">
+   907→   907→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+   908→   908→            <div className="space-y-2"><Label>Policy Name <span className="text-primary">*</span></Label><Input value={form.policyName} onChange={(e) => setForm({ ...form, policyName: e.target.value })} required /></div>
+   909→   909→            <div className="space-y-2"><Label>Cache Type</Label><Select value={form.cacheType} onValueChange={(v) => setForm({ ...form, cacheType: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Enable">Enable</SelectItem><SelectItem value="Disable">Disable</SelectItem></SelectContent></Select></div>
+   910→   910→            <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></div>
+   911→   911→          </div>
+   912→   912→        </SectionCard>
+   913→   913→        <div className="mt-4 flex justify-end"><Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button></div>
+   914→   914→      </form>
+   915→   915→    </div>
+   916→   916→  );
+   917→   917→}
+   918→   918→
+   919→   919→function QosManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+   920→   920→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   921→   921→  const { toast } = useToast();
+   922→   922→  const [rows, setRows] = React.useState<any[]>([
+   923→   923→    { id: 1, policyName: "Default Cache", cacheType: "Enable", description: "Default caching policy", status: "Active" },
+   924→   924→    { id: 2, policyName: "No Cache", cacheType: "Disable", description: "Caching disabled", status: "Active" },
+   925→   925→  ]);
+   926→   926→
+   927→   927→  const handleDelete = (r: any) => { setRows(rows.filter((x) => x.id !== r.id)); toast({ title: "Policy deleted", description: r.policyName }); };
+   928→   928→
+   929→   929→  return (
+   930→   930→    <div className="space-y-6">
+   931→   931→      <PageHeader title="Manage Cache Policy" description="View and delete QoS cache policies." icon={<Zap className="h-5 w-5" />} breadcrumb={breadcrumb} />
+   932→   932→      <SectionCard title="Cache Policies" description={`${rows.length} policies`}>
+   933→   933→        <div className="overflow-x-auto">
+   934→   934→          <Table>
+   935→   935→            <TableHeader><TableRow><TableHead>Policy Name</TableHead><TableHead>Cache Type</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Delete</TableHead></TableRow></TableHeader>
+   936→   936→            <TableBody>
+   937→   937→              {rows.map((r) => (
+   938→   938→                <TableRow key={r.id}>
+   939→   939→                  <TableCell className="font-medium">{r.policyName}</TableCell>
+   940→   940→                  <TableCell><Badge variant={r.cacheType === "Enable" ? "default" : "secondary"} className={r.cacheType === "Enable" ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" : ""}>{r.cacheType}</Badge></TableCell>
+   941→   941→                  <TableCell className="text-xs text-muted-foreground">{r.description || "—"}</TableCell>
+   942→   942→                  <TableCell className="text-right"><Button variant="ghost" size="sm" className="text-primary" onClick={() => handleDelete(r)}><Trash2 className="h-3.5 w-3.5" /></Button></TableCell>
+   943→   943→                </TableRow>
+   944→   944→              ))}
+   945→   945→            </TableBody>
+   946→   946→          </Table>
+   947→   947→        </div>
+   948→   948→      </SectionCard>
+   949→   949→    </div>
+   950→   950→  );
+   951→   951→}
+   952→   952→

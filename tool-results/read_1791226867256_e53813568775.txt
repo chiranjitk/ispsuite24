@@ -1,0 +1,602 @@
+   540→      .then((res) => {
+   541→        setUsers(res.data ?? []);
+   542→        setLoading(false);
+   543→      });
+   544→  }, [search, userTypeFilter, statusFilter]);
+   545→
+   546→  React.useEffect(() => {
+   547→    const t = setTimeout(load, 300);
+   548→    return () => clearTimeout(t);
+   549→  }, [load]);
+   550→
+   551→  const toggleAll = () => {
+   552→    if (selected.size === users.length) setSelected(new Set());
+   553→    else setSelected(new Set(users.map((u) => u.userid)));
+   554→  };
+   555→  const toggleOne = (id: number) => {
+   556→    setSelected((s) => {
+   557→      const n = new Set(s);
+   558→      if (n.has(id)) n.delete(id);
+   559→      else n.add(id);
+   560→      return n;
+   561→    });
+   562→  };
+   563→
+   564→  const handleStatusChange = async (newStatus: "Y" | "D" | "N") => {
+   565→    if (selected.size === 0) return;
+   566→    const res = await usersApi.changeStatus(Array.from(selected), newStatus);
+   567→    if (res.responseCode === "0") {
+   568→      toast({ title: "Status updated", description: res.responseMsg });
+   569→      setSelected(new Set());
+   570→      load();
+   571→    }
+   572→  };
+   573→
+   574→  const handleDelete = async () => {
+   575→    if (!deleteTarget) return;
+   576→    setDeleting(true);
+   577→    const res = await usersApi.delete(deleteTarget.userid);
+   578→    setDeleting(false);
+   579→    if (res.responseCode === "0") {
+   580→      toast({ title: "User deleted", description: `"${deleteTarget.username}" was deleted.` });
+   581→      setDeleteTarget(null);
+   582→      load();
+   583→    } else {
+   584→      toast({ title: "Delete failed", description: res.responseMsg, variant: "destructive" });
+   585→    }
+   586→  };
+   587→
+   588→  if (!mod || !child) return null;
+   589→
+   590→  return (
+   591→    <div className="space-y-6">
+   592→      <PageHeader
+   593→        title={grandchild?.label ?? "Search User"}
+   594→        description="Search subscribers by username, account number, name, mobile, IP or MAC. Data is backed by the users API."
+   595→        icon={<mod.icon className="h-5 w-5" />}
+   596→        breadcrumb={[
+   597→          { label: "Cryptsk" },
+   598→          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+   599→          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+   600→          { label: grandchild?.label ?? "Search" },
+   601→        ]}
+   602→        actions={
+   603→          <Button onClick={() => setActive(moduleId, "manage-users", "add-user")}>
+   604→            <UserPlus className="mr-2 h-4 w-4" /> Add User
+   605→          </Button>
+   606→        }
+   607→      />
+   608→
+   609→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+   610→        <KpiCard label="Total Users" value={String(users.length)} icon={<UsersIcon className="h-4 w-4" />} accent />
+   611→        <KpiCard label="Active" value={String(users.filter((u) => u.active === "Y").length)} icon={<Activity className="h-4 w-4" />} />
+   612→        <KpiCard label="Deactive" value={String(users.filter((u) => u.active === "D").length)} icon={<UsersIcon className="h-4 w-4" />} />
+   613→        <KpiCard label="Selected" value={String(selected.size)} icon={<Filter className="h-4 w-4" />} />
+   614→      </div>
+   615→
+   616→      <ActionBar>
+   617→        <div className="relative flex-1 max-w-xs">
+   618→          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+   619→          <Input
+   620→            placeholder="Search username, name, IP, MAC…"
+   621→            className="h-8 pl-8 text-xs"
+   622→            value={search}
+   623→            onChange={(e) => setSearch(e.target.value)}
+   624→          />
+   625→        </div>
+   626→        <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
+   627→          <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+   628→          <SelectContent>
+   629→            <SelectItem value="all">All types</SelectItem>
+   630→            <SelectItem value="User">User</SelectItem>
+   631→            <SelectItem value="Administrator">Administrator</SelectItem>
+   632→            <SelectItem value="Manager">Manager</SelectItem>
+   633→            <SelectItem value="Operator">Operator</SelectItem>
+   634→            <SelectItem value="Leased Line">Leased Line</SelectItem>
+   635→          </SelectContent>
+   636→        </Select>
+   637→        <Select value={statusFilter} onValueChange={setStatusFilter}>
+   638→          <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
+   639→          <SelectContent>
+   640→            <SelectItem value="all">All status</SelectItem>
+   641→            <SelectItem value="Y">Active</SelectItem>
+   642→            <SelectItem value="D">Deactive</SelectItem>
+   643→            <SelectItem value="N">Suspended</SelectItem>
+   644→          </SelectContent>
+   645→        </Select>
+   646→        <Button variant="outline" size="sm" className="h-8" onClick={load}>
+   647→          <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
+   648→        </Button>
+   649→        {selected.size > 0 && (
+   650→          <>
+   651→            <Button size="sm" className="h-8" onClick={() => handleStatusChange("Y")}>
+   652→              <Power className="mr-1.5 h-3.5 w-3.5" /> Activate
+   653→            </Button>
+   654→            <Button size="sm" variant="destructive" className="h-8" onClick={() => handleStatusChange("N")}>
+   655→              <Power className="mr-1.5 h-3.5 w-3.5" /> Suspend
+   656→            </Button>
+   657→          </>
+   658→        )}
+   659→      </ActionBar>
+   660→
+   661→      <SectionCard>
+   662→        {loading ? (
+   663→          <div className="flex items-center justify-center py-12">
+   664→            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+   665→          </div>
+   666→        ) : users.length === 0 ? (
+   667→          <EmptyState
+   668→            icon={<Search className="h-5 w-5" />}
+   669→            title="No users found"
+   670→            description="Try adjusting your search or filters."
+   671→            action={<Button onClick={() => setActive(moduleId, "manage-users", "add-user")}><UserPlus className="mr-2 h-4 w-4" /> Add User</Button>}
+   672→          />
+   673→        ) : (
+   674→          <div className="overflow-x-auto">
+   675→            <Table>
+   676→              <TableHeader>
+   677→                <TableRow>
+   678→                  <TableHead className="w-8">
+   679→                    <Checkbox checked={users.length > 0 && selected.size === users.length} onCheckedChange={toggleAll} />
+   680→                  </TableHead>
+   681→                  <TableHead>Account No</TableHead>
+   682→                  <TableHead>Username</TableHead>
+   683→                  <TableHead>Name</TableHead>
+   684→                  <TableHead>Type</TableHead>
+   685→                  <TableHead>Package</TableHead>
+   686→                  <TableHead>Zone</TableHead>
+   687→                  <TableHead>Contact</TableHead>
+   688→                  <TableHead>Status</TableHead>
+   689→                  <TableHead className="text-right">Actions</TableHead>
+   690→                </TableRow>
+   691→              </TableHeader>
+   692→              <TableBody>
+   693→                {users.map((u) => (
+   694→                  <TableRow key={u.userid} data-state={selected.has(u.userid) ? "selected" : undefined}>
+   695→                    <TableCell><Checkbox checked={selected.has(u.userid)} onCheckedChange={() => toggleOne(u.userid)} /></TableCell>
+   696→                    <TableCell className="font-mono text-xs">{u.accountid}</TableCell>
+   697→                    <TableCell className="font-medium text-primary">{u.username}</TableCell>
+   698→                    <TableCell>{u.name}</TableCell>
+   699→                    <TableCell><Badge variant="outline" className="text-[10px]">{u.userType}</Badge></TableCell>
+   700→                    <TableCell className="text-xs text-muted-foreground max-w-[140px] truncate">{u.packageName}</TableCell>
+   701→                    <TableCell className="text-xs text-muted-foreground">{u.zoneName}</TableCell>
+   702→                    <TableCell className="text-xs">
+   703→                      <div>{u.emailid || "—"}</div>
+   704→                      <div className="text-muted-foreground">{u.phone || "—"}</div>
+   705→                    </TableCell>
+   706→                    <TableCell>
+   707→                      <Badge
+   708→                        variant={u.active === "Y" ? "default" : u.active === "D" ? "secondary" : "destructive"}
+   709→                        className={
+   710→                          u.active === "Y"
+   711→                            ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
+   712→                            : u.active === "N"
+   713→                            ? "bg-primary/10 text-primary hover:bg-primary/10"
+   714→                            : ""
+   715→                        }
+   716→                      >
+   717→                        {u.active === "Y" ? "Active" : u.active === "D" ? "Deactive" : "Suspended"}
+   718→                      </Badge>
+   719→                    </TableCell>
+   720→                    <TableCell className="text-right">
+   721→                      <div className="flex items-center justify-end gap-1">
+   722→                        <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit user", description: `Editing ${u.username}` })}>
+   723→                          <Pencil className="h-3.5 w-3.5" />
+   724→                        </Button>
+   725→                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(u)}>
+   726→                          <Trash2 className="h-3.5 w-3.5" />
+   727→                        </Button>
+   728→                      </div>
+   729→                    </TableCell>
+   730→                  </TableRow>
+   731→                ))}
+   732→              </TableBody>
+   733→            </Table>
+   734→          </div>
+   735→        )}
+   736→      </SectionCard>
+   737→
+   738→      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+   739→        <DialogContent>
+   740→          <DialogHeader><DialogTitle>Delete User</DialogTitle></DialogHeader>
+   741→          <p className="text-sm text-muted-foreground">
+   742→            Are you sure you want to delete <span className="font-medium text-foreground">{deleteTarget?.username}</span> ({deleteTarget?.name})? This action cannot be undone.
+   743→          </p>
+   744→          <DialogFooter>
+   745→            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+   746→            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+   747→              {deleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…</> : <><Trash2 className="mr-2 h-4 w-4" /> Delete</>}
+   748→            </Button>
+   749→          </DialogFooter>
+   750→        </DialogContent>
+   751→      </Dialog>
+   752→    </div>
+   753→  );
+   754→}
+   755→
+   756→/* ================ MANAGE LIVE USERS (REAL FUNCTIONAL) ================ */
+   757→
+   758→function ManageLiveUsersPage({ moduleId, childId, grandchildId }: ViewProps) {
+   759→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   760→  const setActive = useAppStore((s) => s.setActive);
+   761→  const { toast } = useToast();
+   762→  const [users, setUsers] = React.useState<LiveUser[]>([]);
+   763→  const [totalConnected, setTotalConnected] = React.useState(0);
+   764→  const [loading, setLoading] = React.useState(true);
+   765→  const [search, setSearch] = React.useState("");
+   766→  const [typeFilter, setTypeFilter] = React.useState("all");
+   767→  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+   768→  const [messageOpen, setMessageOpen] = React.useState(false);
+   769→  const [message, setMessage] = React.useState("");
+   770→  const [sending, setSending] = React.useState(false);
+   771→
+   772→  const load = React.useCallback(() => {
+   773→    setLoading(true);
+   774→    liveUsersApi
+   775→      .list({ search: search || undefined, type: typeFilter !== "all" ? typeFilter : undefined })
+   776→      .then((res) => {
+   777→        setUsers(res.data ?? []);
+   778→        setTotalConnected(res.totalConnected ?? 0);
+   779→        setLoading(false);
+   780→      });
+   781→  }, [search, typeFilter]);
+   782→
+   783→  React.useEffect(() => {
+   784→    const t = setTimeout(load, 300);
+   785→    return () => clearTimeout(t);
+   786→  }, [load]);
+   787→
+   788→  const toggleAll = () => {
+   789→    if (selected.size === users.length) setSelected(new Set());
+   790→    else setSelected(new Set(users.map((u) => u.sessionid)));
+   791→  };
+   792→  const toggleOne = (sid: string) => {
+   793→    setSelected((s) => {
+   794→      const n = new Set(s);
+   795→      if (n.has(sid)) n.delete(sid);
+   796→      else n.add(sid);
+   797→      return n;
+   798→    });
+   799→  };
+   800→
+   801→  const handleDisconnect = async () => {
+   802→    if (selected.size === 0) return;
+   803→    const res = await liveUsersApi.disconnect(Array.from(selected));
+   804→    if (res.responseCode === "0") {
+   805→      toast({ title: "Users disconnected", description: res.responseMsg, variant: "destructive" });
+   806→      setSelected(new Set());
+   807→      load();
+   808→    }
+   809→  };
+   810→
+   811→  const handleSendMessage = async () => {
+   812→    setSending(true);
+   813→    const res = await liveUsersApi.sendMessage(Array.from(selected), message);
+   814→    setSending(false);
+   815→    if (res.responseCode === "0") {
+   816→      toast({ title: "Message sent", description: res.responseMsg });
+   817→      setMessageOpen(false);
+   818→      setMessage("");
+   819→    }
+   820→  };
+   821→
+   822→  if (!mod || !child) return null;
+   823→
+   824→  return (
+   825→    <div className="space-y-6">
+   826→      <PageHeader
+   827→        title={grandchild?.label ?? "Manage Live Users"}
+   828→        description={`Total users connected: ${totalConnected} · Current system time: ${new Date().toLocaleString()}`}
+   829→        icon={<mod.icon className="h-5 w-5" />}
+   830→        breadcrumb={[
+   831→          { label: "Cryptsk" },
+   832→          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+   833→          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+   834→          { label: grandchild?.label ?? "Manage" },
+   835→        ]}
+   836→      />
+   837→
+   838→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+   839→        <KpiCard label="Live Sessions" value={String(totalConnected)} icon={<Network className="h-4 w-4" />} accent />
+   840→        <KpiCard label="Showing" value={String(users.length)} icon={<Activity className="h-4 w-4" />} />
+   841→        <KpiCard label="PPPoE" value={String(users.filter((u) => u.userType === "PPPoE").length)} icon={<Network className="h-4 w-4" />} />
+   842→        <KpiCard label="Selected" value={String(selected.size)} icon={<UsersIcon className="h-4 w-4" />} />
+   843→      </div>
+   844→
+   845→      <ActionBar>
+   846→        <Button size="sm" onClick={() => setMessageOpen(true)}>
+   847→          <Send className="mr-2 h-3.5 w-3.5" /> Send Message to All
+   848→        </Button>
+   849→        <Button size="sm" variant="destructive" disabled={!selected.size} onClick={handleDisconnect}>
+   850→          <Power className="mr-2 h-3.5 w-3.5" /> Disconnect ({selected.size})
+   851→        </Button>
+   852→        <div className="ml-auto flex items-center gap-2">
+   853→          <Select value={typeFilter} onValueChange={setTypeFilter}>
+   854→            <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+   855→            <SelectContent>
+   856→              <SelectItem value="all">All types</SelectItem>
+   857→              <SelectItem value="PPPoE">PPPoE</SelectItem>
+   858→              <SelectItem value="Leased Line">Leased Line</SelectItem>
+   859→              <SelectItem value="Hotspot">Hotspot</SelectItem>
+   860→            </SelectContent>
+   861→          </Select>
+   862→          <div className="relative">
+   863→            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+   864→            <Input placeholder="Search user / IP / MAC" className="h-8 w-[220px] pl-8 text-xs" value={search} onChange={(e) => setSearch(e.target.value)} />
+   865→          </div>
+   866→          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={load}>
+   867→            <RefreshCw className="h-3.5 w-3.5" />
+   868→          </Button>
+   869→        </div>
+   870→      </ActionBar>
+   871→
+   872→      <SectionCard>
+   873→        {loading ? (
+   874→          <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+   875→        ) : users.length === 0 ? (
+   876→          <EmptyState icon={<Search className="h-5 w-5" />} title="No live users match your filters" />
+   877→        ) : (
+   878→          <div className="overflow-x-auto">
+   879→            <Table>
+   880→              <TableHeader>
+   881→                <TableRow>
+   882→                  <TableHead className="w-8"><Checkbox checked={users.length > 0 && selected.size === users.length} onCheckedChange={toggleAll} /></TableHead>
+   883→                  <TableHead className="w-12">Sr.</TableHead>
+   884→                  <TableHead>Account No</TableHead>
+   885→                  <TableHead>User Name</TableHead>
+   886→                  <TableHead>Type</TableHead>
+   887→                  <TableHead>Connected From</TableHead>
+   888→                  <TableHead>Public IP</TableHead>
+   889→                  <TableHead>MAC Address</TableHead>
+   890→                  <TableHead>Start Time</TableHead>
+   891→                  <TableHead>Time</TableHead>
+   892→                  <TableHead>Upload</TableHead>
+   893→                  <TableHead>Download</TableHead>
+   894→                  <TableHead>Bandwidth</TableHead>
+   895→                  <TableHead>Device</TableHead>
+   896→                </TableRow>
+   897→              </TableHeader>
+   898→              <TableBody>
+   899→                {users.map((u) => (
+   900→                  <TableRow key={u.sr} data-state={selected.has(u.sessionid) ? "selected" : undefined}>
+   901→                    <TableCell><Checkbox checked={selected.has(u.sessionid)} onCheckedChange={() => toggleOne(u.sessionid)} /></TableCell>
+   902→                    <TableCell className="text-muted-foreground">{u.sr}</TableCell>
+   903→                    <TableCell className="font-mono text-xs">{u.accountNo}</TableCell>
+   904→                    <TableCell className="font-medium text-primary">{u.userName}</TableCell>
+   905→                    <TableCell><Badge variant="outline" className="text-[10px]">{u.userType}</Badge></TableCell>
+   906→                    <TableCell className="max-w-[180px] truncate font-mono text-xs text-muted-foreground">{u.connectedFrom}</TableCell>
+   907→                    <TableCell className="font-mono text-xs">{u.publicIp}</TableCell>
+   908→                    <TableCell className="font-mono text-xs text-muted-foreground">{u.mac}</TableCell>
+   909→                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{u.startTime}</TableCell>
+   910→                    <TableCell className="font-mono text-xs">{u.duration}</TableCell>
+   911→                    <TableCell className="text-xs">{u.upload}</TableCell>
+   912→                    <TableCell className="text-xs">{u.download}</TableCell>
+   913→                    <TableCell className="font-mono text-xs font-semibold text-primary">{u.bandwidth}</TableCell>
+   914→                    <TableCell className="text-xs text-muted-foreground">{u.deviceType}</TableCell>
+   915→                  </TableRow>
+   916→                ))}
+   917→              </TableBody>
+   918→            </Table>
+   919→          </div>
+   920→        )}
+   921→        <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
+   922→          <span>Showing {users.length} of {totalConnected} live users</span>
+   923→          <div className="flex items-center gap-2">
+   924→            <Button variant="outline" size="sm" disabled>Previous</Button>
+   925→            <span>Page 1 / {Math.ceil(totalConnected / 250)}</span>
+   926→            <Button variant="outline" size="sm">Next »</Button>
+   927→          </div>
+   928→        </div>
+   929→      </SectionCard>
+   930→
+   931→      {/* Send Message Dialog */}
+   932→      <Dialog open={messageOpen} onOpenChange={setMessageOpen}>
+   933→        <DialogContent>
+   934→          <DialogHeader><DialogTitle>Send Message to Live Users</DialogTitle></DialogHeader>
+   935→          <p className="text-sm text-muted-foreground">
+   936→            {selected.size > 0
+   937→              ? `Sending to ${selected.size} selected user(s).`
+   938→              : `Sending to all ${totalConnected} live users.`}
+   939→          </p>
+   940→          <Textarea
+   941→            placeholder="Type your message…"
+   942→            value={message}
+   943→            onChange={(e) => setMessage(e.target.value)}
+   944→            rows={4}
+   945→          />
+   946→          <DialogFooter>
+   947→            <Button variant="outline" onClick={() => setMessageOpen(false)}>Cancel</Button>
+   948→            <Button onClick={handleSendMessage} disabled={sending || !message.trim()}>
+   949→              {sending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…</> : <><Send className="mr-2 h-4 w-4" /> Send</>}
+   950→            </Button>
+   951→          </DialogFooter>
+   952→        </DialogContent>
+   953→      </Dialog>
+   954→    </div>
+   955→  );
+   956→}
+   957→
+   958→/* ================ SEARCH LIVE USERS (REAL FUNCTIONAL - same data, search-focused) ================ */
+   959→
+   960→function SearchLiveUsersPage({ moduleId, childId, grandchildId }: ViewProps) {
+   961→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   962→  const setActive = useAppStore((s) => s.setActive);
+   963→  const [users, setUsers] = React.useState<LiveUser[]>([]);
+   964→  const [totalConnected, setTotalConnected] = React.useState(0);
+   965→  const [loading, setLoading] = React.useState(true);
+   966→  const [search, setSearch] = React.useState("");
+   967→
+   968→  const load = React.useCallback(() => {
+   969→    setLoading(true);
+   970→    liveUsersApi.list({ search: search || undefined }).then((res) => {
+   971→      setUsers(res.data ?? []);
+   972→      setTotalConnected(res.totalConnected ?? 0);
+   973→      setLoading(false);
+   974→    });
+   975→  }, [search]);
+   976→
+   977→  React.useEffect(() => {
+   978→    const t = setTimeout(load, 300);
+   979→    return () => clearTimeout(t);
+   980→  }, [load]);
+   981→
+   982→  if (!mod || !child) return null;
+   983→
+   984→  return (
+   985→    <div className="space-y-6">
+   986→      <PageHeader
+   987→        title={grandchild?.label ?? "Search Live Users"}
+   988→        description="Search active sessions by username, IP, or MAC address."
+   989→        icon={<mod.icon className="h-5 w-5" />}
+   990→        breadcrumb={[
+   991→          { label: "Cryptsk" },
+   992→          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+   993→          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+   994→          { label: grandchild?.label ?? "Search" },
+   995→        ]}
+   996→      />
+   997→
+   998→      <SectionCard title="Search Criteria" description="Enter username, IP, or MAC to find live sessions">
+   999→        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+  1000→          <div className="relative flex-1">
+  1001→            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+  1002→            <Input
+  1003→              placeholder="Enter username, IP address, or MAC address"
+  1004→              className="pl-9"
+  1005→              value={search}
+  1006→              onChange={(e) => setSearch(e.target.value)}
+  1007→            />
+  1008→          </div>
+  1009→          <Button onClick={load}><Search className="mr-2 h-4 w-4" /> Search</Button>
+  1010→        </div>
+  1011→      </SectionCard>
+  1012→
+  1013→      <SectionCard title="Search Results" description={`${users.length} live session(s) found`}>
+  1014→        {loading ? (
+  1015→          <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+  1016→        ) : users.length === 0 ? (
+  1017→          <EmptyState icon={<Search className="h-5 w-5" />} title="No live sessions found" description="Enter a search term above." />
+  1018→        ) : (
+  1019→          <div className="overflow-x-auto">
+  1020→            <Table>
+  1021→              <TableHeader>
+  1022→                <TableRow>
+  1023→                  <TableHead>Account No</TableHead>
+  1024→                  <TableHead>User Name</TableHead>
+  1025→                  <TableHead>Type</TableHead>
+  1026→                  <TableHead>Public IP</TableHead>
+  1027→                  <TableHead>MAC Address</TableHead>
+  1028→                  <TableHead>Start Time</TableHead>
+  1029→                  <TableHead>Duration</TableHead>
+  1030→                  <TableHead>Bandwidth</TableHead>
+  1031→                </TableRow>
+  1032→              </TableHeader>
+  1033→              <TableBody>
+  1034→                {users.map((u) => (
+  1035→                  <TableRow key={u.sr}>
+  1036→                    <TableCell className="font-mono text-xs">{u.accountNo}</TableCell>
+  1037→                    <TableCell className="font-medium text-primary">{u.userName}</TableCell>
+  1038→                    <TableCell><Badge variant="outline" className="text-[10px]">{u.userType}</Badge></TableCell>
+  1039→                    <TableCell className="font-mono text-xs">{u.publicIp}</TableCell>
+  1040→                    <TableCell className="font-mono text-xs text-muted-foreground">{u.mac}</TableCell>
+  1041→                    <TableCell className="text-xs text-muted-foreground">{u.startTime}</TableCell>
+  1042→                    <TableCell className="font-mono text-xs">{u.duration}</TableCell>
+  1043→                    <TableCell className="font-mono text-xs font-semibold text-primary">{u.bandwidth}</TableCell>
+  1044→                  </TableRow>
+  1045→                ))}
+  1046→              </TableBody>
+  1047→            </Table>
+  1048→          </div>
+  1049→        )}
+  1050→      </SectionCard>
+  1051→    </div>
+  1052→  );
+  1053→}
+  1054→
+  1055→/* ================ Zone Management (existing, uses mock) ================ */
+  1056→
+  1057→function ZoneManagement({ moduleId, childId }: ViewProps) {
+  1058→  // Delegate to the real ManageZonesPage (legacy entry point)
+  1059→  return <ManageZonesPage moduleId={moduleId} childId={childId} grandchildId="" />;
+  1060→}
+  1061→
+  1062→/* ================ CREATE ZONE (REAL FUNCTIONAL) ================ */
+  1063→
+  1064→function CreateZonePage({ moduleId, childId, grandchildId }: ViewProps) {
+  1065→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  1066→  const setActive = useAppStore((s) => s.setActive);
+  1067→  const { toast } = useToast();
+  1068→  const [saving, setSaving] = React.useState(false);
+  1069→  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  1070→
+  1071→  const [form, setForm] = React.useState({
+  1072→    zonename: "",
+  1073→    description: "",
+  1074→    billingname: "",
+  1075→    maxconcurrentusers: "500",
+  1076→    pindiscount: "0",
+  1077→    packagediscount: "0",
+  1078→    discounton: "TOTAL" as "TOTAL" | "PACKAGE" | "PIN",
+  1079→    popname: "Bhiwani-POP1",
+  1080→    mincreditbalance: "0",
+  1081→    taxondiscount: "N" as "Y" | "N",
+  1082→    bandwidth: "100 Mbps",
+  1083→    status: "Y" as "Y" | "N",
+  1084→  });
+  1085→
+  1086→  const set = (field: string, value: string) => {
+  1087→    setForm((f) => ({ ...f, [field]: value }));
+  1088→    setErrors((e) => { const n = { ...e }; delete n[field]; return n; });
+  1089→  };
+  1090→
+  1091→  const handleSubmit = async (e: React.FormEvent) => {
+  1092→    e.preventDefault();
+  1093→    setSaving(true);
+  1094→    setErrors({});
+  1095→    const res = await zonesApi.create({
+  1096→      ...form,
+  1097→      maxconcurrentusers: Number(form.maxconcurrentusers),
+  1098→      pindiscount: Number(form.pindiscount),
+  1099→      packagediscount: Number(form.packagediscount),
+  1100→      mincreditbalance: Number(form.mincreditbalance),
+  1101→    });
+  1102→    setSaving(false);
+  1103→    if (res.responseCode === "0") {
+  1104→      toast({ title: "Zone created", description: `"${form.zonename}" has been created successfully.` });
+  1105→      setActive(moduleId, "zone", "manage-zone");
+  1106→    } else {
+  1107→      if (res.errors) setErrors(res.errors);
+  1108→      toast({ title: "Failed to create zone", description: res.responseMsg, variant: "destructive" });
+  1109→    }
+  1110→  };
+  1111→
+  1112→  if (!mod || !child) return null;
+  1113→
+  1114→  return (
+  1115→    <div className="space-y-6">
+  1116→      <PageHeader
+  1117→        title={grandchild?.label ?? "Create Zone"}
+  1118→        description="Create a new network zone. Fields mirror the accsium ZoneService.createZone API."
+  1119→        icon={<mod.icon className="h-5 w-5" />}
+  1120→        breadcrumb={[
+  1121→          { label: "Cryptsk" },
+  1122→          { label: mod.label, onClick: () => setActive(moduleId, "", "") },
+  1123→          { label: child.label, onClick: () => setActive(moduleId, childId, "") },
+  1124→          { label: grandchild?.label ?? "Create" },
+  1125→        ]}
+  1126→        actions={<Button variant="outline" onClick={() => setActive(moduleId, "zone", "manage-zone")}><X className="mr-2 h-4 w-4" /> Cancel</Button>}
+  1127→      />
+  1128→      <form onSubmit={handleSubmit} className="space-y-6">
+  1129→        <SectionCard title="Zone Information" description="Name and description">
+  1130→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  1131→            <div className="space-y-2">
+  1132→              <Label htmlFor="zonename">Zone Name <span className="text-primary">*</span></Label>
+  1133→              <Input id="zonename" value={form.zonename} onChange={(e) => set("zonename", e.target.value)} placeholder="e.g. Bhiwani-North" className={errors.zonename ? "border-primary" : ""} />
+  1134→              {errors.zonename && <p className="text-xs text-primary flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.zonename}</p>}
+  1135→            </div>
+  1136→            <div className="space-y-2">
+  1137→              <Label htmlFor="billingname">Billing Name</Label>
+  1138→              <Input id="billingname" value={form.billingname} onChange={(e) => set("billingname", e.target.value)} placeholder="Name for invoices" />
+  1139→            </div>
+
+[showing lines 540-1139 of 1449; use offset=1140 with limit to continue reading]

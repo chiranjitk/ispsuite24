@@ -657,3 +657,281 @@ Stage Summary:
 - All 31 System pages now match the 24online reference: SAME fields, SAME columns, SAME buttons, SAME form actions.
 - The System module UI is 1:1 with the live 24online deployment.
 - Lint passes, build succeeds, PM2 restarted, HTTP 200 confirmed.
+
+---
+
+## Task ID: FIX-B — Add missing UserView (7) and SalesView (3) grandchild pages
+
+**Date:** 2026-10-05
+**Goal:** User module and Sales module had several grandchild routes that fell through to `LeafPlaceholder`. Each of these needed a REAL functional page with a form or table, PageHeader with breadcrumb, and `useToast` for actions.
+
+### Work Log:
+- Read `worklog.md` for project context and previous agents' work.
+- Read existing code: `UserView.tsx` (1,449 lines), `SalesView.tsx` (471 lines), `_shared.tsx` (ViewProps, useViewRouter, useModuleHeader, ChildOverview, LeafPlaceholder), `PolicyView.tsx` (pattern reference for real functional pages).
+- Read `nav.ts` to confirm grandchild IDs and reference URLs.
+- Read `mock-data.ts` to confirm available data (POOLS, ZONES, LEADS, SERVICE_REQUESTS) and `api.ts` for `usersApi.list({ userType: "Leased Line" })` support.
+
+### Pages added to `UserView.tsx` (7 grandchildren, ~1,245 new lines, file now 2,720 lines):
+
+| # | Route | Page Component | Key Features |
+|---|-------|----------------|--------------|
+| 1 | `manage-users > leased-line-users` | `LeasedLineUsersPage` | Real `usersApi.list({ userType: "Leased Line" })` call, search + status filter, KPI cards (Active/Deactive/Blocked), 8-column table (Username, Name, NAS Identifier, IP, Package, Zone, Status, Actions), Re-login button per row + confirmation dialog with loading state |
+| 2 | `pool > create-pool` | `CreatePoolPage` | Form with pool name, zone select (from `ZONES`), subnet (CIDR validation), gateway (IPv4 validation), primary/secondary DNS, description, status. Two SectionCards (Pool Information, Network Configuration). Save + Cancel buttons with loading state |
+| 3 | `pool > manage-pool` | `ManagePoolPage` | Table of 6 IP pools from `POOLS` mock — Name, Zone, Subnet, Gateway, Utilization bar (color-coded emerald/amber/primary), Status. Search by name/subnet, zone filter, KPI cards (Total IPs, Used IPs, Utilization %), Edit (toast) + Delete (confirmation dialog) per row |
+| 4 | `pool > search-node` | `SearchNodePage` | Search form (node IP/name + zone filter), 8 mock nodes derived from POOLS gateways. Results table with ID, Node Name, IP Address, Type (Gateway/Router/NAS), Zone, Pool, Status badges. Search button + toast feedback |
+| 5 | `pool > search-network` | `SearchNetworkPage` | Search form (network address), matches `POOLS` subnets by prefix/contains. Results table showing Pool Name, Zone, Subnet, Gateway, Utilization bar, "Belongs To" column (zone / pool). Empty state for no matches |
+| 6 | `customers > edit-customers` | `EditCustomersPage` | Two-column layout: customer search/select list (left) + edit form (right). Search by name/ID/mobile/email. Edit form has name, email, phone, address (textarea), city, state, zip. Save Changes button with loading state, Clear button to deselect |
+| 7 | `customers > purge-customers` | `PurgeCustomersPage` | Date range (from/to) + customer search + customer selection table with select-all checkbox. Warning banner about irreversibility. Purge Selected button (disabled until ≥1 selected) opens confirmation dialog showing count + date range. Purge action triggers destructive toast |
+
+### Pages added to `SalesView.tsx` (3 grandchildren, complete refactor):
+
+`SalesView` was refactored from a 2-level switch (module/child) to use `useViewRouter` for proper 3-level routing. File grew from 471 → 731 lines.
+
+| # | Route | Page Component | Key Features |
+|---|-------|----------------|--------------|
+| 1 | `lead > create` | `LeadCreatePage` | Form: name (required), contact (required, regex-validated), area (required), plan, source (Walk-in/Referral/Facebook/Cold Call select), owner (Sales-A/B/C/D select), notes (textarea). Two SectionCards (Lead Information, Source & Ownership). Save + Cancel buttons with loading state. On success → navigates to `lead > manage` |
+| 2 | `lead > manage` | `LeadManagePage` | Kanban board (5 stage columns) + List view toggle. Filter by owner, area, stage. KPI cards (Total Leads, Conversion Rate, Showing). Kanban cards show Name, ID, Contact, Area, Plan, Owner with Edit/Delete buttons. List view has 10-column table with Edit/Delete actions per row. Delete confirmation dialog with loading state |
+| 3 | `service-request > manage` | `ServiceRequestManagePage` | Table + Timeline view toggle. Filter by type (Installation/Relocation/Plan Change/Termination), status (5), priority (3), plus search by ID/customer/technician. KPI cards (Total, Pending, In Progress, Completed). New Request button in header. Table has 7 columns (ID, Customer, Type, Scheduled Date, Technician, Priority, Status). Timeline shows ordered scheduled requests with badges |
+
+### Routing Pattern Used (per task instructions):
+```tsx
+// In each view file's grandchild routing section:
+if (childId === "pool" && grandchildId === "create-pool")
+  return <CreatePoolPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+```
+
+### Brand & Component Standards Followed:
+- **Brand colors:** primary=red (used for danger/required/destructive), emerald=success, amber=warning, sky/violet/slate for status variety
+- **shadcn components used:** Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Input, Label, Textarea, Button, Badge, Checkbox, Switch, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+- **Shared components used:** `PageHeader` (with 3-level breadcrumb + icon + actions), `KpiCard`, `SectionCard`, `ActionBar`, `EmptyState`
+- **Hooks:** `useToast` for all action feedback, `useAppStore` for navigation (`setActive`), `useModuleHeader` for resolving module/child/grandchild labels, `useViewRouter` for 3-level routing
+- **Real functionality:** every page has actual state management (`useState`), validation, loading states, confirmation dialogs for destructive actions, and toast notifications. No `LeafPlaceholder` fallbacks for these 10 routes.
+- **Long list handling:** `EditCustomersPage` search list uses `max-h-96 overflow-y-auto scrollbar-thin` per UI rules
+
+### Verification:
+- **Lint:** `bun run lint` → 0 errors, 0 warnings, exit code 0 ✓
+- **No existing routes broken:** UserView keeps all 8 existing grandchild routes (add-user, search-user, advance-search, manage-live-users, search-live-users, create-zone, manage-zone, search-zone-admin) plus the new 7. SalesView's existing overview/child-overview flow preserved via `useViewRouter`.
+- **File sizes:** UserView.tsx 1,449 → 2,720 lines (+1,271). SalesView.tsx 471 → 731 lines (+260, full refactor).
+
+### Stage Summary:
+- All 10 missing grandchildren now have REAL functional pages (no `LeafPlaceholder`).
+- User module: 7/7 pages added — leased-line-users, create-pool, manage-pool, search-node, search-network, edit-customers, purge-customers.
+- Sales module: 3/3 pages added — lead>create, lead>manage, service-request>manage (plus `SalesView` refactored to use `useViewRouter` for proper 3-level routing).
+- Lint passes with 0 errors. No existing routes or components broken.
+
+---
+
+## Task FIX-A — Add 15 missing grandchild pages (Package, Payment Gateway, Help modules)
+
+**Date:** 4 Oct 2026
+**Task ID:** FIX-A
+**Agent:** full-stack-developer
+
+### Scope
+Add the missing bespoke grandchild page components to 3 module view files. Each page is a REAL functional page (form/table) — NOT a `LeafPlaceholder`. Follows the established `PolicyView.tsx` pattern with `useViewRouter` 3-level routing, `PageHeader` + 3-level breadcrumb, real state, validation, loading states, confirmation dialogs where destructive, and `useToast` for all actions.
+
+### Files modified
+1. **`src/components/app/views/PackageView.tsx`** — 958 → 2,280 lines (+1,322)
+   - Added 11 grandchild routes + page components
+   - Added internal `useBreadcrumb` helper for 3-level breadcrumb wiring
+2. **`src/components/app/views/PaymentGatewayView.tsx`** — 497 → 835 lines (+338, full refactor)
+   - Refactored to use `useViewRouter` for proper 3-level routing
+   - Added 2 merchant grandchild pages
+3. **`src/components/app/views/HelpView.tsx`** — 597 → 883 lines (+286, full refactor)
+   - Refactored to use `useViewRouter` for proper 3-level routing
+   - Added 2 register grandchild pages
+
+### Pages added (15 total)
+
+**PackageView.tsx — Invoice (6):**
+1. `custom-invoice` — `CustomInvoicePage` — Form with customer select, package select, amount, tax, discount, description + live total calculation + Create/Cancel buttons
+2. `purge-invoice` — `PurgeInvoicePage` — Date range + status filter form, matches table, destructive Purge button with `Dialog` confirmation
+3. `invoice-reports` — `InvoiceReportsPage` — Filter form (date range, zone, status) + KPI summary + results table (Invoice No, Customer, Amount, Date, Status)
+4. `create-invoice` — `CreateInvoicePage` — Form: customer select, package, billing period (Weekly/Monthly/Quarterly/Half-Yearly/Yearly), amount, tax, discount + live total + Create button
+5. `configuration` — `InvoiceConfigPage` — Form: invoice prefix, starting number, tax rate, currency symbol, footer text + Save button + live preview
+6. `zone-invoice` — `ZoneInvoicePage` — Form: zone select (with user counts), date range, template select + Generate button + generated batch table
+
+**PackageView.tsx — Ancillary Service (3):**
+7. `add-service` — `AddServicePage` — Form: service name, price, description, status (Active/Inactive) + Create button (redirects to manage-service)
+8. `manage-service` — `ManageServicePage` — Searchable table (ID, Name+desc, Price, Status toggle, Edit/Delete) with delete confirmation dialog and KPI cards
+9. `default-service` — `DefaultServicePage` — Real checkbox matrix (6 packages × 4 services) with Save button
+
+**PackageView.tsx — Tax (2):**
+10. `add` — `AddTaxPage` — Form: tax name, rate (%), type (Inclusive/Exclusive), applies-to, description + Create button
+11. `default-tax` — `DefaultTaxPage` — Table with radio-like checkbox selection (Name, Rate, Type, Applies-To, Status) + Save button
+
+**PaymentGatewayView.tsx — Merchant (2):**
+1. `create` — `MerchantCreatePage` — Form: merchant name, provider select (Razorpay/PayU/Stripe/Cashfree), merchant ID, secret key (with show/hide toggle), callback URL, test mode toggle, set-as-default toggle + Create button (redirects to manage)
+2. `manage` — `MerchantManagePage` — Searchable table (ID, Name, Provider badge, Merchant ID, Default checkbox toggle, Status toggle, Edit/Delete) with delete confirmation dialog and KPI cards
+
+**HelpView.tsx — Register (2):**
+1. `online-registration` — `OnlineRegistrationPage` — Form: company name, contact person, email, phone, address (Textarea), license key (with email validation) + Register button (redirects to module-license) + "Why Register?" benefits card
+2. `module-license` — `ModuleLicensePage` — Searchable + status-filtered table of all 15 modules (Module, Licensed checkmark, Expiry, Status badge, Renew button with loading state) + KPI cards (Total/Licensed/Active/Expired-Trial)
+
+### Routing Pattern Used (in each view)
+```tsx
+const router = useViewRouter(moduleId, childId, grandchildId);
+if (router.state === "loading") return null;
+if (router.state === "module-overview") return <Overview ... />;
+if (router.state === "child-overview") return <ChildOverview moduleId={moduleId} childId={router.childId} />;
+if (router.state === "grandchild") {
+  if (childId === "invoice" && grandchildId === "custom-invoice")
+    return <CustomInvoicePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+  // ... other grandchildren
+  return <LeafPlaceholder ... />;
+}
+// state === "child" — bespoke child content via switch(childId)
+```
+
+### Brand & Component Standards Followed
+- **Brand colors:** primary=red (used for danger/required/destructive buttons, accent KPIs, currency emphasis), emerald=success (Active/Paid/Generated badges), amber=warning (Due/Trial), primary for Overdue/Failed
+- **shadcn components used:** Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Input, Label, Textarea, Button, Badge, Checkbox, Switch, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+- **Shared components used:** `PageHeader` (with 3-level breadcrumb + icon + actions), `KpiCard`, `SectionCard`, `ActionBar`, `EmptyState`
+- **Hooks:** `useToast` for all action feedback, `useAppStore` for navigation (`setActive`), `useModuleHeader` for resolving module/child/grandchild labels, `useViewRouter` for 3-level routing
+- **Real functionality:** every page has actual `useState` form state, validation, loading spinners (`Loader2 animate-spin`), confirmation dialogs for destructive actions (delete/purge), and toast notifications. No `LeafPlaceholder` fallbacks for these 15 routes.
+- **Long list handling:** searchable tables in `ManageServicePage`, `MerchantManagePage`, `ModuleLicensePage` use `overflow-x-auto`. Default-service matrix uses `overflow-x-auto` with `sticky left-0 bg-card` for the package name column.
+
+### Verification
+- **Lint:** `bun run lint` → 0 errors, 0 warnings, exit code 0 ✓
+- **TypeScript:** `bunx tsc --noEmit --skipLibCheck` → 0 errors in PackageView/PaymentGatewayView/HelpView (pre-existing errors in other files untouched)
+- **No existing routes broken:**
+  - PackageView keeps existing `package>create` and `package>manage` routes, plus the 5 children overview (Package, Invoice, Invoice Template, Ancillary Service, Tax).
+  - PaymentGatewayView keeps existing `ConfigureChild` and `SearchTxnChild`. The `merchant` child now goes to `ChildOverview` (showing Create + Manage cards) instead of the old inline `MerchantChild` list. Old `MerchantChild` and `RegisterProduct` components left in place (lint rules with `no-unused-vars: off`).
+  - HelpView keeps existing `CompanyInfo`, `ClientApp`, `UpgradeVersion`, `ManageCustomization`, `Documentation`, `About` children. The `register` child now goes to `ChildOverview` (showing Online Registration + Module License cards) instead of the old inline `RegisterProduct`. Old `RegisterProduct` component left in place.
+
+### Stage Summary
+- All 15 missing grandchildren now have REAL functional pages (no `LeafPlaceholder`).
+- Package module: 11/11 grandchildren covered (invoice: 6, ancillary: 3, tax: 2)
+- Payment Gateway module: 2/2 grandchildren covered (merchant: create, manage)
+- Help module: 2/2 grandchildren covered (register: online-registration, module-license)
+- Lint passes with 0 errors. No existing routes or components broken. Three view files refactored to consistent `useViewRouter` 3-level pattern.
+
+---
+
+## Task FIX-C — Add 33 missing grandchild routes (Inventory, Alert, Payment Tracking)
+
+**Agent:** full-stack-developer
+**Task ID:** FIX-C
+**Scope:** Add 33 missing grandchild pages across three module views (Inventory: 13, Alert: 11, Payment Tracking: 9). Each must be a real functional page (NOT a `LeafPlaceholder`) with form/table, `useToast` for actions, and proper breadcrumb. All three view files refactored to the `useViewRouter` 3-level pattern from `PolicyView.tsx`.
+
+### Files Modified
+
+1. **`src/components/app/views/InventoryView.tsx`** — full rewrite to `useViewRouter` pattern + 13 grandchild pages
+2. **`src/components/app/views/AlertView.tsx`** — full rewrite to `useViewRouter` pattern + 11 grandchild pages
+3. **`src/components/app/views/PaymentTrackingView.tsx`** — full rewrite to `useViewRouter` pattern + 9 grandchild pages
+
+### Inventory (13 grandchildren)
+
+**Transaction child:**
+1. `indent` → `IndentPage` — Indents table (ID/Item/Qty/Dept/Date/Status) + create FormDrawer
+2. `purchase-order` → `PurchaseOrderPage` — PO table (ID/Vendor/Items/Total/Date/Status) + create FormDrawer
+3. `receipt` → `ReceiptPage` — Goods receipts table (ID/PO/Item/Qty/Date) + create FormDrawer
+4. `issue` → `IssuePage` — Stock issues table (ID/Item/Qty/Issued To/Date) + create FormDrawer
+5. `stock-transfer` → `StockTransferPage` — Transfers table (ID/From/To/Item/Qty/Date) + create FormDrawer with from≠to validation
+6. `customer-return` → `CustomerReturnPage` — Returns table (ID/Customer/Item/Qty/Reason/Date) + create FormDrawer with reason select
+7. `supplier-return` → `SupplierReturnPage` — Returns table (ID/Supplier/Item/Qty/Reason/Date) + create FormDrawer
+
+**Master child:**
+8. `item-master` → `ItemMasterPage` — Full CRUD: Items table + KPIs (Total/Stock Value/Low/Out) + Add/Edit FormDrawer + Delete ConfirmDialog + low-stock amber row highlight
+9. `ware-house` → `WarehousePage` — Warehouses CRUD (ID/Name/Location/Description)
+10. `vendor` → `VendorPage` — Vendors CRUD (ID/Name/Contact/Email/Phone/Address)
+11. `uom` → `UomPage` — UoM CRUD (ID/Name/Description)
+12. `view-stock` → `ViewStockPage` — Read-only stock levels table (Item/Warehouse/Qty/Min/Value) with search + warehouse filter + KPIs + sticky-header scroll (`max-h-96 overflow-y-auto`) + Export button
+13. `emi-master` → `EmiMasterPage` — EMI plans CRUD (ID/Name/Duration/Interest Rate/Status)
+
+### Alert (11 grandchildren)
+
+**SMS Gateway child:**
+1. `manage` → `SmsManagePage` — Provider select + API URL + API Key + Sender ID + enabled Switch + Save + Status side panel
+2. `configure-details` → `SmsConfigDetailsPage` — Gateway URL/Port/Username/Password/Sender ID/DLT Template ID form
+3. `bulk-sms` → `BulkSmsPage` — Template select + recipient type (all/zone/group/manual) + conditional recipient input + message textarea with 160-char counter + Preview pane
+4. `sms-log-report` → `SmsLogReportPage` — Filter form (date range/mobile/status) + sticky-header scrollable table + Reset/Export
+5. `purge-sms-logs` → `PurgeSmsLogsPage` — Date range + Purge button (disabled until both dates set) + confirmation dialog
+
+**Email Management child:**
+6. `create-template` → `CreateEmailTemplatePage` — Name/Subject/Body textarea/Variables form with async spinner + navigate to manage on submit
+7. `manage-template` → `ManageEmailTemplatePage` — Templates table (Name/Subject/Last Modified/Status) with click-to-toggle status + Edit/Delete + ConfirmDialog
+8. `configure` → `EmailConfigurePage` — SMTP server/port/encryption/username/password/from email/from name + Save + Send Test Email + Connection Summary side panel
+9. `proactive-reports` → `ProactiveReportsPage` — Recipients textarea + frequency select + 6 report-type checkboxes + Save + Current Schedule side panel
+10. `smtp-configuration` → `SmtpConfigPage` — SMTP host/port/auth type (LOGIN/PLAIN/CRAM-MD5/None)/username/password + Use TLS switch + Save + Send Test Email
+11. `system-alerts` → `SystemAlertsPage` — Operational alerts table (Time/Level/Module/Message/Status) with KPIs + level filter + Ack/Resolve row actions + sticky-header scroll
+
+**Alert Configuration child (no grandchildren):** preserved bespoke `AlertConfigPage` rendering via the `router.state === "child"` branch.
+
+### Payment Tracking (9 grandchildren)
+
+**Manage Accounts child:**
+1. `customers` → `ManageCustomerAccountsPage` — Customer accounts table (Account/Customer/Balance/Last Payment/Status) + 4 KPIs + Export
+2. `zone` → `ManageZoneAccountsPage` — Zone/franchise accounts table (Zone/Franchise/Balance/Status) + 3 KPIs + Export
+
+**Search Accounts child:**
+3. `customer` → `SearchCustomerAccountsPage` — Search form (account/name/mobile) + results table shown only after search
+4. `zone` → `SearchZoneAccountsPage` — Zone filter + franchise name search + results table
+
+**Payment Details child:**
+5. `search-details` → `SearchPaymentDetailsPage` — Filter form (date range/account/mode) + results table (ID/Account/Customer/Mode/Amount/Date/Status/Collected By) + Export
+6. `payment-mode` → `PaymentModePage` — Payment modes table with enable/disable Switch + Set Default buttons + 3 KPIs
+
+**Reverse child:**
+7. `customer` → `ReverseCustomerTxnPage` — Search + multi-select table + reason input + Reverse Selected (with reason validation, Reversed rows disabled)
+8. `zone` → `ReverseZoneTxnPage` — Same pattern for zone transactions
+
+**Settle child:**
+9. `customers` → `SettleCustomerTxnPage` — Pending-only table + select-all + Settle Selected button + 3 KPIs + EmptyState when nothing pending
+
+### Routing Pattern Applied
+
+All three views now follow the exact PolicyView.tsx pattern:
+
+```tsx
+export function XView({ moduleId, childId, grandchildId }: ViewProps) {
+  const router = useViewRouter(moduleId, childId, grandchildId);
+  if (router.state === "loading") return null;
+  if (router.state === "module-overview") return <XOverview moduleId={moduleId} />;
+  if (router.state === "child-overview") return <ChildOverview moduleId={moduleId} childId={router.childId} />;
+  if (router.state === "grandchild") {
+    if (childId === "x" && grandchildId === "y") return <YPage {...{ moduleId, childId, grandchildId }} />;
+    // ...
+    return <LeafPlaceholder moduleId={moduleId} childId={router.childId} grandchildId={router.grandchildId} />;
+  }
+  return <XOverview moduleId={moduleId} />;
+}
+```
+
+### Shared Helpers Introduced (per view)
+
+- `useBreadcrumb(moduleId, childId, grandchildId?)` — 3-4 level clickable breadcrumb (Cryptsk → Module → Child → Grandchild)
+- `FormDrawer` (Inventory only) — modal right/bottom sheet for create/edit forms with header + close + body
+- `ConfirmDialog` (Inventory only) — destructive action confirmation
+- `PageLoader` (Inventory only) — spinner placeholder (kept for parity with PolicyView even though not currently invoked synchronously)
+- `StatusBadge` (Inventory only) — color-coded status pill with emerald/amber/primary/muted mapping
+- `STATUS_BADGE` / `LEVEL_BADGE` / `SMS_STATUS_BADGE` / `ALERT_STATUS_BADGE` / `CHANNEL_BADGE` / `modeBadgeClass` / `statusBadgeClass` — color maps per status
+
+### Brand & Component Standards Followed
+
+- **Brand colors:** primary=red for danger/required/destructive actions, emerald=success, amber=warning, muted=neutral. Sky/violet used only on Alert channels (SMS/Email) and never blue/indigo.
+- **shadcn components used:** Table (with `sticky top-0 bg-card` headers in long lists), Select, Input, Label, Textarea, Button, Badge, Checkbox, Switch.
+- **Shared components used:** `PageHeader` (icon + 3-4 level breadcrumb + actions), `KpiCard`, `SectionCard`, `ActionBar`, `EmptyState`, `InfoRow`.
+- **Hooks:** `useToast` for ALL action feedback (create/edit/delete/reverse/settle/purge/send-test-email), `useAppStore.setActive` for navigation, `useModuleHeader` + `useViewRouter` for routing.
+- **Real functionality:** every page has `useState` form state, validation, toast notifications, and proper navigation flow. No `LeafPlaceholder` for any of the 33 routes.
+- **Long list handling:** scrollable tables in `ViewStockPage`, `SmsLogReportPage`, `SystemAlertsPage`, `ReverseCustomerTxnPage`, `ReverseZoneTxnPage` use `max-h-96 overflow-y-auto` with `sticky top-0 bg-card` headers.
+- **Inline mock data:** each page contains its own typed mock data (no external API calls). Reused existing `INVENTORY_ITEMS`, `SMS_LOGS`, `EMAIL_TEMPLATES`, `ALERT_RULES`, `PAYMENT_TXNS`, `PAYMENT_MODES`, `FRANCHISE_ACCOUNTS`, `ACCOUNT_SEARCH_RESULTS` from `src/lib/mock-data.ts` where appropriate.
+
+### Backwards-Compatibility Notes
+
+- The previous bespoke `TransactionPage` / `MasterPage` (Inventory), `SmsGateway` / `EmailManagement` (Alert), and `ManageAccounts` / `SearchAccounts` / `PaymentDetails` / `ReverseTransactions` / `SettleTransactions` (Payment Tracking) child-level bespoke pages were intentionally replaced by `<ChildOverview>` (the standard grandchildren card grid). This is consistent with the PolicyView pattern where any child that has grandchildren displays a grid of grandchild cards when no specific grandchild is active. Existing module overview KPIs + card grids were preserved.
+- `AlertConfigPage` (alert module's `alert-config` child, which has NO grandchildren) is still rendered bespoke via the `router.state === "child"` branch — preserves the existing alert-rules table with toggle switches.
+- No existing routes broken: all module-level navigation cards still navigate to the child overview, which now shows the grandchildren grid; clicking any grandchild card renders the bespoke page.
+
+### Verification
+
+- **Lint:** `bun run lint` → 0 errors, 0 warnings, exit code 0 ✓
+- **Dev server:** `GET /` returns HTTP 200 after edits; Next.js 16 Turbopack compiles cleanly on port 3000.
+- **Existing routes preserved:** module overviews unchanged; `alert-config` bespoke child still renders.
+- **All 33 grandchild routes covered:** Inventory 13/13, Alert 11/11, Payment Tracking 9/9. Zero `LeafPlaceholder` fallbacks for any of these routes.
+
+### Stage Summary
+
+- 33 missing grandchildren now have REAL functional pages with forms, tables, validation, toasts, and proper navigation.
+- All three view files (InventoryView, AlertView, PaymentTrackingView) refactored to the consistent `useViewRouter` 3-level pattern matching PolicyView.tsx.
+- Lint passes with 0 errors. No existing routes or components broken.
