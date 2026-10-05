@@ -115,6 +115,8 @@ export function SystemView({ moduleId, childId, grandchildId }: ViewProps) {
       return <InterfacePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
     if (childId === "network" && grandchildId === "gateway")
       return <GatewayPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "network" && grandchildId === "priorities")
+      return <PrioritiesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
     if (childId === "network" && grandchildId === "dns")
       return <DnsPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
     if (childId === "network" && grandchildId === "static-route")
@@ -138,6 +140,10 @@ export function SystemView({ moduleId, childId, grandchildId }: ViewProps) {
     if (childId === "dhcp" && grandchildId === "ip-leasing")
       return <IpLeasingPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
 
+    /* ---------------- PPPoE ---------------- */
+    if (childId === "pppoe" && grandchildId === "manage-pppoe")
+      return <ManagePppoePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+
     /* ---------------- Manage Data ---------------- */
     if (childId === "manage-data" && grandchildId === "backup")
       return <BackupPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
@@ -157,6 +163,18 @@ export function SystemView({ moduleId, childId, grandchildId }: ViewProps) {
     /* ---------------- Client Services ---------------- */
     if (childId === "client-services" && grandchildId === "parameters")
       return <ClientServicesParametersPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "client-services" && grandchildId === "customized-images")
+      return <CustomizedImagesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "client-services" && grandchildId === "forgot-password")
+      return <ForgotPasswordConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "client-services" && grandchildId === "clientgui-urls")
+      return <ClientGuiUrlsPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "client-services" && grandchildId === "webservice-config")
+      return <WebserviceConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "client-services" && grandchildId === "password-config")
+      return <PasswordConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "client-services" && grandchildId === "configuration")
+      return <ClientConfigurationPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
 
     /* ---------------- ACL ---------------- */
     if (childId === "acl" && grandchildId === "access-control")
@@ -179,10 +197,40 @@ export function SystemView({ moduleId, childId, grandchildId }: ViewProps) {
       return <CaptiveCreatePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
     if (childId === "captive-portal" && grandchildId === "manage")
       return <CaptiveManagePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "captive-portal" && grandchildId === "client-page")
+      return <CpClientPagePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "captive-portal" && grandchildId === "portal-networks")
+      return <PortalNetworksPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "captive-portal" && grandchildId === "leased-line-page")
+      return <LeasedLinePageConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "captive-portal" && grandchildId === "messages")
+      return <PortalMessagesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "captive-portal" && grandchildId === "portal-config")
+      return <PortalConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "captive-portal" && grandchildId === "configure-profile")
+      return <ConfigureProfilePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "captive-portal" && grandchildId === "security-config")
+      return <CpSecurityConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "captive-portal" && grandchildId === "social-media")
+      return <SocialMediaConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "captive-portal" && grandchildId === "cp-registration")
+      return <CpRegistrationPolicyPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
 
     /* ---------------- NAS Management ---------------- */
     if (childId === "nas" && grandchildId === "nas-ip-config")
       return <NasIpConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "nas" && grandchildId === "radius-config")
+      return <RadiusConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "nas" && grandchildId === "nas-configuration")
+      return <NasConfigurationPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "nas" && grandchildId === "preferences")
+      return <NasPreferencesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "nas" && grandchildId === "connectivity")
+      return <NasConnectivityPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "nas" && grandchildId === "nas-client-config")
+      return <NasClientConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+    if (childId === "nas" && grandchildId === "attribute-mapping")
+      return <AttributeMappingPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
 
     /* ---------------- Status Tracker ---------------- */
     if (childId === "status-tracker" && grandchildId === "add-device")
@@ -4642,6 +4690,1275 @@ function PacketCapturePage({ moduleId, childId, grandchildId }: ViewProps) {
           </div>
         )}
       </SectionCard>
+    </div>
+  );
+}
+
+/* ===================================================================== *
+ *  CLIENT SERVICES — Real functional pages (6 grandchildren)
+ * ===================================================================== */
+
+/* --- Customized Images --- */
+function CustomizedImagesPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [images, setImages] = React.useState([
+    { id: 1, name: "Top Banner", filename: "topbanner_default.jpg", size: "45 KB", uploaded: "01 Oct 2026" },
+    { id: 2, name: "Bottom Banner", filename: "bottombanner_default.jpg", size: "32 KB", uploaded: "01 Oct 2026" },
+    { id: 3, name: "Top Left Corner", filename: "topleft_logo.png", size: "12 KB", uploaded: "01 Oct 2026" },
+    { id: 4, name: "Coupon Logo", filename: "coupon_logo.png", size: "8 KB", uploaded: "01 Oct 2026" },
+    { id: 5, name: "Default Image", filename: "default_bg.jpg", size: "120 KB", uploaded: "01 Oct 2026" },
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Customized Images" description="Upload and manage custom banner/logo images for the client portal." breadcrumb={breadcrumb} icon={<Settings2 className="h-5 w-5" />} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard label="Total Images" value={String(images.length)} icon={<FileText className="h-4 w-4" />} accent />
+        <KpiCard label="Default Set" value="5" icon={<Layers className="h-4 w-4" />} />
+      </div>
+      <SectionCard title="Uploaded Images" description="Custom images displayed on the client login page and my-account portal">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Image Type</TableHead><TableHead>Filename</TableHead><TableHead>Size</TableHead><TableHead>Uploaded</TableHead><TableHead className="text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {images.map((img) => (
+                <TableRow key={img.id}>
+                  <TableCell className="font-medium">{img.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{img.filename}</TableCell>
+                  <TableCell className="text-muted-foreground">{img.size}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{img.uploaded}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Replace image", description: `Upload new ${img.name}` })}><Upload className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setImages(images.filter((i) => i.id !== img.id)); toast({ title: "Image removed", description: img.name }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+      <SectionCard title="Upload New Image" description="Select an image type and upload a file (JPG/PNG/GIF, max 500 KB)">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label>Image Type</Label>
+            <Select defaultValue="topfilename">
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="topfilename">Top Banner</SelectItem>
+                <SelectItem value="bottomfilename">Bottom Banner</SelectItem>
+                <SelectItem value="topleftcornerfilename">Top Left Corner</SelectItem>
+                <SelectItem value="couponlogo1">Coupon Logo 1</SelectItem>
+                <SelectItem value="couponlogo2">Coupon Logo 2</SelectItem>
+                <SelectItem value="defaultimage">Default Image</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>File</Label>
+            <div className="flex h-10 items-center justify-center rounded-md border border-dashed border-border bg-muted/30 text-sm text-muted-foreground">
+              <Upload className="mr-2 h-4 w-4" /> Choose file…
+            </div>
+          </div>
+          <div className="flex items-end">
+            <Button className="w-full" onClick={() => toast({ title: "Image uploaded", description: "Image has been uploaded successfully." })}>
+              <Upload className="mr-2 h-4 w-4" /> Upload
+            </Button>
+          </div>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* --- Forgot Password Config --- */
+function ForgotPasswordConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [form, setForm] = React.useState({
+    passwordConfiguration: "email",
+    forgotPasswordTime: "30",
+    limits: "3",
+    otpLength: "6",
+    otpExpiry: "5",
+  });
+  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Forgot Password Configuration" description="Configure how users recover forgotten passwords." breadcrumb={breadcrumb} icon={<Settings2 className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "Configuration saved", description: "Forgot password settings updated." }); }}>
+        <SectionCard title="Recovery Settings" description="Set the recovery method and limits">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Recovery Method</Label>
+              <Select value={form.passwordConfiguration} onValueChange={(v) => set("passwordConfiguration", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email">Email Verification</SelectItem>
+                  <SelectItem value="sms">SMS OTP</SelectItem>
+                  <SelectItem value="question">Security Question</SelectItem>
+                  <SelectItem value="admin">Admin Approval</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="forgotPasswordTime">Recovery Link Validity (minutes)</Label>
+              <Input id="forgotPasswordTime" type="number" min="1" value={form.forgotPasswordTime} onChange={(e) => set("forgotPasswordTime", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="limits">Max Attempts per Day</Label>
+              <Input id="limits" type="number" min="1" value={form.limits} onChange={(e) => set("limits", e.target.value)} />
+            </div>
+            {form.passwordConfiguration === "sms" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="otpLength">OTP Length</Label>
+                  <Input id="otpLength" type="number" min="4" max="8" value={form.otpLength} onChange={(e) => set("otpLength", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="otpExpiry">OTP Expiry (minutes)</Label>
+                  <Input id="otpExpiry" type="number" min="1" value={form.otpExpiry} onChange={(e) => set("otpExpiry", e.target.value)} />
+                </div>
+              </>
+            )}
+          </div>
+        </SectionCard>
+        <div className="mt-4 flex justify-end">
+          <Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Configuration</Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* --- Client GUI URLs --- */
+function ClientGuiUrlsPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [urls, setUrls] = React.useState([
+    { id: "txtmyaccounturl", label: "My Account URL", value: "https://portal.cryptsk.com/myaccount" },
+    { id: "txtpackageplansurl", label: "Package Plans URL", value: "https://portal.cryptsk.com/plans" },
+    { id: "txtregusingpinurl", label: "Registration via PIN URL", value: "https://portal.cryptsk.com/register?mode=pin" },
+    { id: "txtregwithoutusingpinurl", label: "Registration without PIN URL", value: "https://portal.cryptsk.com/register" },
+    { id: "txtrecoverpasswdurl", label: "Recover Password URL", value: "https://portal.cryptsk.com/recover" },
+    { id: "txtrenewusingpinurl", label: "Renew via PIN URL", value: "https://portal.cryptsk.com/renew?mode=pin" },
+    { id: "txtrenewusingpgwayurl", label: "Renew via Payment Gateway URL", value: "https://portal.cryptsk.com/renew?mode=pg" },
+    { id: "txtbuypkgusingpgwayurl", label: "Buy Package via PG URL", value: "https://portal.cryptsk.com/buy?mode=pg" },
+    { id: "txtbuypkgusingsmswayurl", label: "Buy Package via SMS URL", value: "https://portal.cryptsk.com/buy?mode=sms" },
+    { id: "txtrenewpkgusingsmswayurl", label: "Renew via SMS URL", value: "https://portal.cryptsk.com/renew?mode=sms" },
+    { id: "txtchangebodurl", label: "Change BOD URL", value: "https://portal.cryptsk.com/bod" },
+    { id: "txtresetpasswordurl", label: "Reset Password URL", value: "https://portal.cryptsk.com/reset" },
+    { id: "txtcoupondetailsurl", label: "Coupon Details URL", value: "https://portal.cryptsk.com/coupon" },
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Client GUI URLs" description="Configure the URLs used by the client GUI and self-service portal." breadcrumb={breadcrumb} icon={<Settings2 className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "URLs saved", description: `${urls.length} client GUI URLs updated.` }); }}>
+        <SectionCard title="Portal URLs" description="These URLs are used for client login redirects and self-service actions">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {urls.map((u) => (
+              <div key={u.id} className="space-y-2">
+                <Label htmlFor={u.id}>{u.label}</Label>
+                <Input id={u.id} value={u.value} onChange={(e) => setUrls((arr) => arr.map((x) => x.id === u.id ? { ...x, value: e.target.value } : x))} className="font-mono text-xs" />
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+        <div className="mt-4 flex justify-end">
+          <Button type="submit"><Save className="mr-2 h-4 w-4" /> Save All URLs</Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* --- Webservice Config --- */
+function WebserviceConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [mq, setMq] = React.useState({ serviceUrl: "https://spearhd.cryptsk.com/ws", userId: "cryptsk_api", password: "••••••••", maxDays: "30", maxDaysLimit: "90", enableAuthUser: true, bindToMac: false, generateInvoice: true, ipAllocation: "0", packageId: "1", poolId: "1", restrictionValue: "0", userStatus: "Y" });
+  const [spearhd, setSpearhd] = React.useState({ serviceUrl: "https://spearhd.cryptsk.com/api", userId: "cryptsk_sph", password: "••••••••" });
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Webservice Configuration" description="Configure integration with external web services (Spearhead, MQ)." breadcrumb={breadcrumb} icon={<Settings2 className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "Webservice config saved", description: "External web service settings updated." }); }}>
+        <div className="space-y-6">
+          <SectionCard title="Spearhead Integration" description="Spearhead web service for user synchronization">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Service URL</Label>
+                <Input value={spearhd.serviceUrl} onChange={(e) => setSpearhd((s) => ({ ...s, serviceUrl: e.target.value }))} className="font-mono text-xs" />
+              </div>
+              <div className="space-y-2"><Label>User ID</Label><Input value={spearhd.userId} onChange={(e) => setSpearhd((s) => ({ ...s, userId: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Password</Label><Input type="password" value={spearhd.password} onChange={(e) => setSpearhd((s) => ({ ...s, password: e.target.value }))} /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="MQ Integration" description="Message Queue web service for external user management">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label>MQ Service URL</Label>
+                <Input value={mq.serviceUrl} onChange={(e) => setMq((s) => ({ ...s, serviceUrl: e.target.value }))} className="font-mono text-xs" />
+              </div>
+              <div className="space-y-2"><Label>MQ User ID</Label><Input value={mq.userId} onChange={(e) => setMq((s) => ({ ...s, userId: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>MQ Password</Label><Input type="password" value={mq.password} onChange={(e) => setMq((s) => ({ ...s, password: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Max Days</Label><Input type="number" value={mq.maxDays} onChange={(e) => setMq((s) => ({ ...s, maxDays: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Max Days Limit</Label><Input type="number" value={mq.maxDaysLimit} onChange={(e) => setMq((s) => ({ ...s, maxDaysLimit: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>IP Allocation</Label><Select value={mq.ipAllocation} onValueChange={(v) => setMq((s) => ({ ...s, ipAllocation: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="0">Dynamic</SelectItem><SelectItem value="1">Static</SelectItem><SelectItem value="2">Pool</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label>User Status</Label><Select value={mq.userStatus} onValueChange={(v) => setMq((s) => ({ ...s, userStatus: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Y">Active</SelectItem><SelectItem value="D">Deactive</SelectItem><SelectItem value="N">Suspended</SelectItem></SelectContent></Select></div>
+              <div className="flex items-center gap-3"><Switch checked={mq.enableAuthUser} onCheckedChange={(v) => setMq((s) => ({ ...s, enableAuthUser: v }))} /><Label>Enable Auth User</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={mq.bindToMac} onCheckedChange={(v) => setMq((s) => ({ ...s, bindToMac: v }))} /><Label>Bind to MAC</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={mq.generateInvoice} onCheckedChange={(v) => setMq((s) => ({ ...s, generateInvoice: v }))} /><Label>Generate Invoice</Label></div>
+            </div>
+          </SectionCard>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Configuration</Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* --- Password Config --- */
+function PasswordConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [form, setForm] = React.useState({
+    configType: "alphanumeric",
+    minLength: "8",
+    mixLetter: true,
+    nonStandard: false,
+    expiryDays: "90",
+    historyCount: "5",
+    requireSpecial: true,
+    requireNumber: true,
+    requireUpper: true,
+    requireLower: true,
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Password Configuration" description="Configure password policies for users and administrators." breadcrumb={breadcrumb} icon={<KeyRound className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "Password policy saved", description: "Password configuration updated successfully." }); }}>
+        <SectionCard title="Password Policy" description="Define password complexity rules">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Password Type</Label>
+              <Select value={form.configType} onValueChange={(v) => set("configType", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alphanumeric">Alphanumeric</SelectItem>
+                  <SelectItem value="numeric">Numeric Only (PIN)</SelectItem>
+                  <SelectItem value="alphabetic">Alphabetic Only</SelectItem>
+                  <SelectItem value="complex">Complex (with special chars)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="minLength">Minimum Length</Label>
+              <Input id="minLength" type="number" min="4" max="32" value={form.minLength} onChange={(e) => set("minLength", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="expiryDays">Password Expiry (days)</Label>
+              <Input id="expiryDays" type="number" min="0" value={form.expiryDays} onChange={(e) => set("expiryDays", e.target.value)} />
+              <p className="text-xs text-muted-foreground">0 = never expires</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="historyCount">Password History</Label>
+              <Input id="historyCount" type="number" min="0" value={form.historyCount} onChange={(e) => set("historyCount", e.target.value)} />
+              <p className="text-xs text-muted-foreground">Prevent reusing last N passwords</p>
+            </div>
+          </div>
+        </SectionCard>
+        <SectionCard title="Complexity Requirements" description="Character types that must be included in passwords">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="flex items-center gap-3"><Switch checked={form.requireUpper} onCheckedChange={(v) => set("requireUpper", v)} /><Label>Require Uppercase Letters (A-Z)</Label></div>
+            <div className="flex items-center gap-3"><Switch checked={form.requireLower} onCheckedChange={(v) => set("requireLower", v)} /><Label>Require Lowercase Letters (a-z)</Label></div>
+            <div className="flex items-center gap-3"><Switch checked={form.requireNumber} onCheckedChange={(v) => set("requireNumber", v)} /><Label>Require Numbers (0-9)</Label></div>
+            <div className="flex items-center gap-3"><Switch checked={form.requireSpecial} onCheckedChange={(v) => set("requireSpecial", v)} /><Label>Require Special Characters (!@#$%)</Label></div>
+            <div className="flex items-center gap-3"><Switch checked={form.mixLetter} onCheckedChange={(v) => set("mixLetter", v)} /><Label>Mix Letters and Numbers</Label></div>
+            <div className="flex items-center gap-3"><Switch checked={form.nonStandard} onCheckedChange={(v) => set("nonStandard", v)} /><Label>Allow Non-Standard Characters</Label></div>
+          </div>
+        </SectionCard>
+        <div className="mt-4 flex justify-end">
+          <Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Password Policy</Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* --- Client Configuration --- */
+function ClientConfigurationPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [form, setForm] = React.useState({
+    systemGracedays: "3",
+    maxLoginAllowed: "3",
+    pgRedirectType: "self",
+    pgRedirectUrl: "https://portal.cryptsk.com/thankyou",
+    accountPrefix: "A",
+    accountPre: "8",
+    httpdPort: "443",
+    additionalDay: "30",
+  });
+  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Client Configuration" description="General client service configuration parameters." breadcrumb={breadcrumb} icon={<Settings2 className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "Configuration saved", description: "Client configuration updated." }); }}>
+        <div className="space-y-6">
+          <SectionCard title="Session & Login" description="Grace days and login limits">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="systemGracedays">System Grace Days</Label><Input id="systemGracedays" type="number" min="0" value={form.systemGracedays} onChange={(e) => set("systemGracedays", e.target.value)} /><p className="text-xs text-muted-foreground">Days after expiry before suspension</p></div>
+              <div className="space-y-2"><Label htmlFor="maxLoginAllowed">Max Login Allowed</Label><Input id="maxLoginAllowed" type="number" min="1" value={form.maxLoginAllowed} onChange={(e) => set("maxLoginAllowed", e.target.value)} /><p className="text-xs text-muted-foreground">Concurrent logins per user</p></div>
+              <div className="space-y-2"><Label htmlFor="additionalDay">Additional Day (minutes)</Label><Input id="additionalDay" type="number" value={form.additionalDay} onChange={(e) => set("additionalDay", e.target.value)} /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Payment Gateway Redirect" description="Where users are redirected after payment">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label>Redirect Type</Label><Select value={form.pgRedirectType} onValueChange={(v) => set("pgRedirectType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="self">Self Portal</SelectItem><SelectItem value="custom">Custom URL</SelectItem><SelectItem value="none">No Redirect</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label htmlFor="pgRedirectUrl">Redirect URL</Label><Input id="pgRedirectUrl" value={form.pgRedirectUrl} onChange={(e) => set("pgRedirectUrl", e.target.value)} className="font-mono text-xs" /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Account & Server" description="Account number format and server settings">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="accountPrefix">Account Number Prefix</Label><Input id="accountPrefix" maxLength="2" value={form.accountPrefix} onChange={(e) => set("accountPrefix", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="accountPre">Account Number Length</Label><Input id="accountPre" type="number" min="6" max="12" value={form.accountPre} onChange={(e) => set("accountPre", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="httpdPort">HTTPD Port</Label><Input id="httpdPort" type="number" value={form.httpdPort} onChange={(e) => set("httpdPort", e.target.value)} /></div>
+            </div>
+          </SectionCard>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Configuration</Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* ===================================================================== *
+ *  CAPTIVE PORTAL — Real functional pages (9 grandchildren)
+ * ===================================================================== */
+
+/* --- Client Page (manage client login templates) --- */
+function CpClientPagePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [templates, setTemplates] = React.useState([
+    { id: 1, name: "Standard Login", type: "PPPoE", status: "Active", lastModified: "01 Oct 2026" },
+    { id: 2, name: "Hotspot Login", type: "Hotspot", status: "Active", lastModified: "28 Sep 2026" },
+    { id: 3, name: "Leased Line Login", type: "Leased Line", status: "Active", lastModified: "15 Sep 2026" },
+    { id: 4, name: "Mobile Login", type: "Mobile", status: "Inactive", lastModified: "10 Sep 2026" },
+  ]);
+  const [filter, setFilter] = React.useState("all");
+
+  const filtered = templates.filter((t) => filter === "all" || t.type === filter);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Client Page" description="Manage client login page templates for different user types." breadcrumb={breadcrumb} icon={<Plug className="h-5 w-5" />} />
+      <ActionBar>
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All types</SelectItem>
+            <SelectItem value="PPPoE">PPPoE</SelectItem>
+            <SelectItem value="Hotspot">Hotspot</SelectItem>
+            <SelectItem value="Leased Line">Leased Line</SelectItem>
+            <SelectItem value="Mobile">Mobile</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button size="sm" onClick={() => toast({ title: "Import template", description: "Upload a template file" })}><Upload className="mr-2 h-3.5 w-3.5" /> Import Template</Button>
+        <Button size="sm" onClick={() => toast({ title: "Create template", description: "Open template editor" })}><Plus className="mr-2 h-3.5 w-3.5" /> New Template</Button>
+      </ActionBar>
+      <SectionCard title="Login Page Templates" description={`${filtered.length} templates`}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((t) => (
+            <div key={t.id} className="rounded-lg border border-border bg-card p-4">
+              <div className="mb-3 flex aspect-video items-center justify-center rounded-md bg-muted/30">
+                <Plug className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-foreground">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.type} · {t.lastModified}</p>
+                </div>
+                <Badge variant={t.status === "Active" ? "default" : "secondary"} className={t.status === "Active" ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" : ""}>{t.status}</Badge>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => toast({ title: "Edit template", description: t.name })}><Pencil className="mr-1 h-3 w-3" /> Edit</Button>
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => toast({ title: "Preview", description: t.name })}><FileText className="mr-1 h-3 w-3" /> Preview</Button>
+                <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setTemplates(templates.filter((x) => x.id !== t.id)); toast({ title: "Template deleted", description: t.name }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* --- Portal Networks (template-zone relation) --- */
+function PortalNetworksPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [pools, setPools] = React.useState([
+    { id: 1, pool: "Pool-Bhiwani0", zone: "Bhiwani-Core", preLogin: "Standard Login", postLogin: "My Account", buyPkgPg: true, changePassword: true, getPassword: false },
+    { id: 2, pool: "Pool-Bhiwani1", zone: "Bhiwani-Core", preLogin: "Standard Login", postLogin: "My Account", buyPkgPg: true, changePassword: true, getPassword: false },
+    { id: 3, pool: "Pool-Bhiwani2", zone: "Bhiwani-North", preLogin: "Hotspot Login", postLogin: "My Account", buyPkgPg: false, changePassword: true, getPassword: true },
+    { id: 4, pool: "Pool-Bhiwani3", zone: "Bhiwani-South", preLogin: "Standard Login", postLogin: "My Account", buyPkgPg: true, changePassword: false, getPassword: false },
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Portal Networks" description="Map login page templates to IP pools and zones." breadcrumb={breadcrumb} icon={<Plug className="h-5 w-5" />} />
+      <SectionCard title="Template-Pool Mapping" description="Assign pre-login and post-login templates to each IP pool">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Pool</TableHead><TableHead>Zone</TableHead><TableHead>Pre-Login Template</TableHead><TableHead>Post-Login Template</TableHead><TableHead>Buy Pkg</TableHead><TableHead>Change Pwd</TableHead><TableHead>Get Pwd</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {pools.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">{p.pool}</TableCell>
+                  <TableCell className="text-muted-foreground">{p.zone}</TableCell>
+                  <TableCell>
+                    <Select value={p.preLogin} onValueChange={(v) => setPools((arr) => arr.map((x) => x.id === p.id ? { ...x, preLogin: v } : x))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="Standard Login">Standard Login</SelectItem><SelectItem value="Hotspot Login">Hotspot Login</SelectItem><SelectItem value="Leased Line Login">Leased Line Login</SelectItem><SelectItem value="Mobile Login">Mobile Login</SelectItem></SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Select value={p.postLogin} onValueChange={(v) => setPools((arr) => arr.map((x) => x.id === p.id ? { ...x, postLogin: v } : x))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="My Account">My Account</SelectItem><SelectItem value="Custom Page">Custom Page</SelectItem></SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell><Checkbox checked={p.buyPkgPg} onCheckedChange={(v) => setPools((arr) => arr.map((x) => x.id === p.id ? { ...x, buyPkgPg: !!v } : x))} /></TableCell>
+                  <TableCell><Checkbox checked={p.changePassword} onCheckedChange={(v) => setPools((arr) => arr.map((x) => x.id === p.id ? { ...x, changePassword: !!v } : x))} /></TableCell>
+                  <TableCell><Checkbox checked={p.getPassword} onCheckedChange={(v) => setPools((arr) => arr.map((x) => x.id === p.id ? { ...x, getPassword: !!v } : x))} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+      <div className="flex justify-end">
+        <Button onClick={() => toast({ title: "Mapping saved", description: "Portal network template mapping updated." })}><Save className="mr-2 h-4 w-4" /> Save Mapping</Button>
+      </div>
+    </div>
+  );
+}
+
+/* --- Leased Line Page Config --- */
+function LeasedLinePageConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [pools, setPools] = React.useState([
+    { id: 1, pool: "Pool-Bhiwani0", zone: "Bhiwani-Core", leasedLinePage: "LL-Standard", status: "Active" },
+    { id: 2, pool: "Pool-Bhiwani1", zone: "Bhiwani-Core", leasedLinePage: "LL-Standard", status: "Active" },
+    { id: 3, pool: "Pool-Bhiwani2", zone: "Bhiwani-North", leasedLinePage: "LL-Custom-1", status: "Active" },
+    { id: 4, pool: "Pool-Bhiwani3", zone: "Bhiwani-South", leasedLinePage: "None", status: "Inactive" },
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Leased Line Page" description="Assign leased line user login page templates to IP pools." breadcrumb={breadcrumb} icon={<Plug className="h-5 w-5" />} />
+      <SectionCard title="Leased Line Page Assignment" description="Each pool can have a different leased line login page">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Pool</TableHead><TableHead>Zone</TableHead><TableHead>Leased Line Page</TableHead><TableHead>Status</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {pools.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">{p.pool}</TableCell>
+                  <TableCell className="text-muted-foreground">{p.zone}</TableCell>
+                  <TableCell>
+                    <Select value={p.leasedLinePage} onValueChange={(v) => setPools((arr) => arr.map((x) => x.id === p.id ? { ...x, leasedLinePage: v } : x))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="None">None</SelectItem><SelectItem value="LL-Standard">LL-Standard</SelectItem><SelectItem value="LL-Custom-1">LL-Custom-1</SelectItem><SelectItem value="LL-Custom-2">LL-Custom-2</SelectItem></SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell><StatusBadge status={p.status} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+      <div className="flex justify-end">
+        <Button onClick={() => toast({ title: "Saved", description: "Leased line page assignment updated." })}><Save className="mr-2 h-4 w-4" /> Save</Button>
+      </div>
+    </div>
+  );
+}
+
+/* --- Portal Messages --- */
+function PortalMessagesPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [messages, setMessages] = React.useState([
+    { id: 1, key: "login_success", title: "Login Success", text: "You have been successfully logged in. Enjoy your internet session!", type: "success" },
+    { id: 2, key: "login_fail", title: "Login Failed", text: "Login failed. Please check your username and password.", type: "error" },
+    { id: 3, key: "session_expired", title: "Session Expired", text: "Your session has expired. Please log in again.", type: "warning" },
+    { id: 4, key: "account_suspended", title: "Account Suspended", text: "Your account has been suspended. Please contact support.", type: "error" },
+    { id: 5, key: "data_limit", title: "Data Limit Reached", text: "You have reached your data transfer limit.", type: "warning" },
+    { id: 6, key: "renewal_reminder", title: "Renewal Reminder", text: "Your plan expires soon. Please renew to avoid interruption.", type: "info" },
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Portal Messages" description="Customize messages displayed on the captive portal." breadcrumb={breadcrumb} icon={<Plug className="h-5 w-5" />} />
+      <SectionCard title="Message Templates" description="Edit the text for each portal message type">
+        <div className="space-y-4">
+          {messages.map((m) => (
+            <div key={m.id} className="rounded-lg border border-border bg-card p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px]">{m.type}</Badge>
+                  <Label className="font-medium">{m.title}</Label>
+                </div>
+              </div>
+              <Textarea value={m.text} onChange={(e) => setMessages((arr) => arr.map((x) => x.id === m.id ? { ...x, text: e.target.value } : x))} rows={2} className="text-sm" />
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+      <div className="flex justify-end">
+        <Button onClick={() => toast({ title: "Messages saved", description: `${messages.length} portal messages updated.` })}><Save className="mr-2 h-4 w-4" /> Save All Messages</Button>
+      </div>
+    </div>
+  );
+}
+
+/* --- Portal Config --- */
+function PortalConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [form, setForm] = React.useState({
+    authenticate: "local",
+    encryptionKey: "cp_enc_2026",
+    sessionTimeout: "30",
+    idleTimeout: "10",
+    concurrentLogin: false,
+    macBinding: true,
+    httpsOnly: true,
+    favicon: "favicon.ico",
+    allowPackagePin: true,
+    allowWalkinPin: false,
+    allowValuePin: true,
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Portal Configuration" description="General captive portal configuration settings." breadcrumb={breadcrumb} icon={<Plug className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "Portal config saved", description: "Portal configuration updated." }); }}>
+        <div className="space-y-6">
+          <SectionCard title="Authentication" description="Authentication method and security">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label>Authentication Method</Label><Select value={form.authenticate} onValueChange={(v) => set("authenticate", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="local">Local (RADIUS)</SelectItem><SelectItem value="ldap">LDAP</SelectItem><SelectItem value="ad">Active Directory</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label htmlFor="encryptionKey">Encryption Key</Label><Input id="encryptionKey" value={form.encryptionKey} onChange={(e) => set("encryptionKey", e.target.value)} className="font-mono text-xs" /></div>
+              <div className="space-y-2"><Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label><Input id="sessionTimeout" type="number" value={form.sessionTimeout} onChange={(e) => set("sessionTimeout", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="idleTimeout">Idle Timeout (minutes)</Label><Input id="idleTimeout" type="number" value={form.idleTimeout} onChange={(e) => set("idleTimeout", e.target.value)} /></div>
+              <div className="flex items-center gap-3"><Switch checked={form.httpsOnly} onCheckedChange={(v) => set("httpsOnly", v)} /><Label>HTTPS Only</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.concurrentLogin} onCheckedChange={(v) => set("concurrentLogin", v)} /><Label>Allow Concurrent Login</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.macBinding} onCheckedChange={(v) => set("macBinding", v)} /><Label>MAC Binding</Label></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="PIN Registration" description="Control which PIN types users can use for self-registration">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="flex items-center gap-3"><Switch checked={form.allowPackagePin} onCheckedChange={(v) => set("allowPackagePin", v)} /><Label>Allow Package PIN</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.allowWalkinPin} onCheckedChange={(v) => set("allowWalkinPin", v)} /><Label>Allow Walk-in PIN</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.allowValuePin} onCheckedChange={(v) => set("allowValuePin", v)} /><Label>Allow Value PIN</Label></div>
+            </div>
+          </SectionCard>
+        </div>
+        <div className="mt-4 flex justify-end"><Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Configuration</Button></div>
+      </form>
+    </div>
+  );
+}
+
+/* --- Configure Profile --- */
+function ConfigureProfilePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [profiles, setProfiles] = React.useState([
+    { id: 1, name: "Default Profile", realm: "cryptsk.com", realmOrder: "suffix", usernameCase: "lower", css: "body { background: #fff; }", status: "Active" },
+    { id: 2, name: "Hotel Profile", realm: "hotel.cryptsk.com", realmOrder: "prefix", usernameCase: "preserve", css: "body { background: #f0f0f0; }", status: "Active" },
+    { id: 3, name: "Guest Profile", realm: "guest.cryptsk.com", realmOrder: "suffix", usernameCase: "lower", css: "body { background: #fafafa; }", status: "Inactive" },
+  ]);
+  const [showForm, setShowForm] = React.useState(false);
+  const [form, setForm] = React.useState({ name: "", realm: "", realmOrder: "suffix", usernameCase: "lower", css: "" });
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Configure Profile" description="Create and manage CP (Captive Portal) profiles with realm and CSS customization." breadcrumb={breadcrumb} icon={<Plug className="h-5 w-5" />} />
+      <ActionBar>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Create Profile"}</Button>
+      </ActionBar>
+      {showForm && (
+        <SectionCard title="Create New Profile" description="Configure a new captive portal profile">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Profile Name</Label><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. VIP Profile" /></div>
+            <div className="space-y-2"><Label>Realm</Label><Input value={form.realm} onChange={(e) => setForm((f) => ({ ...f, realm: e.target.value }))} placeholder="e.g. vip.cryptsk.com" /></div>
+            <div className="space-y-2"><Label>Realm Order</Label><Select value={form.realmOrder} onValueChange={(v) => setForm((f) => ({ ...f, realmOrder: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="suffix">Suffix (user@realm)</SelectItem><SelectItem value="prefix">Prefix (realm\\user)</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Username Case</Label><Select value={form.usernameCase} onValueChange={(v) => setForm((f) => ({ ...f, usernameCase: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="lower">Lowercase</SelectItem><SelectItem value="upper">Uppercase</SelectItem><SelectItem value="preserve">Preserve</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2 md:col-span-2"><Label>CSS Elements</Label><Textarea value={form.css} onChange={(e) => setForm((f) => ({ ...f, css: e.target.value }))} rows={4} placeholder="body { background: #fff; }" className="font-mono text-xs" /></div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button onClick={() => {
+              setProfiles((arr) => [...arr, { id: Math.max(...arr.map((x) => x.id)) + 1, name: form.name, realm: form.realm, realmOrder: form.realmOrder, usernameCase: form.usernameCase, css: form.css, status: "Active" }]);
+              setShowForm(false); setForm({ name: "", realm: "", realmOrder: "suffix", usernameCase: "lower", css: "" });
+              toast({ title: "Profile created", description: form.name });
+            }}><Save className="mr-2 h-4 w-4" /> Create</Button>
+          </div>
+        </SectionCard>
+      )}
+      <SectionCard title="CP Profiles" description={`${profiles.length} profiles`}>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead><TableHead>Realm</TableHead><TableHead>Realm Order</TableHead><TableHead>Username Case</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {profiles.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{p.realm}</TableCell>
+                  <TableCell className="text-xs">{p.realmOrder}</TableCell>
+                  <TableCell className="text-xs">{p.usernameCase}</TableCell>
+                  <TableCell><StatusBadge status={p.status} /></TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit profile", description: p.name })}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setProfiles(profiles.filter((x) => x.id !== p.id)); toast({ title: "Profile deleted", description: p.name }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* --- CP Security Config --- */
+function CpSecurityConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [form, setForm] = React.useState({
+    httpsEnabled: true,
+    sslCertPath: "/etc/ssl/cryptsk.crt",
+    sslKeyPath: "/etc/ssl/cryptsk.key",
+    csrfProtection: true,
+    xssProtection: true,
+    sessionCookieSecure: true,
+    maxLoginAttempts: "5",
+    lockoutDuration: "15",
+    ipWhitelist: "",
+    ipBlacklist: "",
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Security Configuration" description="Security settings for the captive portal." breadcrumb={breadcrumb} icon={<ShieldCheck className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "Security config saved", description: "Portal security settings updated." }); }}>
+        <div className="space-y-6">
+          <SectionCard title="HTTPS & SSL" description="Secure the portal with HTTPS">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex items-center gap-3 md:col-span-2"><Switch checked={form.httpsEnabled} onCheckedChange={(v) => set("httpsEnabled", v)} /><Label>Enable HTTPS</Label></div>
+              <div className="space-y-2"><Label>SSL Certificate Path</Label><Input value={form.sslCertPath} onChange={(e) => set("sslCertPath", e.target.value)} className="font-mono text-xs" /></div>
+              <div className="space-y-2"><Label>SSL Key Path</Label><Input value={form.sslKeyPath} onChange={(e) => set("sslKeyPath", e.target.value)} className="font-mono text-xs" /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Web Security" description="Protection against common web attacks">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex items-center gap-3"><Switch checked={form.csrfProtection} onCheckedChange={(v) => set("csrfProtection", v)} /><Label>CSRF Protection</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.xssProtection} onCheckedChange={(v) => set("xssProtection", v)} /><Label>XSS Protection</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.sessionCookieSecure} onCheckedChange={(v) => set("sessionCookieSecure", v)} /><Label>Secure Session Cookies</Label></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Brute Force Protection" description="Limit login attempts and lock out attackers">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="maxLoginAttempts">Max Login Attempts</Label><Input id="maxLoginAttempts" type="number" min="1" value={form.maxLoginAttempts} onChange={(e) => set("maxLoginAttempts", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="lockoutDuration">Lockout Duration (minutes)</Label><Input id="lockoutDuration" type="number" min="1" value={form.lockoutDuration} onChange={(e) => set("lockoutDuration", e.target.value)} /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="IP Filtering" description="Allow or block specific IP addresses">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="ipWhitelist">IP Whitelist (comma-separated)</Label><Textarea id="ipWhitelist" value={form.ipWhitelist} onChange={(e) => set("ipWhitelist", e.target.value)} rows={3} placeholder="192.168.1.0/24, 10.0.0.5" className="font-mono text-xs" /></div>
+              <div className="space-y-2"><Label htmlFor="ipBlacklist">IP Blacklist (comma-separated)</Label><Textarea id="ipBlacklist" value={form.ipBlacklist} onChange={(e) => set("ipBlacklist", e.target.value)} rows={3} placeholder="203.0.113.5" className="font-mono text-xs" /></div>
+            </div>
+          </SectionCard>
+        </div>
+        <div className="mt-4 flex justify-end"><Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Security Configuration</Button></div>
+      </form>
+    </div>
+  );
+}
+
+/* --- Social Media Config --- */
+function SocialMediaConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [platforms, setPlatforms] = React.useState([
+    { id: "facebook", name: "Facebook", enabled: true, clientId: "fb_123456789", clientSecret: "••••••••", scope: "email" },
+    { id: "google", name: "Google", enabled: true, clientId: "google_987654321.apps.googleusercontent.com", clientSecret: "••••••••", scope: "email profile" },
+    { id: "twitter", name: "Twitter/X", enabled: false, clientId: "", clientSecret: "", scope: "" },
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Social Media Configuration" description="Enable social media login for the captive portal." breadcrumb={breadcrumb} icon={<Plug className="h-5 w-5" />} />
+      <div className="space-y-4">
+        {platforms.map((p) => (
+          <SectionCard key={p.id} title={p.name} description={`OAuth 2.0 configuration for ${p.name} login`}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex items-center gap-3 md:col-span-2">
+                <Switch checked={p.enabled} onCheckedChange={(v) => setPlatforms((arr) => arr.map((x) => x.id === p.id ? { ...x, enabled: v } : x))} />
+                <Label>Enable {p.name} Login</Label>
+              </div>
+              <div className="space-y-2"><Label>Client ID / API Key</Label><Input value={p.clientId} onChange={(e) => setPlatforms((arr) => arr.map((x) => x.id === p.id ? { ...x, clientId: e.target.value } : x))} className="font-mono text-xs" /></div>
+              <div className="space-y-2"><Label>Client Secret</Label><Input type="password" value={p.clientSecret} onChange={(e) => setPlatforms((arr) => arr.map((x) => x.id === p.id ? { ...x, clientSecret: e.target.value } : x))} /></div>
+              <div className="space-y-2 md:col-span-2"><Label>Scope</Label><Input value={p.scope} onChange={(e) => setPlatforms((arr) => arr.map((x) => x.id === p.id ? { ...x, scope: e.target.value } : x))} className="font-mono text-xs" /></div>
+            </div>
+          </SectionCard>
+        ))}
+      </div>
+      <div className="flex justify-end">
+        <Button onClick={() => toast({ title: "Social media config saved", description: `${platforms.filter((p) => p.enabled).length} platforms enabled.` })}><Save className="mr-2 h-4 w-4" /> Save All</Button>
+      </div>
+    </div>
+  );
+}
+
+/* --- CP Registration Policy --- */
+function CpRegistrationPolicyPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [form, setForm] = React.useState({
+    allowSelfReg: true,
+    requireEmail: true,
+    requirePhone: true,
+    emailVerification: true,
+    phoneOtp: false,
+    allowedDomains: "gmail.com, yahoo.com, outlook.com",
+    blockedDomains: "",
+    defaultPackage: "unlimited hours 30 days",
+    defaultZone: "Bhiwani-Core",
+    maxAccountsPerEmail: "1",
+    rebind: false,
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="CP Registration Policy" description="Control how users can self-register through the captive portal." breadcrumb={breadcrumb} icon={<Plug className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "Registration policy saved", description: "CP registration policy updated." }); }}>
+        <div className="space-y-6">
+          <SectionCard title="Registration Settings" description="Enable and configure self-registration">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex items-center gap-3 md:col-span-2"><Switch checked={form.allowSelfReg} onCheckedChange={(v) => set("allowSelfReg", v)} /><Label>Allow Self-Registration</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.requireEmail} onCheckedChange={(v) => set("requireEmail", v)} /><Label>Require Email</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.requirePhone} onCheckedChange={(v) => set("requirePhone", v)} /><Label>Require Phone</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.emailVerification} onCheckedChange={(v) => set("emailVerification", v)} /><Label>Email Verification (OTP)</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.phoneOtp} onCheckedChange={(v) => set("phoneOtp", v)} /><Label>Phone OTP Verification</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.rebind} onCheckedChange={(v) => set("rebind", v)} /><Label>Allow Rebind MAC</Label></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Domain Filtering" description="Control which email domains can register">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="allowedDomains">Allowed Domains (comma-separated)</Label><Textarea id="allowedDomains" value={form.allowedDomains} onChange={(e) => set("allowedDomains", e.target.value)} rows={2} className="font-mono text-xs" /></div>
+              <div className="space-y-2"><Label htmlFor="blockedDomains">Blocked Domains (comma-separated)</Label><Textarea id="blockedDomains" value={form.blockedDomains} onChange={(e) => set("blockedDomains", e.target.value)} rows={2} className="font-mono text-xs" /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Default Assignment" description="Package and zone assigned to new self-registered users">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="space-y-2"><Label>Default Package</Label><Select value={form.defaultPackage} onValueChange={(v) => set("defaultPackage", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unlimited hours 1 day">Unlimited 1 day</SelectItem><SelectItem value="unlimited hours 7 days">Unlimited 7 days</SelectItem><SelectItem value="unlimited hours 30 days">Unlimited 30 days</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label>Default Zone</Label><Select value={form.defaultZone} onValueChange={(v) => set("defaultZone", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Bhiwani-Core">Bhiwani-Core</SelectItem><SelectItem value="Bhiwani-North">Bhiwani-North</SelectItem><SelectItem value="Bhiwani-South">Bhiwani-South</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label htmlFor="maxAccountsPerEmail">Max Accounts per Email</Label><Input id="maxAccountsPerEmail" type="number" min="1" value={form.maxAccountsPerEmail} onChange={(e) => set("maxAccountsPerEmail", e.target.value)} /></div>
+            </div>
+          </SectionCard>
+        </div>
+        <div className="mt-4 flex justify-end"><Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Policy</Button></div>
+      </form>
+    </div>
+  );
+}
+
+/* ===================================================================== *
+ *  NAS MANAGEMENT — Real functional pages (6 grandchildren)
+ * ===================================================================== */
+
+/* --- Radius Config --- */
+function RadiusConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [form, setForm] = React.useState({
+    authPort: "1812",
+    acctPort: "1813",
+    coaPort: "3799",
+    timeout: "5",
+    retries: "3",
+    secret: "••••••••••••",
+    deadTime: "10",
+    maxConnections: "16",
+    enableAccounting: true,
+    enableCoA: true,
+    interimUpdate: "300",
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="RADIUS Configuration" description="Global RADIUS server settings for authentication and accounting." breadcrumb={breadcrumb} icon={<HardDrive className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "RADIUS config saved", description: "Global RADIUS settings updated." }); }}>
+        <div className="space-y-6">
+          <SectionCard title="Server Ports" description="RADIUS authentication, accounting and CoA ports">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="space-y-2"><Label htmlFor="authPort">Authentication Port</Label><Input id="authPort" type="number" value={form.authPort} onChange={(e) => set("authPort", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="acctPort">Accounting Port</Label><Input id="acctPort" type="number" value={form.acctPort} onChange={(e) => set("acctPort", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="coaPort">CoA Port</Label><Input id="coaPort" type="number" value={form.coaPort} onChange={(e) => set("coaPort", e.target.value)} /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Connection Settings" description="Timeout, retries and connection pool">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="timeout">Timeout (seconds)</Label><Input id="timeout" type="number" value={form.timeout} onChange={(e) => set("timeout", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="retries">Retries</Label><Input id="retries" type="number" value={form.retries} onChange={(e) => set("retries", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="deadTime">Dead Time (minutes)</Label><Input id="deadTime" type="number" value={form.deadTime} onChange={(e) => set("deadTime", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="maxConnections">Max Connections</Label><Input id="maxConnections" type="number" value={form.maxConnections} onChange={(e) => set("maxConnections", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="interimUpdate">Interim Update Interval (seconds)</Label><Input id="interimUpdate" type="number" value={form.interimUpdate} onChange={(e) => set("interimUpdate", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="secret">Shared Secret</Label><Input id="secret" type="password" value={form.secret} onChange={(e) => set("secret", e.target.value)} /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Features" description="Enable/disable RADIUS features">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex items-center gap-3"><Switch checked={form.enableAccounting} onCheckedChange={(v) => set("enableAccounting", v)} /><Label>Enable Accounting</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.enableCoA} onCheckedChange={(v) => set("enableCoA", v)} /><Label>Enable Change of Authorization (CoA)</Label></div>
+            </div>
+          </SectionCard>
+        </div>
+        <div className="mt-4 flex justify-end"><Button type="submit"><Save className="mr-2 h-4 w-4" /> Save RADIUS Configuration</Button></div>
+      </form>
+    </div>
+  );
+}
+
+/* --- NAS Configuration --- */
+function NasConfigurationPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [configs, setConfigs] = React.useState([
+    { id: 1, name: "sms-core-01", nasType: "24online SMS", identifier: "sms-core-01", secret: "••••••••", authType: "PAP", status: "Active" },
+    { id: 2, name: "sms-core-02", nasType: "24online SMS", identifier: "sms-core-02", secret: "••••••••", authType: "CHAP", status: "Active" },
+    { id: 3, name: "br-5000-edge", nasType: "BRAS", identifier: "br-5000", secret: "••••••••", authType: "MS-CHAPv2", status: "Active" },
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="NAS Configuration" description="Configure NAS device settings including type, identifier, and authentication." breadcrumb={breadcrumb} icon={<HardDrive className="h-5 w-5" />} />
+      <ActionBar>
+        <Button size="sm" onClick={() => toast({ title: "Add NAS config", description: "Open create form" })}><Plus className="mr-2 h-3.5 w-3.5" /> Add Configuration</Button>
+      </ActionBar>
+      <SectionCard title="NAS Configurations" description={`${configs.length} configurations`}>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead><TableHead>NAS Type</TableHead><TableHead>Identifier</TableHead><TableHead>Auth Type</TableHead><TableHead>Secret</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {configs.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell><Badge variant="outline" className="text-[10px]">{c.nasType}</Badge></TableCell>
+                  <TableCell className="font-mono text-xs">{c.identifier}</TableCell>
+                  <TableCell className="text-xs">{c.authType}</TableCell>
+                  <TableCell className="font-mono text-xs">{c.secret}</TableCell>
+                  <TableCell><StatusBadge status={c.status} /></TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit config", description: c.name })}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setConfigs(configs.filter((x) => x.id !== c.id)); toast({ title: "Config deleted", description: c.name }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* --- NAS Preferences --- */
+function NasPreferencesPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [form, setForm] = React.useState({
+    sessionTimeout: "86400",
+    idleTimeout: "600",
+    interimInterval: "300",
+    acctDelay: "0",
+    coaEnabled: true,
+    coaPort: "3799",
+    disconnectOnExpire: true,
+    reauthOnCoA: false,
+    nasIdentifier: "cryptsk-sms",
+    nasType: "24online",
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="NAS Preferences" description="Global preferences applied to all NAS connections." breadcrumb={breadcrumb} icon={<HardDrive className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "Preferences saved", description: "NAS preferences updated." }); }}>
+        <div className="space-y-6">
+          <SectionCard title="Session Timers" description="Default timeout values for user sessions">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="sessionTimeout">Session Timeout (seconds)</Label><Input id="sessionTimeout" type="number" value={form.sessionTimeout} onChange={(e) => set("sessionTimeout", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="idleTimeout">Idle Timeout (seconds)</Label><Input id="idleTimeout" type="number" value={form.idleTimeout} onChange={(e) => set("idleTimeout", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="interimInterval">Interim Update Interval (seconds)</Label><Input id="interimInterval" type="number" value={form.interimInterval} onChange={(e) => set("interimInterval", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="acctDelay">Accounting Delay (seconds)</Label><Input id="acctDelay" type="number" value={form.acctDelay} onChange={(e) => set("acctDelay", e.target.value)} /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="CoA Settings" description="Change of Authorization for disconnecting/modifying live sessions">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex items-center gap-3"><Switch checked={form.coaEnabled} onCheckedChange={(v) => set("coaEnabled", v)} /><Label>Enable CoA</Label></div>
+              <div className="space-y-2"><Label htmlFor="coaPort">CoA Port</Label><Input id="coaPort" type="number" value={form.coaPort} onChange={(e) => set("coaPort", e.target.value)} /></div>
+              <div className="flex items-center gap-3"><Switch checked={form.disconnectOnExpire} onCheckedChange={(v) => set("disconnectOnExpire", v)} /><Label>Disconnect on Expiry</Label></div>
+              <div className="flex items-center gap-3"><Switch checked={form.reauthOnCoA} onCheckedChange={(v) => set("reauthOnCoA", v)} /><Label>Re-authenticate on CoA</Label></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="NAS Identity" description="Default NAS identifier sent in RADIUS packets">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="nasIdentifier">NAS Identifier</Label><Input id="nasIdentifier" value={form.nasIdentifier} onChange={(e) => set("nasIdentifier", e.target.value)} /></div>
+              <div className="space-y-2"><Label>NAS Type</Label><Select value={form.nasType} onValueChange={(v) => set("nasType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="24online">24online SMS</SelectItem><SelectItem value="BRAS">BRAS</SelectItem><SelectItem value="Hotspot">Hotspot Gateway</SelectItem><SelectItem value="Mikrotik">Mikrotik</SelectItem></SelectContent></Select></div>
+            </div>
+          </SectionCard>
+        </div>
+        <div className="mt-4 flex justify-end"><Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Preferences</Button></div>
+      </form>
+    </div>
+  );
+}
+
+/* --- NAS Connectivity --- */
+function NasConnectivityPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [devices, setDevices] = React.useState([
+    { id: 1, name: "sms-core-01", ip: "172.16.16.16", port: "1812", status: "Online", latency: "2ms", lastConnected: "Just now", sessions: 612 },
+    { id: 2, name: "sms-core-02", ip: "172.16.16.17", port: "1812", status: "Online", latency: "3ms", lastConnected: "Just now", sessions: 187 },
+    { id: 3, name: "br-5000-edge", ip: "103.205.148.26", port: "1812", status: "Online", latency: "5ms", lastConnected: "1 min ago", sessions: 0 },
+    { id: 4, name: "hotspot-gw-01", ip: "10.10.5.1", port: "1812", status: "Offline", latency: "—", lastConnected: "2 hours ago", sessions: 0 },
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="NAS Connectivity" description="Monitor real-time connectivity status of all NAS devices." breadcrumb={breadcrumb} icon={<HardDrive className="h-5 w-5" />} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard label="Total NAS" value={String(devices.length)} icon={<HardDrive className="h-4 w-4" />} accent />
+        <KpiCard label="Online" value={String(devices.filter((d) => d.status === "Online").length)} icon={<Activity className="h-4 w-4" />} />
+        <KpiCard label="Offline" value={String(devices.filter((d) => d.status === "Offline").length)} icon={<AlertTriangle className="h-4 w-4" />} />
+        <KpiCard label="Total Sessions" value={String(devices.reduce((a, d) => a + d.sessions, 0))} icon={<Wifi className="h-4 w-4" />} />
+      </div>
+      <SectionCard title="NAS Connectivity Status" description="Real-time status of all configured NAS devices">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead><TableHead>IP Address</TableHead><TableHead>Port</TableHead><TableHead>Status</TableHead><TableHead>Latency</TableHead><TableHead>Last Connected</TableHead><TableHead>Sessions</TableHead><TableHead className="text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {devices.map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell className="font-medium">{d.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{d.ip}</TableCell>
+                  <TableCell className="font-mono text-xs">{d.port}</TableCell>
+                  <TableCell><StatusBadge status={d.status} /></TableCell>
+                  <TableCell className="font-mono text-xs">{d.latency}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{d.lastConnected}</TableCell>
+                  <TableCell>{d.sessions}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Test connection", description: `Pinging ${d.name} (${d.ip})…` })}><Activity className="h-3.5 w-3.5" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* --- NAS Client Config --- */
+function NasClientConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [clients, setClients] = React.useState([
+    { id: 1, name: "sms-core-01", ip: "172.16.16.16", secret: "secret123", nasType: "24online SMS", status: "Active" },
+    { id: 2, name: "sms-core-02", ip: "172.16.16.17", secret: "secret456", nasType: "24online SMS", status: "Active" },
+    { id: 3, name: "br-5000-edge", ip: "103.205.148.26", secret: "bras789", nasType: "BRAS", status: "Active" },
+    { id: 4, name: "hotspot-gw-01", ip: "10.10.5.1", secret: "hotspot000", nasType: "Hotspot", status: "Inactive" },
+  ]);
+  const [showForm, setShowForm] = React.useState(false);
+  const [form, setForm] = React.useState({ name: "", ip: "", secret: "", nasType: "24online SMS" });
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="NAS Client Configuration" description="Configure RADIUS clients (NAS devices that send auth requests)." breadcrumb={breadcrumb} icon={<HardDrive className="h-5 w-5" />} />
+      <ActionBar>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Add Client"}</Button>
+      </ActionBar>
+      {showForm && (
+        <SectionCard title="Add RADIUS Client" description="Register a new NAS device as a RADIUS client">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Client Name</Label><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. mikrotik-01" /></div>
+            <div className="space-y-2"><Label>IP Address</Label><Input value={form.ip} onChange={(e) => setForm((f) => ({ ...f, ip: e.target.value }))} placeholder="e.g. 10.10.5.2" /></div>
+            <div className="space-y-2"><Label>Shared Secret</Label><Input type="password" value={form.secret} onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value }))} /></div>
+            <div className="space-y-2"><Label>NAS Type</Label><Select value={form.nasType} onValueChange={(v) => setForm((f) => ({ ...f, nasType: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="24online SMS">24online SMS</SelectItem><SelectItem value="BRAS">BRAS</SelectItem><SelectItem value="Hotspot">Hotspot</SelectItem><SelectItem value="Mikrotik">Mikrotik</SelectItem></SelectContent></Select></div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button onClick={() => {
+              setClients((arr) => [...arr, { id: Math.max(...arr.map((x) => x.id)) + 1, name: form.name, ip: form.ip, secret: form.secret, nasType: form.nasType, status: "Active" }]);
+              setShowForm(false); setForm({ name: "", ip: "", secret: "", nasType: "24online SMS" });
+              toast({ title: "Client added", description: `${form.name} (${form.ip})` });
+            }}><Save className="mr-2 h-4 w-4" /> Add Client</Button>
+          </div>
+        </SectionCard>
+      )}
+      <SectionCard title="RADIUS Clients" description={`${clients.length} clients`}>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead><TableHead>IP Address</TableHead><TableHead>Secret</TableHead><TableHead>NAS Type</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {clients.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{c.ip}</TableCell>
+                  <TableCell className="font-mono text-xs">••••••••</TableCell>
+                  <TableCell><Badge variant="outline" className="text-[10px]">{c.nasType}</Badge></TableCell>
+                  <TableCell><StatusBadge status={c.status} /></TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit client", description: c.name })}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setClients(clients.filter((x) => x.id !== c.id)); toast({ title: "Client deleted", description: c.name }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* --- Attribute Mapping --- */
+function AttributeMappingPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [mappings, setMappings] = React.useState([
+    { id: 1, radiusAttr: "User-Name", vendorAttr: "Cryptsk-Username", vendor: "Cryptsk", op: ":=", status: "Active" },
+    { id: 2, radiusAttr: "Framed-IP-Address", vendorAttr: "Cryptsk-IP", vendor: "Cryptsk", op: ":=", status: "Active" },
+    { id: 3, radiusAttr: "Session-Timeout", vendorAttr: "Cryptsk-Session-Timeout", vendor: "Cryptsk", op: ":=", status: "Active" },
+    { id: 4, radiusAttr: "Acct-Interim-Interval", vendorAttr: "Cryptsk-Interim", vendor: "Cryptsk", op: ":=", status: "Active" },
+    { id: 5, radiusAttr: "Mikrotik-Rate-Limit", vendorAttr: "Cryptsk-Bandwidth", vendor: "Mikrotik", op: ":=", status: "Active" },
+  ]);
+  const [showForm, setShowForm] = React.useState(false);
+  const [form, setForm] = React.useState({ radiusAttr: "", vendorAttr: "", vendor: "Cryptsk", op: ":=" });
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Attribute Mapping" description="Map standard RADIUS attributes to vendor-specific attributes." breadcrumb={breadcrumb} icon={<HardDrive className="h-5 w-5" />} />
+      <ActionBar>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Add Mapping"}</Button>
+      </ActionBar>
+      {showForm && (
+        <SectionCard title="Add Attribute Mapping" description="Create a new RADIUS-to-vendor attribute mapping">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>RADIUS Attribute</Label><Input value={form.radiusAttr} onChange={(e) => setForm((f) => ({ ...f, radiusAttr: e.target.value }))} placeholder="e.g. User-Name" /></div>
+            <div className="space-y-2"><Label>Vendor Attribute</Label><Input value={form.vendorAttr} onChange={(e) => setForm((f) => ({ ...f, vendorAttr: e.target.value }))} placeholder="e.g. Cryptsk-Username" /></div>
+            <div className="space-y-2"><Label>Vendor</Label><Select value={form.vendor} onValueChange={(v) => setForm((f) => ({ ...f, vendor: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Cryptsk">Cryptsk</SelectItem><SelectItem value="Mikrotik">Mikrotik</SelectItem><SelectItem value="Cisco">Cisco</SelectItem><SelectItem value="Juniper">Juniper</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Operator</Label><Select value={form.op} onValueChange={(v) => setForm((f) => ({ ...f, op: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value=":=">:= (Assign)</SelectItem><SelectItem value="==">== (Equal)</SelectItem><SelectItem value="+=">+= (Append)</SelectItem></SelectContent></Select></div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button onClick={() => {
+              setMappings((arr) => [...arr, { id: Math.max(...arr.map((x) => x.id)) + 1, ...form, status: "Active" }]);
+              setShowForm(false); setForm({ radiusAttr: "", vendorAttr: "", vendor: "Cryptsk", op: ":=" });
+              toast({ title: "Mapping added", description: `${form.radiusAttr} → ${form.vendorAttr}` });
+            }}><Save className="mr-2 h-4 w-4" /> Add Mapping</Button>
+          </div>
+        </SectionCard>
+      )}
+      <SectionCard title="Attribute Mappings" description={`${mappings.length} mappings`}>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>RADIUS Attribute</TableHead><TableHead>Vendor Attribute</TableHead><TableHead>Vendor</TableHead><TableHead>Operator</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {mappings.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell className="font-mono text-xs font-medium">{m.radiusAttr}</TableCell>
+                  <TableCell className="font-mono text-xs">{m.vendorAttr}</TableCell>
+                  <TableCell><Badge variant="outline" className="text-[10px]">{m.vendor}</Badge></TableCell>
+                  <TableCell className="font-mono text-xs">{m.op}</TableCell>
+                  <TableCell><StatusBadge status={m.status} /></TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit mapping", description: m.radiusAttr })}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setMappings(mappings.filter((x) => x.id !== m.id)); toast({ title: "Mapping deleted", description: m.radiusAttr }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* --- Priorities (Network) --- */
+function PrioritiesPage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [priorities, setPriorities] = React.useState([
+    { id: 1, name: "WAN-1-Primary", gateway: "103.205.148.25", interface: "eth12", weight: 100, status: "Active" },
+    { id: 2, name: "WAN-2-Backup", gateway: "103.205.151.1", interface: "eth13", weight: 50, status: "Active" },
+    { id: 3, name: "WAN-3-Failover", gateway: "10.10.5.1", interface: "eth4", weight: 10, status: "Inactive" },
+  ]);
+  const [showForm, setShowForm] = React.useState(false);
+  const [form, setForm] = React.useState({ name: "", gateway: "", interface: "eth0", weight: "100" });
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Priorities" description="Manage traffic prioritization across multiple WAN interfaces." breadcrumb={breadcrumb} icon={<Settings2 className="h-5 w-5" />} />
+      <ActionBar>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Add Priority"}</Button>
+      </ActionBar>
+      {showForm && (
+        <SectionCard title="Add Priority" description="Create a new WAN traffic priority rule">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Priority Name</Label><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. WAN-1-Primary" /></div>
+            <div className="space-y-2"><Label>Gateway IP</Label><Input value={form.gateway} onChange={(e) => setForm((f) => ({ ...f, gateway: e.target.value }))} placeholder="e.g. 103.205.148.25" /></div>
+            <div className="space-y-2"><Label>Interface</Label><Select value={form.interface} onValueChange={(v) => setForm((f) => ({ ...f, interface: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="eth0">eth0</SelectItem><SelectItem value="eth12">eth12 (WAN-1)</SelectItem><SelectItem value="eth13">eth13 (WAN-2)</SelectItem><SelectItem value="eth4">eth4 (WAN-3)</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Weight</Label><Input type="number" min="1" max="100" value={form.weight} onChange={(e) => setForm((f) => ({ ...f, weight: e.target.value }))} /></div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button onClick={() => {
+              setPriorities((arr) => [...arr, { id: Math.max(...arr.map((x) => x.id)) + 1, name: form.name, gateway: form.gateway, interface: form.interface, weight: Number(form.weight), status: "Active" }]);
+              setShowForm(false); setForm({ name: "", gateway: "", interface: "eth0", weight: "100" });
+              toast({ title: "Priority added", description: form.name });
+            }}><Save className="mr-2 h-4 w-4" /> Add</Button>
+          </div>
+        </SectionCard>
+      )}
+      <SectionCard title="Traffic Priorities" description={`${priorities.length} priorities configured`}>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead><TableHead>Gateway</TableHead><TableHead>Interface</TableHead><TableHead>Weight</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {priorities.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{p.gateway}</TableCell>
+                  <TableCell className="font-mono text-xs">{p.interface}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full bg-primary" style={{ width: `${p.weight}%` }} />
+                      </div>
+                      <span className="text-xs">{p.weight}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell><StatusBadge status={p.status} /></TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit priority", description: p.name })}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setPriorities(priorities.filter((x) => x.id !== p.id)); toast({ title: "Priority deleted", description: p.name }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* --- Manage PPPoE --- */
+function ManagePppoePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [form, setForm] = React.useState({
+    pppoeEnabled: true,
+    interface: "eth0",
+    authType: "PAP",
+    mppe: false,
+    mtu: "1492",
+    mru: "1492",
+    idleTimeout: "0",
+    sessionTimeout: "0",
+    maxSessions: "500",
+    dns1: "8.8.8.8",
+    dns2: "8.8.4.4",
+    wins: "",
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Manage PPPoE" description="Configure the PPPoE server settings for user connections." breadcrumb={breadcrumb} icon={<Settings2 className="h-5 w-5" />} />
+      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "PPPoE config saved", description: "PPPoE server settings updated." }); }}>
+        <div className="space-y-6">
+          <SectionCard title="PPPoE Server" description="Enable and configure the PPPoE server">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex items-center gap-3 md:col-span-2"><Switch checked={form.pppoeEnabled} onCheckedChange={(v) => set("pppoeEnabled", v)} /><Label>Enable PPPoE Server</Label></div>
+              <div className="space-y-2"><Label>Interface</Label><Select value={form.interface} onValueChange={(v) => set("interface", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="eth0">eth0 (LAN)</SelectItem><SelectItem value="eth2">eth2 (MGMT)</SelectItem><SelectItem value="eth3">eth3 (Zone-1)</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label>Authentication Type</Label><Select value={form.authType} onValueChange={(v) => set("authType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PAP">PAP</SelectItem><SelectItem value="CHAP">CHAP</SelectItem><SelectItem value="MS-CHAPv2">MS-CHAPv2</SelectItem></SelectContent></Select></div>
+              <div className="flex items-center gap-3"><Switch checked={form.mppe} onCheckedChange={(v) => set("mppe", v)} /><Label>Enable MPPE Encryption</Label></div>
+              <div className="space-y-2"><Label htmlFor="maxSessions">Max Sessions</Label><Input id="maxSessions" type="number" value={form.maxSessions} onChange={(e) => set("maxSessions", e.target.value)} /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="MTU / MRU" description="Maximum Transmission / Receive Unit sizes">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="mtu">MTU</Label><Input id="mtu" type="number" value={form.mtu} onChange={(e) => set("mtu", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="mru">MRU</Label><Input id="mru" type="number" value={form.mru} onChange={(e) => set("mru", e.target.value)} /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="Timeouts" description="Session and idle timeout values">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="idleTimeout">Idle Timeout (seconds, 0=no timeout)</Label><Input id="idleTimeout" type="number" value={form.idleTimeout} onChange={(e) => set("idleTimeout", e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="sessionTimeout">Session Timeout (seconds, 0=no timeout)</Label><Input id="sessionTimeout" type="number" value={form.sessionTimeout} onChange={(e) => set("sessionTimeout", e.target.value)} /></div>
+            </div>
+          </SectionCard>
+          <SectionCard title="DNS / WINS" description="DNS and WINS servers pushed to PPPoE clients">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="space-y-2"><Label htmlFor="dns1">Primary DNS</Label><Input id="dns1" value={form.dns1} onChange={(e) => set("dns1", e.target.value)} className="font-mono text-xs" /></div>
+              <div className="space-y-2"><Label htmlFor="dns2">Secondary DNS</Label><Input id="dns2" value={form.dns2} onChange={(e) => set("dns2", e.target.value)} className="font-mono text-xs" /></div>
+              <div className="space-y-2"><Label htmlFor="wins">WINS Server</Label><Input id="wins" value={form.wins} onChange={(e) => set("wins", e.target.value)} className="font-mono text-xs" placeholder="Optional" /></div>
+            </div>
+          </SectionCard>
+        </div>
+        <div className="mt-4 flex justify-end"><Button type="submit"><Save className="mr-2 h-4 w-4" /> Save PPPoE Configuration</Button></div>
+      </form>
     </div>
   );
 }
