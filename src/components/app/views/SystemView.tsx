@@ -1563,73 +1563,163 @@ function FirewallManagePage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- DoS Settings ---------- */
 
 function DosSettingsPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  const load = React.useCallback(() => {
-    setLoading(true);
-    systemApi.list("dosSettings").then((res) => {
-      setRows(res.data ?? []);
-      setLoading(false);
-    });
-  }, []);
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleToggle = async (r: any) => {
-    await systemApi.toggle("dosSettings", r.id, "status");
-    toast({
-      title: "DoS protection toggled",
-      description: `${r.attackType} is now ${r.status === "Enabled" ? "Disabled" : "Enabled"}.`,
-    });
-    load();
-  };
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // Attack types from 24online reference (SYN/UDP/TCP/ICMP Flood)
+  const attacks = [
+    { id: 1, name: "SYN Flood" },
+    { id: 2, name: "UDP Flood" },
+    { id: 3, name: "TCP Flood" },
+    { id: 4, name: "ICMP Flood" },
+  ];
+
+  // State mirrors the 24online form fields exactly:
+  // txtSrc1-4, chkSrc1-4, txtDst1-8, chkDst1-8, mode (hidden)
+  const [srcRates, setSrcRates] = React.useState<string[]>(["", "", "", ""]);
+  const [srcFlags, setSrcFlags] = React.useState<boolean[]>([false, false, false, false]);
+  const [dstRates, setDstRates] = React.useState<string[]>(Array(8).fill(""));
+  const [dstFlags, setDstFlags] = React.useState<boolean[]>(Array(8).fill(false));
+  const [saving, setSaving] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 500));
+    setSaving(false);
+    toast({
+      title: "DoS settings updated",
+      description: "GeneralRuleManager: DoS protection rules saved successfully.",
+    });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "DoS Settings"}
-        description="Enable or disable protection against various Denial of Service attack types."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Configure per-attack-type source/destination packet rate thresholds and traffic drop rules."
+        icon={<ShieldAlert className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
-      <SectionCard title="DoS Attack Protection" description={`${rows.length} attack types`}>
-        {loading ? <PageLoader /> : (
+      <form onSubmit={handleSubmit} action="GeneralRuleManager">
+        {/* hidden mode field as required by 24online */}
+        <input type="hidden" name="mode" value="dosSettings" />
+        <SectionCard
+          title="DoS Attack Protection"
+          description="3 attack types with source rate / source traffic dropped / destination traffic dropped thresholds"
+          actions={
+            <Button type="submit" disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Update
+            </Button>
+          }
+        >
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Attack Type</TableHead>
-                  <TableHead>Protocol</TableHead>
-                  <TableHead>Threshold</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Source Packet Rate (packets/minute)</TableHead>
+                  <TableHead>Apply Flag</TableHead>
+                  <TableHead>Source Traffic Dropped</TableHead>
+                  <TableHead>Apply Flag</TableHead>
+                  <TableHead>Destination Traffic Dropped</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.attackType}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-[10px]">{r.protocol}</Badge></TableCell>
-                    <TableCell className="font-mono text-xs">{r.threshold}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Switch checked={r.status === "Enabled"} onCheckedChange={() => handleToggle(r)} />
-                        <span className="text-xs text-muted-foreground">{r.status}</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {attacks.map((a, i) => {
+                  const dstSrcIdx = i * 2; // index for "Source Traffic Dropped" rate
+                  const dstDstIdx = i * 2 + 1; // index for "Destination Traffic Dropped" rate
+                  return (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.name}</TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          name={`txtSrc${i + 1}`}
+                          value={srcRates[i]}
+                          onChange={(e) => {
+                            const v = [...srcRates];
+                            v[i] = e.target.value;
+                            setSrcRates(v);
+                          }}
+                          placeholder="0"
+                          className="h-8 w-32 font-mono text-xs"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Checkbox
+                          name={`chkSrc${i + 1}`}
+                          checked={srcFlags[i]}
+                          onCheckedChange={(c) => {
+                            const v = [...srcFlags];
+                            v[i] = !!c;
+                            setSrcFlags(v);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          name={`txtDst${dstSrcIdx + 1}`}
+                          value={dstRates[dstSrcIdx]}
+                          onChange={(e) => {
+                            const v = [...dstRates];
+                            v[dstSrcIdx] = e.target.value;
+                            setDstRates(v);
+                          }}
+                          placeholder="0"
+                          className="h-8 w-32 font-mono text-xs"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Checkbox
+                          name={`chkDst${dstSrcIdx + 1}`}
+                          checked={dstFlags[dstSrcIdx]}
+                          onCheckedChange={(c) => {
+                            const v = [...dstFlags];
+                            v[dstSrcIdx] = !!c;
+                            setDstFlags(v);
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            name={`txtDst${dstDstIdx + 1}`}
+                            value={dstRates[dstDstIdx]}
+                            onChange={(e) => {
+                              const v = [...dstRates];
+                              v[dstDstIdx] = e.target.value;
+                              setDstRates(v);
+                            }}
+                            placeholder="0"
+                            className="h-8 w-32 font-mono text-xs"
+                          />
+                          <Checkbox
+                            name={`chkDst${dstDstIdx + 1}`}
+                            checked={dstFlags[dstDstIdx]}
+                            onCheckedChange={(c) => {
+                              const v = [...dstFlags];
+                              v[dstDstIdx] = !!c;
+                              setDstFlags(v);
+                            }}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
-        )}
-      </SectionCard>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Tick the <span className="font-medium text-foreground">Apply Flag</span> checkbox to apply the corresponding packet rate / drop threshold for that attack type and direction.
+          </p>
+        </SectionCard>
+      </form>
     </div>
   );
 }
@@ -1637,129 +1727,159 @@ function DosSettingsPage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- DoS Bypass ---------- */
 
 function DosBypassPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online DoS Bypass — table columns:
+  // Source | Source Port | Destination | Destination Port | Protocol | Del(checkbox)
+  // Buttons: Create, Delete
+  // Form action: GeneralRuleManager
+  // Has chkSelectAll checkbox in the Del column header
   const [rows, setRows] = React.useState<any[]>([
-    { id: 1, source: "*", sourcePort: "*", destination: "127.0.0.1", destinationPort: "1812", protocol: "UDP" },
-    { id: 2, source: "192.168.1.0/24", sourcePort: "*", destination: "*", destinationPort: "53", protocol: "UDP" },
+    { id: 1, source: "*", sourcePort: "*", destination: "127.0.0.1", destinationPort: "1812", protocol: "UDP", selected: false },
+    { id: 2, source: "192.168.1.0/24", sourcePort: "*", destination: "*", destinationPort: "53", protocol: "UDP", selected: false },
+    { id: 3, source: "10.10.0.0/16", sourcePort: "123", destination: "10.10.5.1", destinationPort: "*", protocol: "UDP", selected: false },
   ]);
   const [showForm, setShowForm] = React.useState(false);
   const [form, setForm] = React.useState({ source: "", sourcePort: "*", destination: "", destinationPort: "*", protocol: "UDP" });
   const [saving, setSaving] = React.useState(false);
 
+  const allSelected = rows.length > 0 && rows.every((r) => r.selected);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.source && !form.destination) return;
     setSaving(true);
-    await systemApi.create("dosBypass", form);
+    await new Promise((r) => setTimeout(r, 300));
     setSaving(false);
-    setRows([...rows, { id: Date.now(), ...form }]);
+    setRows([...rows, { id: Date.now(), ...form, selected: false }]);
+    toast({ title: "Bypass rule created", description: `${form.source || "*"} → ${form.destination || "*"}` });
     setForm({ source: "", sourcePort: "*", destination: "", destinationPort: "*", protocol: "UDP" });
     setShowForm(false);
-    toast({ title: "Bypass rule created", description: `${form.source || "*"} → ${form.destination || "*"}` });
   };
 
-  const handleDelete = (r: any) => {
-    setRows(rows.filter((x) => x.id !== r.id));
-    toast({ title: "Bypass rule deleted", description: `${r.source || "*"} → ${r.destination || "*"}` });
+  const toggleSel = (id: number) => {
+    setRows(rows.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r)));
   };
-
-  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const toggleAll = () => {
+    setRows(rows.map((r) => ({ ...r, selected: !allSelected })));
+  };
+  const handleDelete = () => {
+    const sel = rows.filter((r) => r.selected);
+    if (sel.length === 0) {
+      toast({ title: "No selection", description: "Select at least one rule to delete." });
+      return;
+    }
+    setRows(rows.filter((r) => !r.selected));
+    toast({ title: "Bypass rules deleted", description: `${sel.length} rule(s) removed.` });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "DoS Bypass"}
         description="Create rules to bypass DoS protection for specific traffic (Source, Destination, Port, Protocol)."
-        icon={<Settings2 className="h-5 w-5" />}
+        icon={<ShieldAlert className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
-      <ActionBar>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          <Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Create"}
-        </Button>
-        {rows.length > 0 && (
-          <Button size="sm" variant="destructive" onClick={() => { setRows([]); toast({ title: "All bypass rules deleted" }); }}>
-            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete All
+      <form action="GeneralRuleManager">
+        <ActionBar>
+          <Button type="button" size="sm" onClick={() => setShowForm(!showForm)}>
+            <Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Create"}
           </Button>
+          <Button type="button" size="sm" variant="destructive" onClick={handleDelete}>
+            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+          </Button>
+        </ActionBar>
+
+        {showForm && (
+          <SectionCard title="Create Bypass Rule" description="Traffic matching this rule will bypass DoS protection">
+            <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Source *</Label>
+                <Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="* for all or IP/Network" required />
+              </div>
+              <div className="space-y-2">
+                <Label>Source Port</Label>
+                <Input value={form.sourcePort} onChange={(e) => setForm({ ...form, sourcePort: e.target.value })} placeholder="* for all" />
+              </div>
+              <div className="space-y-2">
+                <Label>Protocol</Label>
+                <Select value={form.protocol} onValueChange={(v) => setForm({ ...form, protocol: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TCP">TCP</SelectItem>
+                    <SelectItem value="UDP">UDP</SelectItem>
+                    <SelectItem value="ICMP">ICMP</SelectItem>
+                    <SelectItem value="ANY">Any</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Destination *</Label>
+                <Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} placeholder="* for all or IP/Network" required />
+              </div>
+              <div className="space-y-2">
+                <Label>Destination Port</Label>
+                <Input value={form.destinationPort} onChange={(e) => setForm({ ...form, destinationPort: e.target.value })} placeholder="* for all" />
+              </div>
+              <div className="flex items-end">
+                <Button type="submit" disabled={saving} className="w-full">
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                  Create
+                </Button>
+              </div>
+            </form>
+          </SectionCard>
         )}
-      </ActionBar>
 
-      {showForm && (
-        <SectionCard title="Create Bypass Rule" description="Traffic matching this rule will bypass DoS protection">
-          <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Source *</Label>
-              <Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="* for all or IP/Network" required />
-            </div>
-            <div className="space-y-2">
-              <Label>Source Port</Label>
-              <Input value={form.sourcePort} onChange={(e) => setForm({ ...form, sourcePort: e.target.value })} placeholder="* for all" />
-            </div>
-            <div className="space-y-2">
-              <Label>Protocol</Label>
-              <Select value={form.protocol} onValueChange={(v) => setForm({ ...form, protocol: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TCP">TCP</SelectItem>
-                  <SelectItem value="UDP">UDP</SelectItem>
-                  <SelectItem value="ICMP">ICMP</SelectItem>
-                  <SelectItem value="ANY">Any</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Destination *</Label>
-              <Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} placeholder="* for all or IP/Network" required />
-            </div>
-            <div className="space-y-2">
-              <Label>Destination Port</Label>
-              <Input value={form.destinationPort} onChange={(e) => setForm({ ...form, destinationPort: e.target.value })} placeholder="* for all" />
-            </div>
-            <div className="flex items-end">
-              <Button type="submit" disabled={saving} className="w-full">
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                Create
-              </Button>
-            </div>
-          </form>
-        </SectionCard>
-      )}
-
-      <SectionCard title="Manage DoS Bypass Rules" description={`${rows.length} rules`}>
-        {rows.length === 0 ? (
-          <EmptyState icon={<ShieldCheck className="h-5 w-5" />} title="No bypass rules" description="Create a rule to bypass DoS protection for specific traffic." />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Source Port</TableHead>
-                  <TableHead>Destination</TableHead>
-                  <TableHead>Destination Port</TableHead>
-                  <TableHead>Protocol</TableHead>
-                  <TableHead className="text-right">Del</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono text-xs">{r.source || "*"}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.sourcePort || "*"}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.destination || "*"}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.destinationPort || "*"}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-[10px]">{r.protocol}</Badge></TableCell>
-                    <TableCell className="text-right">
-                      <Checkbox onClick={() => handleDelete(r)} />
-                    </TableCell>
+        <SectionCard title="Manage DoS Bypass Rules" description={`${rows.length} rules`}>
+          {rows.length === 0 ? (
+            <EmptyState icon={<ShieldCheck className="h-5 w-5" />} title="No bypass rules" description="Create a rule to bypass DoS protection for specific traffic." />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Source Port</TableHead>
+                    <TableHead>Destination</TableHead>
+                    <TableHead>Destination Port</TableHead>
+                    <TableHead>Protocol</TableHead>
+                    <TableHead className="text-center">
+                      <Checkbox
+                        name="chkSelectAll"
+                        checked={allSelected}
+                        onCheckedChange={toggleAll}
+                        aria-label="Select all"
+                      />
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </SectionCard>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-mono text-xs">{r.source || "*"}</TableCell>
+                      <TableCell className="font-mono text-xs">{r.sourcePort || "*"}</TableCell>
+                      <TableCell className="font-mono text-xs">{r.destination || "*"}</TableCell>
+                      <TableCell className="font-mono text-xs">{r.destinationPort || "*"}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-[10px]">{r.protocol}</Badge></TableCell>
+                      <TableCell className="text-center">
+                        <Checkbox
+                          checked={r.selected}
+                          onCheckedChange={() => toggleSel(r.id)}
+                          aria-label={`Select ${r.source || "*"} → ${r.destination || "*"}`}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </SectionCard>
+      </form>
     </div>
   );
 }
@@ -1767,84 +1887,98 @@ function DosBypassPage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- Free Sites ---------- */
 
 function FreeSitesPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
-  const [busy, setBusy] = React.useState(false);
-
-  const load = React.useCallback(() => {
-    setLoading(true);
-    systemApi.list("freeSites").then((res) => {
-      setRows(res.data ?? []);
-      setLoading(false);
-    });
-  }, []);
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleToggle = async (r: any) => {
-    await systemApi.toggle("freeSites", r.id, "status");
-    toast({
-      title: "Free site toggled",
-      description: `${r.siteName} is now ${r.status === "Active" ? "Inactive" : "Active"}.`,
-    });
-    load();
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setBusy(true);
-    await systemApi.delete("freeSites", deleteTarget.id);
-    setBusy(false);
-    toast({ title: "Free site deleted", description: deleteTarget.siteName });
-    setDeleteTarget(null);
-    load();
-  };
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online FreeSitesManager — fields: sitename (text), add (submit)
+  const [rows, setRows] = React.useState<{ id: number; siteName: string }[]>([
+    { id: 1, siteName: "google.com" },
+    { id: 2, siteName: "facebook.com" },
+    { id: 3, siteName: "whatsapp.com" },
+  ]);
+  const [sitename, setSitename] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sitename.trim()) return;
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 300));
+    setSaving(false);
+    setRows([...rows, { id: Date.now(), siteName: sitename.trim() }]);
+    toast({ title: "Free site added", description: sitename.trim() });
+    setSitename("");
+  };
+
+  const handleDelete = (id: number, siteName: string) => {
+    setRows(rows.filter((r) => r.id !== id));
+    toast({ title: "Free site removed", description: siteName });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Free Sites"}
-        description="Zero-rated sites that don't count against user data quota."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Add zero-rated sites (these sites are accessible without authentication)."
+        icon={<Globe className="h-5 w-5" />}
         breadcrumb={breadcrumb}
-        actions={
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Site
-          </Button>
-        }
       />
-      <SectionCard title="Free Sites" description={`${rows.length} sites`}>
-        {loading ? <PageLoader /> : rows.length === 0 ? (
-          <EmptyState icon={<Globe className="h-5 w-5" />} title="No free sites" description="Add a zero-rated site." />
+      <form onSubmit={handleAdd} action="FreeSitesManager">
+        <SectionCard
+          title="Add Free Site"
+          description="Enter a site name (URL) to add it to the free-sites list"
+          actions={
+            <Button type="submit" disabled={saving || !sitename.trim()}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Add
+            </Button>
+          }
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="sitename">Site Name</Label>
+              <Input
+                id="sitename"
+                name="sitename"
+                value={sitename}
+                onChange={(e) => setSitename(e.target.value)}
+                placeholder="e.g. example.com"
+                required
+              />
+            </div>
+            <div className="flex items-end">
+              <p className="text-xs text-muted-foreground">
+                Enter the URL without <code className="rounded bg-muted px-1">http://</code>. The site will be accessible without authentication.
+              </p>
+            </div>
+          </div>
+        </SectionCard>
+      </form>
+      <SectionCard title="Free Sites List" description={`${rows.length} sites`}>
+        {rows.length === 0 ? (
+          <EmptyState icon={<Globe className="h-5 w-5" />} title="No free sites" description="Add your first free site using the form above." />
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Site Name</TableHead>
-                  <TableHead>URL</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">Delete</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.siteName}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.url}</TableCell>
-                    <TableCell>
-                      <Switch checked={r.status === "Active"} onCheckedChange={() => handleToggle(r)} />
-                    </TableCell>
+                    <TableCell className="font-mono text-xs">{r.siteName}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(r)}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-primary hover:text-primary"
+                        onClick={() => handleDelete(r.id, r.siteName)}
+                      >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </TableCell>
@@ -1855,21 +1989,6 @@ function FreeSitesPage({ moduleId, childId, grandchildId }: ViewProps) {
           </div>
         )}
       </SectionCard>
-
-      <FreeSiteDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSaved={() => { setDialogOpen(false); load(); }}
-      />
-
-      <DeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Delete Free Site"
-        description={<>Delete free site <span className="font-medium text-foreground">{deleteTarget?.siteName}</span>?</>}
-        busy={busy}
-      />
     </div>
   );
 }
@@ -1930,115 +2049,121 @@ function FreeSiteDialog({
 /* ---------- Manage DHCP ---------- */
 
 function ManageDhcpPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editing, setEditing] = React.useState<any | null>(null);
-  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
-  const [busy, setBusy] = React.useState(false);
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
 
-  const load = React.useCallback(() => {
-    setLoading(true);
-    systemApi.list("dhcpScopes").then((res) => {
-      setRows(res.data ?? []);
-      setLoading(false);
+  // 24online DHCPManager — fields per row:
+  // mode, dhcpinterface, servername, actionname, page, chgstatus, chgstartup
+  // Buttons: Start/Stop (chgstatus) + Autostart toggle (chgstartup)
+  // Table: Interface | Interface IP | Net Mask | Network Type | DHCP Enabled | Interface Description
+  const [rows, setRows] = React.useState<any[]>([
+    { id: 1, iface: "eth0", ip: "192.168.1.1", netmask: "255.255.255.0", netType: "LAN", dhcpEnabled: "Enabled", desc: "Internal LAN", running: true, autostart: true },
+    { id: 2, iface: "eth1", ip: "203.0.113.5", netmask: "255.255.255.252", netType: "WAN", dhcpEnabled: "Disabled", desc: "External WAN uplink", running: false, autostart: false },
+    { id: 3, iface: "wlan0", ip: "10.10.10.1", netmask: "255.255.255.0", netType: "WLAN", dhcpEnabled: "Enabled", desc: "WiFi access network", running: true, autostart: true },
+  ]);
+  const [busyId, setBusyId] = React.useState<number | null>(null);
+
+  const handleStartStop = async (r: any) => {
+    setBusyId(r.id);
+    await new Promise((res) => setTimeout(res, 400));
+    setBusyId(null);
+    const newRunning = !r.running;
+    const newEnabled = newRunning ? "Enabled" : "Disabled";
+    setRows(rows.map((x) => (x.id === r.id ? { ...x, running: newRunning, dhcpEnabled: newEnabled } : x)));
+    toast({
+      title: newRunning ? "DHCP service started" : "DHCP service stopped",
+      description: `${r.iface}: DHCP ${newRunning ? "started" : "stopped"}.`,
     });
-  }, []);
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setBusy(true);
-    await systemApi.delete("dhcpScopes", deleteTarget.id);
-    setBusy(false);
-    toast({ title: "DHCP scope deleted", description: `${deleteTarget.startIp} – ${deleteTarget.endIp}` });
-    setDeleteTarget(null);
-    load();
   };
 
-  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const handleAutostart = async (r: any) => {
+    setRows(rows.map((x) => (x.id === r.id ? { ...x, autostart: !x.autostart } : x)));
+    toast({
+      title: "Autostart updated",
+      description: `${r.iface}: autostart ${r.autostart ? "disabled" : "enabled"}.`,
+    });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Manage DHCP"}
-        description="Configure DHCP scopes for IP address allocation."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Start, stop, and enable autostart for DHCP servers running on each network interface."
+        icon={<Wifi className="h-5 w-5" />}
         breadcrumb={breadcrumb}
-        actions={
-          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" /> Add Scope
-          </Button>
-        }
       />
-      <SectionCard title="DHCP Scopes" description={`${rows.length} scopes`}>
-        {loading ? <PageLoader /> : rows.length === 0 ? (
-          <EmptyState icon={<Wifi className="h-5 w-5" />} title="No DHCP scopes" description="Add a DHCP scope." />
-        ) : (
+      <form action="DHCPManager">
+        {/* hidden fields as required by 24online */}
+        <input type="hidden" name="mode" value="manageDhcp" />
+        <input type="hidden" name="page" value="manageDhcp" />
+        <SectionCard title="DHCP Servers" description={`${rows.length} interfaces`}>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Interface</TableHead>
-                  <TableHead>Start IP</TableHead>
-                  <TableHead>End IP</TableHead>
-                  <TableHead>Netmask</TableHead>
-                  <TableHead>Gateway</TableHead>
-                  <TableHead>DNS</TableHead>
-                  <TableHead>Lease Time</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Interface IP</TableHead>
+                  <TableHead>Net Mask</TableHead>
+                  <TableHead>Network Type</TableHead>
+                  <TableHead>DHCP Enabled</TableHead>
+                  <TableHead>Interface Description</TableHead>
+                  <TableHead>Autostart</TableHead>
+                  <TableHead className="text-right">Start / Stop</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-mono text-xs">{r.interface}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.startIp}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.endIp}</TableCell>
+                    <TableCell className="font-mono text-xs font-semibold">{r.iface}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.ip}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">{r.netmask}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.gateway}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.dns}</TableCell>
-                    <TableCell className="text-xs">{r.leaseTime}</TableCell>
-                    <TableCell><StatusBadge status={r.status} /></TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={r.netType === "WAN"
+                          ? "border-amber-500/30 text-amber-700 dark:text-amber-400"
+                          : "border-emerald-500/30 text-emerald-700 dark:text-emerald-400"}
+                      >
+                        {r.netType}
+                      </Badge>
+                    </TableCell>
+                    <TableCell><StatusBadge status={r.dhcpEnabled} /></TableCell>
+                    <TableCell className="text-xs">{r.desc}</TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={!!r.autostart}
+                        onCheckedChange={() => handleAutostart(r)}
+                        aria-label="Toggle autostart"
+                      />
+                    </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => { setEditing(r); setDialogOpen(true); }}>
-                          <Pencil className="h-3.5 w-3.5" />
+                      <input type="hidden" name={`dhcpinterface_${r.id}`} value={r.iface} />
+                      <input type="hidden" name={`servername_${r.id}`} value={`dhcpd_${r.iface}`} />
+                      {busyId === r.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={r.running ? "destructive" : "default"}
+                          onClick={() => handleStartStop(r)}
+                        >
+                          {r.running ? (
+                            <><Square className="mr-1.5 h-3.5 w-3.5" /> Stop</>
+                          ) : (
+                            <><Play className="mr-1.5 h-3.5 w-3.5" /> Start</>
+                          )}
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(r)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
-        )}
-      </SectionCard>
-
-      <DhcpScopeDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        editing={editing}
-        onSaved={() => { setDialogOpen(false); load(); }}
-      />
-
-      <DeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Delete DHCP Scope"
-        description={<>Delete DHCP scope <span className="font-mono text-foreground">{deleteTarget?.startIp}–{deleteTarget?.endIp}</span>?</>}
-        busy={busy}
-      />
+        </SectionCard>
+      </form>
     </div>
   );
 }
@@ -2144,119 +2269,146 @@ function DhcpScopeDialog({
 /* ---------- IP Leasing ---------- */
 
 function IpLeasingPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [search, setSearch] = React.useState("");
-  const [poolFilter, setPoolFilter] = React.useState("all");
-
-  React.useEffect(() => {
-    systemApi.list("dhcpLeases").then((res) => {
-      setRows(res.data ?? []);
-      setLoading(false);
-    });
-  }, []);
-
-  const filtered = rows.filter((r) => {
-    if (poolFilter !== "all" && r.pool !== poolFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        r.ip?.toLowerCase().includes(q) ||
-        r.mac?.toLowerCase().includes(q) ||
-        r.host?.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
-
-  const handleRelease = (r: any) => {
-    toast({
-      title: "Lease released",
-      description: `Released ${r.ip} (${r.host}).`,
-    });
-    setRows(rows.filter((x) => x.ip !== r.ip));
-  };
-
-  const pools = Array.from(new Set(rows.map((r) => r.pool)));
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online IP Leasing Report — form fields:
+  // dhcpinterface (select), ipaddress (text), macaddress (text),
+  // clienthostname (text), vci (text), state (select), getdetail (submit)
+  const [form, setForm] = React.useState({
+    dhcpinterface: "all",
+    ipaddress: "",
+    macaddress: "",
+    clienthostname: "",
+    vci: "",
+    state: "all",
+  });
+  const [loading, setLoading] = React.useState(false);
+  const [rows, setRows] = React.useState<any[]>([]);
+
+  const allLeases: any[] = [
+    { id: 1, dhcpInterface: "eth0", ip: "192.168.1.10", mac: "AA:BB:CC:00:00:01", host: "client-01", vci: "MSFT 5.0", leaseStart: "2026-01-15 08:30:00", leaseExpiry: "2026-01-16 08:30:00", state: "Active" },
+    { id: 2, dhcpInterface: "eth0", ip: "192.168.1.11", mac: "AA:BB:CC:00:00:02", host: "client-02", vci: "android-dhcp", leaseStart: "2026-01-15 09:15:00", leaseExpiry: "2026-01-16 09:15:00", state: "Active" },
+    { id: 3, dhcpInterface: "wlan0", ip: "10.10.10.25", mac: "AA:BB:CC:00:00:03", host: "iphone-x", vci: "dhcp-client-1.0", leaseStart: "2026-01-15 07:00:00", leaseExpiry: "2026-01-15 19:00:00", state: "Expired" },
+    { id: 4, dhcpInterface: "wlan0", ip: "10.10.10.26", mac: "AA:BB:CC:00:00:04", host: "android-pixel", vci: "android-dhcp", leaseStart: "2026-01-15 11:45:00", leaseExpiry: "2026-01-16 11:45:00", state: "Active" },
+    { id: 5, dhcpInterface: "eth1", ip: "203.0.113.10", mac: "AA:BB:CC:00:00:05", host: "router-uplink", vci: "router-os", leaseStart: "2026-01-14 22:00:00", leaseExpiry: "2026-01-21 22:00:00", state: "Released" },
+  ];
+
+  const handleGetDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 400));
+    setLoading(false);
+    const filtered = allLeases.filter((r) => {
+      if (form.dhcpinterface !== "all" && r.dhcpInterface !== form.dhcpinterface) return false;
+      if (form.ipaddress && !r.ip.includes(form.ipaddress)) return false;
+      if (form.macaddress && !r.mac.toLowerCase().includes(form.macaddress.toLowerCase())) return false;
+      if (form.clienthostname && !r.host.toLowerCase().includes(form.clienthostname.toLowerCase())) return false;
+      if (form.vci && !r.vci.toLowerCase().includes(form.vci.toLowerCase())) return false;
+      if (form.state !== "all" && r.state !== form.state) return false;
+      return true;
+    });
+    setRows(filtered);
+    toast({
+      title: "Lease details retrieved",
+      description: `${filtered.length} matching DHCP leases.`,
+    });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "IP Leasing Report"}
-        description="View active and expired DHCP leases."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="View DHCP IP leasing details by interface, IP, MAC, hostname, VCI, or lease state."
+        icon={<Wifi className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total Leases" value={String(rows.length)} icon={<Wifi className="h-4 w-4" />} accent />
-        <KpiCard label="Active" value={String(rows.filter((r) => r.status === "Active").length)} icon={<Activity className="h-4 w-4" />} />
-        <KpiCard label="Expired" value={String(rows.filter((r) => r.status === "Expired").length)} icon={<AlertTriangle className="h-4 w-4" />} />
-        <KpiCard label="Pools" value={String(pools.length)} icon={<Layers className="h-4 w-4" />} />
-      </div>
-
-      <ActionBar>
-        <div className="relative flex-1 max-w-xs">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search IP / MAC / host…"
-            className="h-8 pl-8 text-xs"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Select value={poolFilter} onValueChange={setPoolFilter}>
-          <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All pools</SelectItem>
-            {pools.map((p) => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </ActionBar>
-
-      <SectionCard title="DHCP Leases" description={`${filtered.length} of ${rows.length} leases`}>
-        {loading ? <PageLoader /> : filtered.length === 0 ? (
-          <EmptyState icon={<Wifi className="h-5 w-5" />} title="No leases found" description="Try a different filter." />
+      <form onSubmit={handleGetDetails}>
+        <SectionCard
+          title="Filter Leases"
+          description="Use any combination of filters — leave blank to retrieve all leases"
+          actions={
+            <Button type="submit" disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+              Get Details
+            </Button>
+          }
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="dhcpinterface">DHCP Interface</Label>
+              <Select value={form.dhcpinterface} onValueChange={(v) => setForm({ ...form, dhcpinterface: v })}>
+                <SelectTrigger id="dhcpinterface"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All interfaces</SelectItem>
+                  <SelectItem value="eth0">eth0</SelectItem>
+                  <SelectItem value="eth1">eth1</SelectItem>
+                  <SelectItem value="wlan0">wlan0</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ipaddress">IP Address</Label>
+              <Input id="ipaddress" name="ipaddress" value={form.ipaddress} onChange={(e) => setForm({ ...form, ipaddress: e.target.value })} placeholder="192.168.1.10" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="macaddress">MAC Address</Label>
+              <Input id="macaddress" name="macaddress" value={form.macaddress} onChange={(e) => setForm({ ...form, macaddress: e.target.value })} placeholder="AA:BB:CC:DD:EE:FF" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="clienthostname">Client Hostname</Label>
+              <Input id="clienthostname" name="clienthostname" value={form.clienthostname} onChange={(e) => setForm({ ...form, clienthostname: e.target.value })} placeholder="client-01" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vci">VCI</Label>
+              <Input id="vci" name="vci" value={form.vci} onChange={(e) => setForm({ ...form, vci: e.target.value })} placeholder="MSFT 5.0" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="state">State</Label>
+              <Select value={form.state} onValueChange={(v) => setForm({ ...form, state: v })}>
+                <SelectTrigger id="state"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All states</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Expired">Expired</SelectItem>
+                  <SelectItem value="Released">Released</SelectItem>
+                  <SelectItem value="Abandoned">Abandoned</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </SectionCard>
+      </form>
+      <SectionCard title="DHCP Leases" description={`${rows.length} leases`}>
+        {rows.length === 0 ? (
+          <EmptyState icon={<Wifi className="h-5 w-5" />} title="No leases retrieved" description="Click Get Details to retrieve DHCP leases." />
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>IP</TableHead>
-                  <TableHead>MAC</TableHead>
-                  <TableHead>Host</TableHead>
-                  <TableHead>Pool</TableHead>
-                  <TableHead>Lease Start</TableHead>
-                  <TableHead>Lease End</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead>DHCP Interface</TableHead>
+                  <TableHead>Leased IP Address</TableHead>
+                  <TableHead>MAC Address</TableHead>
+                  <TableHead>Client Hostname</TableHead>
+                  <TableHead>VCI</TableHead>
+                  <TableHead>Lease Start Time</TableHead>
+                  <TableHead>Lease Expiry Time</TableHead>
+                  <TableHead>State</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((r) => (
-                  <TableRow key={r.ip}>
+                {rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-mono text-xs font-semibold">{r.dhcpInterface}</TableCell>
                     <TableCell className="font-mono text-xs">{r.ip}</TableCell>
                     <TableCell className="font-mono text-xs">{r.mac}</TableCell>
                     <TableCell className="text-xs">{r.host}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{r.pool}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{r.vci}</TableCell>
                     <TableCell className="text-xs">{r.leaseStart}</TableCell>
-                    <TableCell className="text-xs">{r.leaseEnd}</TableCell>
-                    <TableCell><StatusBadge status={r.status} /></TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRelease(r)}
-                        disabled={r.status !== "Active"}
-                      >
-                        Release
-                      </Button>
-                    </TableCell>
+                    <TableCell className="text-xs">{r.leaseExpiry}</TableCell>
+                    <TableCell><StatusBadge status={r.state} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -2275,43 +2427,55 @@ function IpLeasingPage({ moduleId, childId, grandchildId }: ViewProps) {
 function ServicesPage({ moduleId, childId }: ViewProps) {
   const { mod, child } = useModuleHeader(moduleId, childId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+
+  // 24online Services — buttons per service:
+  // btndhcpserver/btndns/btnpppoed/btndynamicdns/btnrestart/btnshutdown
+  // chgdhcpserver/chgdns/chgpppoed/chgdynamicdns (autostart toggles)
+  // Table columns: Service Name | Status | Commands
+  // Services: DHCP Server, DNS, Server (Web), PPPoE, Dynamic DNS
+  const [rows, setRows] = React.useState<any[]>([
+    { id: "dhcpd", name: "DHCP Server", btnField: "btndhcpserver", chgField: "chgdhcpserver", status: "Running", autostart: true },
+    { id: "named", name: "DNS", btnField: "btndns", chgField: "chgdns", status: "Running", autostart: true },
+    { id: "web", name: "Server (Web)", btnField: "btnrestart", chgField: "chgdns", status: "Running", autostart: true },
+    { id: "pppoe", name: "PPPoE", btnField: "btnpppoed", chgField: "chgpppoed", status: "Stopped", autostart: false },
+    { id: "ddns", name: "Dynamic DNS", btnField: "btndynamicdns", chgField: "chgdynamicdns", status: "Running", autostart: false },
+  ]);
   const [busyId, setBusyId] = React.useState<string | null>(null);
-
-  const load = React.useCallback(() => {
-    setLoading(true);
-    systemApi.list("services").then((res) => {
-      setRows(res.data ?? []);
-      setLoading(false);
-    });
-  }, []);
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleControl = async (r: any, command: "start" | "stop" | "restart") => {
-    setBusyId(r.id);
-    await systemApi.serviceControl("services", r.id, command);
-    setBusyId(null);
-    toast({
-      title: `Service ${command}`,
-      description: `${r.name}: ${command} command issued.`,
-    });
-    load();
-  };
-
-  const handleAutoStart = async (r: any) => {
-    await systemApi.toggle("services", r.id, "autoStart");
-    toast({
-      title: "Auto-start toggled",
-      description: `${r.name} auto-start ${r.autoStart ? "disabled" : "enabled"}.`,
-    });
-    load();
-  };
+  const [busyGlobal, setBusyGlobal] = React.useState<"" | "restart" | "shutdown" | null>(null);
 
   if (!mod || !child) return null;
+
+  const handleStartStop = async (r: any) => {
+    setBusyId(r.id);
+    await new Promise((res) => setTimeout(res, 400));
+    setBusyId(null);
+    setRows(rows.map((x) => (x.id === r.id ? { ...x, status: x.status === "Running" ? "Stopped" : "Running" } : x)));
+    toast({
+      title: r.status === "Running" ? "Service stopped" : "Service started",
+      description: `${r.name}: ${r.status === "Running" ? "stop" : "start"} command issued.`,
+    });
+  };
+
+  const handleAutostart = async (r: any) => {
+    setRows(rows.map((x) => (x.id === r.id ? { ...x, autostart: !x.autostart } : x)));
+    toast({
+      title: "Autostart updated",
+      description: `${r.name}: autostart ${r.autostart ? "disabled" : "enabled"}.`,
+    });
+  };
+
+  const handleGlobal = async (cmd: "restart" | "shutdown") => {
+    setBusyGlobal(cmd);
+    await new Promise((res) => setTimeout(res, 700));
+    setBusyGlobal(null);
+    if (cmd === "shutdown") {
+      setRows(rows.map((x) => ({ ...x, status: "Stopped" })));
+    }
+    toast({
+      title: cmd === "restart" ? "All services restarted" : "All services shut down",
+      description: cmd === "restart" ? "Restart command sent to all services." : "Shutdown command sent to all services.",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -2320,76 +2484,66 @@ function ServicesPage({ moduleId, childId }: ViewProps) {
         description={child.desc}
         icon={<mod.icon className="h-5 w-5" />}
         breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child.label }]}
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => handleGlobal("restart")} disabled={!!busyGlobal}>
+              {busyGlobal === "restart" ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-2 h-3.5 w-3.5" />}
+              Restart All
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => handleGlobal("shutdown")} disabled={!!busyGlobal}>
+              {busyGlobal === "shutdown" ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Power className="mr-2 h-3.5 w-3.5" />}
+              Shutdown
+            </Button>
+          </>
+        }
       />
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total Services" value={String(rows.length)} icon={<Server className="h-4 w-4" />} accent />
-        <KpiCard label="Running" value={String(rows.filter((r) => r.status === "Running").length)} icon={<Activity className="h-4 w-4" />} />
-        <KpiCard label="Stopped" value={String(rows.filter((r) => r.status === "Stopped").length)} icon={<Power className="h-4 w-4" />} />
-        <KpiCard label="Auto-Start" value={String(rows.filter((r) => r.autoStart).length)} icon={<RefreshCw className="h-4 w-4" />} />
-      </div>
-
       <SectionCard title="System Services" description={`${rows.length} services`}>
-        {loading ? <PageLoader /> : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Auto-Start</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.name}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.description}</TableCell>
-                    <TableCell><StatusBadge status={r.status} /></TableCell>
-                    <TableCell>
-                      <Switch checked={!!r.autoStart} onCheckedChange={() => handleAutoStart(r)} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {busyId === r.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Service Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Autostart</TableHead>
+                <TableHead className="text-right">Commands</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell><StatusBadge status={r.status} /></TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={!!r.autostart}
+                      onCheckedChange={() => handleAutostart(r)}
+                      aria-label={`Toggle autostart for ${r.name}`}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <input type="hidden" name={`servername_${r.id}`} value={r.id} />
+                    {busyId === r.id ? (
+                      <Loader2 className="ml-auto h-4 w-4 animate-spin" />
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={r.status === "Running" ? "destructive" : "default"}
+                        onClick={() => handleStartStop(r)}
+                      >
+                        {r.status === "Running" ? (
+                          <><Square className="mr-1.5 h-3.5 w-3.5" /> Stop</>
                         ) : (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleControl(r, "start")}
-                              disabled={r.status === "Running"}
-                            >
-                              <Play className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleControl(r, "stop")}
-                              disabled={r.status === "Stopped"}
-                            >
-                              <Square className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleControl(r, "restart")}
-                            >
-                              <RefreshCw className="h-3.5 w-3.5" />
-                            </Button>
-                          </>
+                          <><Play className="mr-1.5 h-3.5 w-3.5" /> Start</>
                         )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </SectionCard>
     </div>
   );
@@ -2406,8 +2560,12 @@ function ConsolePage({ moduleId, childId }: ViewProps) {
   const [showOld, setShowOld] = React.useState(false);
   const [showNew, setShowNew] = React.useState(false);
   const [showConfirm, setShowConfirm] = React.useState(false);
+
+  // 24online Console — form fields:
+  // guiadminpass (password), newconsolepass (password),
+  // newconsolepass1 (password), submitme (submit)
+  // Labels: GUI Administrator Password*, New Console Password*, Confirm New Console Password*
   const [form, setForm] = React.useState({
-    consoleUsername: "administrator",
     guiadminpass: "",
     newconsolepass: "",
     newconsolepass1: "",
@@ -2430,8 +2588,8 @@ function ConsolePage({ moduleId, childId }: ViewProps) {
     setSaving(true);
     await new Promise((r) => setTimeout(r, 600));
     setSaving(false);
-    toast({ title: "Console password reset", description: "Password updated successfully." });
-    setForm({ ...form, guiadminpass: "", newconsolepass: "", newconsolepass1: "" });
+    toast({ title: "Console password changed", description: "Console credentials updated successfully." });
+    setForm({ guiadminpass: "", newconsolepass: "", newconsolepass1: "" });
   };
 
   return (
@@ -2442,21 +2600,17 @@ function ConsolePage({ moduleId, childId }: ViewProps) {
         icon={<mod.icon className="h-5 w-5" />}
         breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child.label }]}
       />
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
         <SectionCard title="Reset Console Password" description="Update the console administrator credentials.">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Console Username</Label>
-              <Input
-                value={form.consoleUsername}
-                onChange={(e) => setForm({ ...form, consoleUsername: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Current GUI Admin Password</Label>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="guiadminpass">
+                GUI Administrator Password <span className="text-primary">*</span>
+              </Label>
               <div className="relative">
                 <Input
+                  id="guiadminpass"
+                  name="guiadminpass"
                   type={showOld ? "text" : "password"}
                   value={form.guiadminpass}
                   onChange={(e) => setForm({ ...form, guiadminpass: e.target.value })}
@@ -2465,16 +2619,20 @@ function ConsolePage({ moduleId, childId }: ViewProps) {
                 <button
                   type="button"
                   onClick={() => setShowOld((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
                 >
                   {showOld ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>New Console Password</Label>
+              <Label htmlFor="newconsolepass">
+                New Console Password <span className="text-primary">*</span>
+              </Label>
               <div className="relative">
                 <Input
+                  id="newconsolepass"
+                  name="newconsolepass"
                   type={showNew ? "text" : "password"}
                   value={form.newconsolepass}
                   onChange={(e) => setForm({ ...form, newconsolepass: e.target.value })}
@@ -2483,16 +2641,20 @@ function ConsolePage({ moduleId, childId }: ViewProps) {
                 <button
                   type="button"
                   onClick={() => setShowNew((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
                 >
                   {showNew ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Confirm New Password</Label>
+              <Label htmlFor="newconsolepass1">
+                Confirm New Console Password <span className="text-primary">*</span>
+              </Label>
               <div className="relative">
                 <Input
+                  id="newconsolepass1"
+                  name="newconsolepass1"
                   type={showConfirm ? "text" : "password"}
                   value={form.newconsolepass1}
                   onChange={(e) => setForm({ ...form, newconsolepass1: e.target.value })}
@@ -2501,7 +2663,7 @@ function ConsolePage({ moduleId, childId }: ViewProps) {
                 <button
                   type="button"
                   onClick={() => setShowConfirm((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
                 >
                   {showConfirm ? "Hide" : "Show"}
                 </button>
@@ -2514,10 +2676,10 @@ function ConsolePage({ moduleId, childId }: ViewProps) {
             )}
           </div>
         </SectionCard>
-        <div className="flex items-center justify-end gap-3">
-          <Button type="submit" disabled={saving}>
+        <div className="flex items-center justify-end">
+          <Button type="submit" name="submitme" disabled={saving}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
-            Reset Password
+            Submit
           </Button>
         </div>
       </form>
@@ -2532,94 +2694,154 @@ function ConsolePage({ moduleId, childId }: ViewProps) {
 /* ---------- Backup ---------- */
 
 function BackupPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [busy, setBusy] = React.useState(false);
-
-  const load = React.useCallback(() => {
-    setLoading(true);
-    systemApi.list("backups").then((res) => {
-      setRows(res.data ?? []);
-      setLoading(false);
-    });
-  }, []);
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleBackupNow = async () => {
-    setBusy(true);
-    await systemApi.create("backups", {
-      type: "Full",
-      filename: `backup_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}_${new Date().getHours().toString().padStart(2, "0")}00.tar.gz`,
-      size: "—",
-      date: new Date().toLocaleString(),
-      status: "In Progress",
-    });
-    setBusy(false);
-    toast({ title: "Backup started", description: "A new full backup is in progress." });
-    load();
-  };
-
-  const handleDownload = (r: any) => {
-    toast({ title: "Download started", description: r.filename });
-  };
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online Backup — fields:
+  // btnbackup (button), startmonth/endmonth (selects), btnusersessionbackup (button),
+  // btnrrdbackup (button), displaystartdate/displayenddate (text),
+  // btnwebsurfingbackup (button)
+  // Sections: "Take Backup of System Data till date",
+  //   "Backup User Session" (with month selects),
+  //   "Backup RRD", "Backup logs (in CSV Format)" (with date range)
+  const [busy, setBusy] = React.useState<string | null>(null);
+  const [startmonth, setStartmonth] = React.useState("01");
+  const [endmonth, setEndmonth] = React.useState("01");
+  const [displaystartdate, setDisplaystartdate] = React.useState("");
+  const [displayenddate, setDisplayenddate] = React.useState("");
+
+  const months = [
+    { v: "01", l: "January" }, { v: "02", l: "February" }, { v: "03", l: "March" },
+    { v: "04", l: "April" }, { v: "05", l: "May" }, { v: "06", l: "June" },
+    { v: "07", l: "July" }, { v: "08", l: "August" }, { v: "09", l: "September" },
+    { v: "10", l: "October" }, { v: "11", l: "November" }, { v: "12", l: "December" },
+  ];
+
+  const run = async (key: string, label: string) => {
+    setBusy(key);
+    await new Promise((r) => setTimeout(r, 600));
+    setBusy(null);
+    toast({ title: `${label} completed`, description: "Backup file generated successfully." });
+  };
+
+  const download = (label: string) => {
+    toast({ title: "Download started", description: label });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Backup"}
-        description="View and trigger system backups."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Trigger backups for system data, user sessions, RRD files, and web surfing logs."
+        icon={<Database className="h-5 w-5" />}
         breadcrumb={breadcrumb}
-        actions={
-          <Button onClick={handleBackupNow} disabled={busy}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-            Backup Now
-          </Button>
-        }
       />
-      <SectionCard title="Backup Records" description={`${rows.length} records`}>
-        {loading ? <PageLoader /> : rows.length === 0 ? (
-          <EmptyState icon={<Database className="h-5 w-5" />} title="No backups" description="Trigger your first backup." />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Filename</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell><Badge variant="outline" className="text-[10px]">{r.type}</Badge></TableCell>
-                    <TableCell className="font-mono text-xs">{r.filename}</TableCell>
-                    <TableCell className="text-xs">{r.size}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.date}</TableCell>
-                    <TableCell><StatusBadge status={r.status} /></TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => handleDownload(r)} disabled={r.status !== "Completed"}>
-                        <Download className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SectionCard title="Take Backup of System Data till date" description="Generate a full system backup of all data up to today">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              Generates a complete backup of all system data including configuration, users, packages, and billing history.
+            </p>
+            <div className="flex gap-2">
+              <Button name="btnbackup" onClick={() => run("btnbackup", "System data backup")} disabled={!!busy}>
+                {busy === "btnbackup" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Backup
+              </Button>
+              <Button variant="outline" onClick={() => download("System data backup")} disabled={busy === "btnbackup"}>
+                <Download className="mr-2 h-4 w-4" /> Download
+              </Button>
+            </div>
           </div>
-        )}
-      </SectionCard>
+        </SectionCard>
+
+        <SectionCard title="Backup User Session" description="Generate a backup of user session data for the selected month range">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="startmonth">Start Month</Label>
+                <Select value={startmonth} onValueChange={setStartmonth}>
+                  <SelectTrigger id="startmonth"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {months.map((m) => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endmonth">End Month</Label>
+                <Select value={endmonth} onValueChange={setEndmonth}>
+                  <SelectTrigger id="endmonth"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {months.map((m) => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button name="btnusersessionbackup" onClick={() => run("btnusersessionbackup", "User session backup")} disabled={!!busy}>
+                {busy === "btnusersessionbackup" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Backup
+              </Button>
+              <Button variant="outline" onClick={() => download("User session backup")} disabled={busy === "btnusersessionbackup"}>
+                <Download className="mr-2 h-4 w-4" /> Download
+              </Button>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Backup RRD" description="Generate a backup of Round Robin Database files (used for graphs)">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              RRD files contain historical traffic and usage data used for graphing and reports.
+            </p>
+            <div className="flex gap-2">
+              <Button name="btnrrdbackup" onClick={() => run("btnrrdbackup", "RRD backup")} disabled={!!busy}>
+                {busy === "btnrrdbackup" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Backup
+              </Button>
+              <Button variant="outline" onClick={() => download("RRD backup")} disabled={busy === "btnrrdbackup"}>
+                <Download className="mr-2 h-4 w-4" /> Download
+              </Button>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Backup logs (in CSV Format)" description="Export web surfing logs within a date range as a CSV file">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="displaystartdate">Start Date</Label>
+                <Input
+                  id="displaystartdate"
+                  name="displaystartdate"
+                  type="date"
+                  value={displaystartdate}
+                  onChange={(e) => setDisplaystartdate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="displayenddate">End Date</Label>
+                <Input
+                  id="displayenddate"
+                  name="displayenddate"
+                  type="date"
+                  value={displayenddate}
+                  onChange={(e) => setDisplayenddate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button name="btnwebsurfingbackup" onClick={() => run("btnwebsurfingbackup", "Web surfing logs CSV")} disabled={!!busy}>
+                {busy === "btnwebsurfingbackup" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Backup
+              </Button>
+              <Button variant="outline" onClick={() => download("Web surfing logs CSV")} disabled={busy === "btnwebsurfingbackup"}>
+                <Download className="mr-2 h-4 w-4" /> Download
+              </Button>
+            </div>
+          </div>
+        </SectionCard>
+      </div>
     </div>
   );
 }
@@ -2627,87 +2849,221 @@ function BackupPage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- Backup Schedule ---------- */
 
 function BackupSchedulePage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editing, setEditing] = React.useState<any | null>(null);
-
-  const load = React.useCallback(() => {
-    setLoading(true);
-    systemApi.list("backupSchedules").then((res) => {
-      setRows(res.data ?? []);
-      setLoading(false);
-    });
-  }, []);
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleToggle = async (r: any) => {
-    await systemApi.toggle("backupSchedules", r.id, "enabled");
-    toast({ title: "Schedule toggled", description: `${r.type} ${r.enabled ? "disabled" : "enabled"}.` });
-    load();
-  };
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online Backup Schedule — fields:
+  // mailinterval (radio: Daily/Weekly/Monthly/Never), sendtype (radio: FTP/Mail),
+  // mailid (text), ftpserver (text), ftpuser (text), ftppassword (password),
+  // usersessioninterval (radio), logchecks (checkboxes),
+  // mailloginterval (radio), mailrrdinterval (radio)
+  // Sections: Backup frequency Details*, Notify By*, To*, FTP Server*, User Name*,
+  //   Password*, User session backup, Backup of RRD Files
+  const [mailinterval, setMailinterval] = React.useState("Daily");
+  const [sendtype, setSendtype] = React.useState("Mail");
+  const [mailid, setMailid] = React.useState("");
+  const [ftpserver, setFtpserver] = React.useState("");
+  const [ftpuser, setFtpuser] = React.useState("");
+  const [ftppassword, setFtppassword] = React.useState("");
+  const [usersessioninterval, setUsersessioninterval] = React.useState("Never");
+  const [logChecks, setLogChecks] = React.useState({
+    authLog: false, userLog: false, auditLog: false, adminLog: false,
+  });
+  const [mailloginterval, setMailloginterval] = React.useState("Never");
+  const [mailrrdinterval, setMailrrdinterval] = React.useState("Never");
+  const [saving, setSaving] = React.useState(false);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 500));
+    setSaving(false);
+    toast({ title: "Backup schedule saved", description: "Your backup schedule configuration has been saved." });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Backup Schedule"}
-        description="Configure automatic backup schedules."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Configure automatic backup frequency, delivery method (FTP or Email), and notification settings."
+        icon={<CalendarClock className="h-5 w-5" />}
         breadcrumb={breadcrumb}
-        actions={
-          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" /> Add Schedule
-          </Button>
-        }
       />
-      <SectionCard title="Schedules" description={`${rows.length} schedules`}>
-        {loading ? <PageLoader /> : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Frequency</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Retention</TableHead>
-                  <TableHead>Enabled</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.type}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-[10px]">{r.frequency}</Badge></TableCell>
-                    <TableCell className="font-mono text-xs">{r.time}</TableCell>
-                    <TableCell className="text-xs">{r.retention}</TableCell>
-                    <TableCell><Switch checked={!!r.enabled} onCheckedChange={() => handleToggle(r)} /></TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => { setEditing(r); setDialogOpen(true); }}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      <form onSubmit={handleSave} className="space-y-6">
+        <SectionCard title="Backup frequency Details *" description="How often the system data backup should be generated">
+          <div className="flex flex-wrap gap-4">
+            {["Daily", "Weekly", "Monthly", "Never"].map((opt) => (
+              <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="mailinterval"
+                  value={opt}
+                  checked={mailinterval === opt}
+                  onChange={() => setMailinterval(opt)}
+                  className="h-4 w-4 accent-primary"
+                />
+                {opt}
+              </label>
+            ))}
           </div>
-        )}
-      </SectionCard>
+        </SectionCard>
 
-      <BackupScheduleDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        editing={editing}
-        onSaved={() => { setDialogOpen(false); load(); }}
-      />
+        <SectionCard title="Notify By *" description="Select how the backup file should be delivered">
+          <div className="flex flex-wrap gap-6">
+            {["FTP", "Mail"].map((opt) => (
+              <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="sendtype"
+                  value={opt}
+                  checked={sendtype === opt}
+                  onChange={() => setSendtype(opt)}
+                  className="h-4 w-4 accent-primary"
+                />
+                {opt}
+              </label>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="To *" description="Email address that will receive the backup notification">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="mailid">Email ID</Label>
+              <Input
+                id="mailid"
+                name="mailid"
+                type="email"
+                value={mailid}
+                onChange={(e) => setMailid(e.target.value)}
+                placeholder="admin@example.com"
+              />
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="FTP Server *" description="FTP delivery configuration (used when Notify By = FTP)">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="ftpserver">FTP Server *</Label>
+              <Input
+                id="ftpserver"
+                name="ftpserver"
+                value={ftpserver}
+                onChange={(e) => setFtpserver(e.target.value)}
+                placeholder="ftp.example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ftpuser">User Name *</Label>
+              <Input
+                id="ftpuser"
+                name="ftpuser"
+                value={ftpuser}
+                onChange={(e) => setFtpuser(e.target.value)}
+                placeholder="ftpuser"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ftppassword">Password *</Label>
+              <Input
+                id="ftppassword"
+                name="ftppassword"
+                type="password"
+                value={ftppassword}
+                onChange={(e) => setFtppassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="User session backup" description="Frequency for user session data backup">
+          <div className="flex flex-wrap gap-4">
+            {["Daily", "Weekly", "Monthly", "Never"].map((opt) => (
+              <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="usersessioninterval"
+                  value={opt}
+                  checked={usersessioninterval === opt}
+                  onChange={() => setUsersessioninterval(opt)}
+                  className="h-4 w-4 accent-primary"
+                />
+                {opt}
+              </label>
+            ))}
+          </div>
+          <div className="mt-4 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Log Checks (select logs to include in backup)</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { k: "authLog", l: "Auth Log" },
+                { k: "userLog", l: "User Log" },
+                { k: "auditLog", l: "Audit Log" },
+                { k: "adminLog", l: "Admin Log" },
+              ].map((c) => (
+                <label key={c.k} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={logChecks[c.k as keyof typeof logChecks]}
+                    onCheckedChange={(v) => setLogChecks({ ...logChecks, [c.k]: !!v })}
+                  />
+                  {c.l}
+                </label>
+              ))}
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Backup of RRD Files" description="Frequency for RRD files backup, sent by mail">
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Mail Log Interval</p>
+              <div className="flex flex-wrap gap-4">
+                {["Daily", "Weekly", "Monthly", "Never"].map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="mailloginterval"
+                      value={opt}
+                      checked={mailloginterval === opt}
+                      onChange={() => setMailloginterval(opt)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Mail RRD Interval</p>
+              <div className="flex flex-wrap gap-4">
+                {["Daily", "Weekly", "Monthly", "Never"].map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="mailrrdinterval"
+                      value={opt}
+                      checked={mailrrdinterval === opt}
+                      onChange={() => setMailrrdinterval(opt)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+
+        <div className="flex items-center justify-end">
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -2810,74 +3166,76 @@ function BackupScheduleDialog({
 /* ---------- Restore ---------- */
 
 function RestorePage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [backups, setBackups] = React.useState<any[]>([]);
-  const [selected, setSelected] = React.useState("");
-  const [restoring, setRestoring] = React.useState(false);
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
 
-  React.useEffect(() => {
-    systemApi.list("backups").then((res) => {
-      const completed = (res.data ?? []).filter((b: any) => b.status === "Completed");
-      setBackups(completed);
-      if (completed.length > 0) setSelected(completed[0].filename);
-    });
-  }, []);
+  // 24online Restore — fields:
+  // filename (file), usersessionfilename (file), rrdfilename (file), btnrrdupload (button)
+  // Sections: "Upload Backup", "Upload User Session Backup", "Upload RRD Backup"
+  // Buttons: Upload (x3)
+  const [busy, setBusy] = React.useState<string | null>(null);
+  const [filename, setFilename] = React.useState("");
+  const [usersessionfilename, setUsersessionfilename] = React.useState("");
+  const [rrdfilename, setRrdfilename] = React.useState("");
 
-  const handleRestore = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selected) return;
-    setRestoring(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setRestoring(false);
-    toast({ title: "Restore started", description: `Restoring from ${selected}.` });
+  const upload = async (key: string, file: string, label: string) => {
+    if (!file) return;
+    setBusy(key);
+    await new Promise((r) => setTimeout(r, 600));
+    setBusy(null);
+    toast({ title: `${label} uploaded`, description: `Restoring from ${file}.` });
   };
 
-  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const uploadCard = (
+    title: string,
+    description: string,
+    id: string,
+    label: string,
+    value: string,
+    set: (v: string) => void,
+    busyKey: string,
+    btnName: string
+  ) => (
+    <SectionCard title={title} description={description}>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-end">
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor={id}>{label}</Label>
+          <Input
+            id={id}
+            name={id}
+            type="file"
+            onChange={(e) => set(e.target.files?.[0]?.name ?? "")}
+          />
+        </div>
+        <Button
+          type="button"
+          name={btnName}
+          disabled={!value || !!busy}
+          onClick={() => upload(busyKey, value, label)}
+        >
+          {busy === busyKey ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+          Upload
+        </Button>
+      </div>
+    </SectionCard>
+  );
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Restore"}
-        description="Restore system data from a previous backup."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Restore system data, user sessions, or RRD files from previously uploaded backup files."
+        icon={<RefreshCw className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
-      <form onSubmit={handleRestore}>
-        <SectionCard title="Restore From Backup" description="Select a backup to restore">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Backup File</Label>
-              <Select value={selected} onValueChange={setSelected}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {backups.map((b) => (
-                    <SelectItem key={b.id} value={b.filename}>{b.filename} ({b.date})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="rounded-lg border border-dashed border-border bg-muted/20 p-6 text-center">
-              <Upload className="mx-auto h-6 w-6 text-muted-foreground" />
-              <p className="mt-2 text-sm font-medium">Or upload a backup file</p>
-              <p className="text-xs text-muted-foreground">.tar.gz files only — file upload is a mock for now.</p>
-              <Button type="button" variant="outline" className="mt-3" onClick={() => toast({ title: "File upload", description: "Upload is mocked in this demo." })}>
-                <Upload className="mr-2 h-4 w-4" /> Choose File
-              </Button>
-            </div>
-            <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400">
-              <AlertTriangle className="inline h-3.5 w-3.5 mr-1" />
-              Restoring will overwrite current data. This action cannot be undone.
-            </div>
-          </div>
-          <div className="mt-4 flex items-center justify-end">
-            <Button type="submit" disabled={restoring || !selected}>
-              {restoring ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-              Restore Now
-            </Button>
-          </div>
-        </SectionCard>
-      </form>
+      <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400">
+        <AlertTriangle className="inline h-3.5 w-3.5 mr-1" />
+        Restoring will overwrite current data. This action cannot be undone.
+      </div>
+      {uploadCard("Upload Backup", "Restore complete system data from a backup file", "filename", "Backup File", filename, setFilename, "filename", "btnbackupupload")}
+      {uploadCard("Upload User Session Backup", "Restore user session data from a backup file", "usersessionfilename", "User Session Backup File", usersessionfilename, setUsersessionfilename, "usersessionfilename", "btnusersessionupload")}
+      {uploadCard("Upload RRD Backup", "Restore RRD files from a backup file", "rrdfilename", "RRD Backup File", rrdfilename, setRrdfilename, "rrdfilename", "btnrrdupload")}
     </div>
   );
 }
@@ -2885,76 +3243,209 @@ function RestorePage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- Auto Purge ---------- */
 
 function AutoPurgePage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [saving, setSaving] = React.useState(false);
-  const [form, setForm] = React.useState({
-    purgeType: "Audit Log",
-    retentionDays: "30",
-    enabled: true,
-  });
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    await new Promise((r) => setTimeout(r, 500));
-    setSaving(false);
-    toast({
-      title: "Auto purge saved",
-      description: `${form.purgeType} retention: ${form.retentionDays} days.`,
-    });
+  // 24online Auto Purge — many fields, 3 Save buttons covering the sections:
+  // accesslogvalue (days), archiveuservalue, daysfromlastlogin, deactiveExpiredUser (radio),
+  // nasintegrationlog, txtKeepInvDelUsr, txtKeepInvActUsr, txtKeepInvDeactUsr, txtKeepAuditLog,
+  // txtKeepSMSLog, txtKeepRenHstryLog, txtDelArchiveUsr, txtKeepExpiredPins, txtKeepHistoryLogs,
+  // txtauthmessages, txtDelAcquisitedUsr, purgeusersafter, txtDelSocialMediaUsr, devicecount
+  // Sections (Save #1 — Purge Frequency + Notification + Invoice + Audit + SMS + Renewal):
+  //   "Purge Frequency", "Purge Notification", "Auto Purge Invoice",
+  //   "Auto Purge Audit Log", "Auto Purge SMS Log", "Auto Purge Renewal History Log"
+  // Sections (Save #2):
+  //   "Auto Purge Archive Users", "Auto Purge Expired Pins", "Auto Purge Pin History",
+  //   "Auto Purge Auth Messages", "Auto purge for Acquisited Users",
+  //   "Auto purge for SMPP users", "Auto purge for Social Media Users"
+  // Sections (Save #3): Purge Frequency / days from last login / device count
+  const [s1, setS1] = React.useState({
+    accesslogvalue: "30",
+    purgeusersafter: "90",
+    deactiveExpiredUser: "Yes",
+    nasintegrationlog: "60",
+  });
+  const [s2, setS2] = React.useState({
+    txtKeepInvDelUsr: "180",
+    txtKeepInvActUsr: "180",
+    txtKeepInvDeactUsr: "180",
+    txtKeepAuditLog: "120",
+    txtKeepSMSLog: "90",
+    txtKeepRenHstryLog: "365",
+  });
+  const [s3, setS3] = React.useState({
+    txtDelArchiveUsr: "365",
+    txtKeepExpiredPins: "120",
+    txtKeepHistoryLogs: "180",
+    txtauthmessages: "60",
+    txtDelAcquisitedUsr: "365",
+    txtDelSocialMediaUsr: "365",
+    daysfromlastlogin: "120",
+    devicecount: "5",
+  });
+  const [busy, setBusy] = React.useState<number | null>(null);
+
+  const save = async (key: number, label: string) => {
+    setBusy(key);
+    await new Promise((r) => setTimeout(r, 400));
+    setBusy(null);
+    toast({ title: `${label} saved`, description: "Auto purge settings updated successfully." });
   };
+
+  const numField = (
+    name: string,
+    label: string,
+    value: string,
+    set: (v: string) => void,
+    suffix = "days"
+  ) => (
+    <div className="space-y-2">
+      <Label htmlFor={name}>{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          id={name}
+          name={name}
+          type="number"
+          min="0"
+          value={value}
+          onChange={(e) => set(e.target.value)}
+          className="font-mono text-sm"
+        />
+        <span className="text-xs text-muted-foreground whitespace-nowrap">{suffix}</span>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Auto Purge"}
-        description="Configure automatic purging of old log data."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Configure retention / purge intervals for system logs, user data, invoices, audit trails, and other historical records."
+        icon={<Trash2 className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
-      <form onSubmit={handleSubmit}>
-        <SectionCard title="Auto Purge Configuration">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Purge Type</Label>
-              <Select value={form.purgeType} onValueChange={(v) => setForm({ ...form, purgeType: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Audit Log">Audit Log</SelectItem>
-                  <SelectItem value="Access Log">Access Log</SelectItem>
-                  <SelectItem value="User Session">User Session</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Retention (days)</Label>
-              <Input
-                type="number"
-                min="1"
-                value={form.retentionDays}
-                onChange={(e) => setForm({ ...form, retentionDays: e.target.value })}
-              />
-            </div>
-            <div className="flex items-center gap-3 pt-6">
-              <Switch
-                id="purgeEnabled"
-                checked={form.enabled}
-                onCheckedChange={(v) => setForm({ ...form, enabled: v })}
-              />
-              <Label htmlFor="purgeEnabled" className="cursor-pointer">Enabled</Label>
+
+      {/* Save group 1 */}
+      <SectionCard
+        title="Purge Frequency / Notification / Invoice / Audit / SMS / Renewal"
+        description="First group of auto-purge retention intervals"
+        actions={
+          <Button size="sm" onClick={() => save(1, "Purge group 1")} disabled={!!busy}>
+            {busy === 1 ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+            Save
+          </Button>
+        }
+      >
+        <div className="space-y-6">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Purge Frequency</h4>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {numField("accesslogvalue", "Access Log (days)", s1.accesslogvalue, (v) => setS1({ ...s1, accesslogvalue: v }))}
+              {numField("purgeusersafter", "Purge Users After (days)", s1.purgeusersafter, (v) => setS1({ ...s1, purgeusersafter: v }))}
+              {numField("nasintegrationlog", "NAS Integration Log (days)", s1.nasintegrationlog, (v) => setS1({ ...s1, nasintegrationlog: v }))}
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-end">
-            <Button type="submit" disabled={saving}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save Configuration
-            </Button>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Purge Notification — Deactivate Expired Users</h4>
+            <div className="flex flex-wrap gap-4">
+              {["Yes", "No"].map((opt) => (
+                <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="deactiveExpiredUser"
+                    value={opt}
+                    checked={s1.deactiveExpiredUser === opt}
+                    onChange={() => setS1({ ...s1, deactiveExpiredUser: opt })}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  {opt}
+                </label>
+              ))}
+            </div>
           </div>
-        </SectionCard>
-      </form>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge Invoice</h4>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {numField("txtKeepInvDelUsr", "Keep Deleted User Invoices (days)", s2.txtKeepInvDelUsr, (v) => setS2({ ...s2, txtKeepInvDelUsr: v }))}
+              {numField("txtKeepInvActUsr", "Keep Active User Invoices (days)", s2.txtKeepInvActUsr, (v) => setS2({ ...s2, txtKeepInvActUsr: v }))}
+              {numField("txtKeepInvDeactUsr", "Keep Deactivated User Invoices (days)", s2.txtKeepInvDeactUsr, (v) => setS2({ ...s2, txtKeepInvDeactUsr: v }))}
+            </div>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge Audit Log</h4>
+            {numField("txtKeepAuditLog", "Keep Audit Log (days)", s2.txtKeepAuditLog, (v) => setS2({ ...s2, txtKeepAuditLog: v }))}
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge SMS Log</h4>
+            {numField("txtKeepSMSLog", "Keep SMS Log (days)", s2.txtKeepSMSLog, (v) => setS2({ ...s2, txtKeepSMSLog: v }))}
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge Renewal History Log</h4>
+            {numField("txtKeepRenHstryLog", "Keep Renewal History Log (days)", s2.txtKeepRenHstryLog, (v) => setS2({ ...s2, txtKeepRenHstryLog: v }))}
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Save group 2 */}
+      <SectionCard
+        title="Archive Users / Expired Pins / Auth Messages / Acquisited / SMPP / Social Media"
+        description="Second group of auto-purge retention intervals"
+        actions={
+          <Button size="sm" onClick={() => save(2, "Purge group 2")} disabled={!!busy}>
+            {busy === 2 ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+            Save
+          </Button>
+        }
+      >
+        <div className="space-y-6">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge Archive Users</h4>
+            {numField("txtDelArchiveUsr", "Delete Archived Users After (days)", s3.txtDelArchiveUsr, (v) => setS3({ ...s3, txtDelArchiveUsr: v }))}
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge Expired Pins</h4>
+            {numField("txtKeepExpiredPins", "Keep Expired Pins (days)", s3.txtKeepExpiredPins, (v) => setS3({ ...s3, txtKeepExpiredPins: v }))}
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge Pin History</h4>
+            {numField("txtKeepHistoryLogs", "Keep Pin History Logs (days)", s3.txtKeepHistoryLogs, (v) => setS3({ ...s3, txtKeepHistoryLogs: v }))}
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge Auth Messages</h4>
+            {numField("txtauthmessages", "Keep Auth Messages (days)", s3.txtauthmessages, (v) => setS3({ ...s3, txtauthmessages: v }))}
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge for Acquisited Users</h4>
+            {numField("txtDelAcquisitedUsr", "Delete Acquisited Users After (days)", s3.txtDelAcquisitedUsr, (v) => setS3({ ...s3, txtDelAcquisitedUsr: v }))}
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge for SMPP Users</h4>
+            <p className="text-xs text-muted-foreground">SMPP users follow the same retention as Acquisited users.</p>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">Auto Purge for Social Media Users</h4>
+            {numField("txtDelSocialMediaUsr", "Delete Social Media Users After (days)", s3.txtDelSocialMediaUsr, (v) => setS3({ ...s3, txtDelSocialMediaUsr: v }))}
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Save group 3 */}
+      <SectionCard
+        title="Last Login / Device Count"
+        description="User inactivity and device-count purge settings"
+        actions={
+          <Button size="sm" onClick={() => save(3, "Purge group 3")} disabled={!!busy}>
+            {busy === 3 ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+            Save
+          </Button>
+        }
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {numField("daysfromlastlogin", "Days From Last Login (purge inactive users)", s3.daysfromlastlogin, (v) => setS3({ ...s3, daysfromlastlogin: v }))}
+          {numField("devicecount", "Device Count (max devices per user)", s3.devicecount, (v) => setS3({ ...s3, devicecount: v }), "")}
+        </div>
+      </SectionCard>
     </div>
   );
 }
@@ -2962,17 +3453,24 @@ function AutoPurgePage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- Manual Purge ---------- */
 
 function ManualPurgePage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online Manual Purge — fields:
+  // mode (radio: Web Surfing Logs / User Session Logs / Audit Logs / Archive Users / NAS Integration Log)
+  // usertype (checkbox)
+  // displaydate (text date picker)
+  // Buttons: Purge
+  // Sections: "Logs" (radio options), "Users" (radio + checkbox), "Purge Data" (date picker)
+  const [mode, setMode] = React.useState("Web Surfing Logs");
+  const [userMode, setUserMode] = React.useState("Archive Users");
+  const [usertype, setUsertype] = React.useState({
+    active: false, expired: false, deactivated: false, locked: false,
+  });
+  const [displaydate, setDisplaydate] = React.useState("");
   const [purging, setPurging] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [form, setForm] = React.useState({
-    purgeType: "Audit Log",
-    fromDate: "",
-    toDate: "",
-  });
-
-  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
 
   const handlePurge = async () => {
     setPurging(true);
@@ -2981,7 +3479,7 @@ function ManualPurgePage({ moduleId, childId, grandchildId }: ViewProps) {
     setConfirmOpen(false);
     toast({
       title: "Purge complete",
-      description: `${form.purgeType} from ${form.fromDate || "—"} to ${form.toDate || "—"} purged.`,
+      description: `${mode} up to ${displaydate || "today"} has been purged.`,
     });
   };
 
@@ -2989,42 +3487,88 @@ function ManualPurgePage({ moduleId, childId, grandchildId }: ViewProps) {
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Manual Purge"}
-        description="Manually purge log data within a specific date range."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Manually purge system logs, user sessions, archived users, or NAS integration data older than a chosen date."
+        icon={<Trash2 className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
-      <SectionCard title="Manual Purge">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400">
+        <AlertTriangle className="inline h-3.5 w-3.5 mr-1" />
+        Manual purge is irreversible. Make sure you have a backup before proceeding.
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <SectionCard title="Logs" description="Select which log type to purge">
           <div className="space-y-2">
-            <Label>Purge Type</Label>
-            <Select value={form.purgeType} onValueChange={(v) => setForm({ ...form, purgeType: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Audit Log">Audit Log</SelectItem>
-                <SelectItem value="Access Log">Access Log</SelectItem>
-                <SelectItem value="User Session">User Session</SelectItem>
-                <SelectItem value="Web Surfing">Web Surfing</SelectItem>
-              </SelectContent>
-            </Select>
+            {[
+              "Web Surfing Logs",
+              "User Session Logs",
+              "Audit Logs",
+              "NAS Integration Log",
+            ].map((opt) => (
+              <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="mode"
+                  value={opt}
+                  checked={mode === opt}
+                  onChange={() => setMode(opt)}
+                  className="h-4 w-4 accent-primary"
+                />
+                {opt}
+              </label>
+            ))}
           </div>
+        </SectionCard>
+        <SectionCard title="Users" description="Select user data to purge (radio + checkbox)">
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="userMode"
+                value="Archive Users"
+                checked={userMode === "Archive Users"}
+                onChange={() => setUserMode("Archive Users")}
+                className="h-4 w-4 accent-primary"
+              />
+              Archive Users
+            </label>
+            <div className="ml-6 grid grid-cols-2 gap-2">
+              {[
+                { k: "active", l: "Active Users" },
+                { k: "expired", l: "Expired Users" },
+                { k: "deactivated", l: "Deactivated Users" },
+                { k: "locked", l: "Locked Users" },
+              ].map((c) => (
+                <label key={c.k} className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox
+                    name={`usertype_${c.k}`}
+                    checked={usertype[c.k as keyof typeof usertype]}
+                    onCheckedChange={(v) => setUsertype({ ...usertype, [c.k]: !!v })}
+                  />
+                  {c.l}
+                </label>
+              ))}
+            </div>
+          </div>
+        </SectionCard>
+      </div>
+      <SectionCard title="Purge Data" description="Pick the cut-off date — data older than this date will be purged">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-end">
           <div className="space-y-2">
-            <Label>From Date</Label>
-            <Input type="date" value={form.fromDate} onChange={(e) => setForm({ ...form, fromDate: e.target.value })} />
+            <Label htmlFor="displaydate">Purge Data Before</Label>
+            <Input
+              id="displaydate"
+              name="displaydate"
+              type="date"
+              value={displaydate}
+              onChange={(e) => setDisplaydate(e.target.value)}
+            />
           </div>
-          <div className="space-y-2">
-            <Label>To Date</Label>
-            <Input type="date" value={form.toDate} onChange={(e) => setForm({ ...form, toDate: e.target.value })} />
+          <div className="flex md:justify-end">
+            <Button variant="destructive" onClick={() => setConfirmOpen(true)} disabled={purging || !displaydate}>
+              {purging ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Purge
+            </Button>
           </div>
-        </div>
-        <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400">
-          <AlertTriangle className="inline h-3.5 w-3.5 mr-1" />
-          Manual purge is irreversible. Make sure you have a backup.
-        </div>
-        <div className="mt-4 flex items-center justify-end">
-          <Button onClick={() => setConfirmOpen(true)} disabled={purging}>
-            {purging ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-            Purge Now
-          </Button>
         </div>
       </SectionCard>
 
@@ -3033,9 +3577,8 @@ function ManualPurgePage({ moduleId, childId, grandchildId }: ViewProps) {
           <DialogHeader>
             <DialogTitle>Confirm Manual Purge</DialogTitle>
             <DialogDescription>
-              This will permanently delete <span className="font-medium text-foreground">{form.purgeType}</span> records
-              {form.fromDate && ` from ${form.fromDate}`}
-              {form.toDate && ` to ${form.toDate}`}. This action cannot be undone.
+              This will permanently delete <span className="font-medium text-foreground">{mode}</span> records
+              {displaydate && ` older than ${displaydate}`}. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -3054,164 +3597,72 @@ function ManualPurgePage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- Migrate User ---------- */
 
 function MigrateUserPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [migrating, setMigrating] = React.useState(false);
-  const [form, setForm] = React.useState({
-    sourceZone: "",
-    targetZone: "",
-    username: "",
-  });
-  const [csvFile, setCsvFile] = React.useState<File | null>(null);
-  const [uploading, setUploading] = React.useState(false);
-  const [migrationHistory, setMigrationHistory] = React.useState<any[]>([
-    { id: 1, date: "03 Oct 2026", file: "zone1_to_zone2_0310.csv", users: 45, status: "Completed" },
-    { id: 2, date: "01 Oct 2026", file: "hisar_to_bhiwani_0110.csv", users: 12, status: "Completed" },
-    { id: 3, date: "28 Sep 2026", file: "rohtak_migration_2809.csv", users: 8, status: "Failed" },
-  ]);
-
-  const zones = [
-    { id: "zone-1", name: "Bhiwani Zone 1" },
-    { id: "zone-2", name: "Bhiwani Zone 2" },
-    { id: "zone-3", name: "Hisar Zone" },
-    { id: "zone-4", name: "Rohtak Zone" },
-  ];
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
 
-  const handleMigrate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (form.sourceZone === form.targetZone) {
-      toast({ title: "Invalid selection", description: "Source and target zones must differ.", variant: "destructive" });
-      return;
-    }
-    setMigrating(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setMigrating(false);
-    toast({
-      title: "User migrated",
-      description: `${form.username || "User"} moved from ${form.sourceZone} to ${form.targetZone}.`,
-    });
-    setForm({ sourceZone: "", targetZone: "", username: "" });
-  };
+  // 24online Migrate User — fields:
+  // csvfiletype (hidden), mode (hidden), file (file)
+  // Buttons: "Upload file"
+  // Text: "Upload data file to migrate users"
+  // Form action: getcsv.do
+  const [fileName, setFileName] = React.useState("");
+  const [uploading, setUploading] = React.useState(false);
 
-  const handleCsvUpload = async (e: React.FormEvent) => {
+  const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!csvFile) return;
+    if (!fileName) return;
     setUploading(true);
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 800));
     setUploading(false);
-    setMigrationHistory([
-      { id: Date.now(), date: new Date().toLocaleDateString(), file: csvFile.name, users: Math.floor(Math.random() * 50) + 1, status: "Completed" },
-      ...migrationHistory,
-    ]);
-    toast({ title: "CSV uploaded", description: `${csvFile.name} processed. Users migrated successfully.` });
-    setCsvFile(null);
+    toast({
+      title: "CSV file uploaded",
+      description: `${fileName} uploaded successfully. Migration will start shortly.`,
+    });
+    setFileName("");
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Migrate User"}
-        description="Migrate users between zones via CSV upload or single-user migration."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Upload data file to migrate users"
+        icon={<Upload className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
-
-      {/* CSV Upload */}
-      <SectionCard title="Bulk Migration via CSV" description="Upload a CSV file to migrate multiple users at once">
-        <form onSubmit={handleCsvUpload} className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1fr]">
-          <div className="space-y-2">
-            <Label>CSV File</Label>
-            <div className="flex h-10 items-center gap-2 rounded-md border border-dashed border-border bg-muted/30 px-3">
-              <Upload className="h-4 w-4 text-muted-foreground" />
-              <input
+      <form onSubmit={handleUpload} action="getcsv.do">
+        <input type="hidden" name="csvfiletype" value="migrateuser" />
+        <input type="hidden" name="mode" value="migrate" />
+        <SectionCard
+          title="Upload data file to migrate users"
+          description="Choose a CSV file containing user records to migrate"
+          actions={
+            <Button type="submit" disabled={!fileName || uploading}>
+              {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Upload file
+            </Button>
+          }
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="file">Data File (CSV)</Label>
+              <Input
+                id="file"
+                name="file"
                 type="file"
                 accept=".csv"
-                onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)}
-                className="flex-1 text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1 file:text-primary-foreground"
+                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
               />
             </div>
-            <p className="text-xs text-muted-foreground">CSV format: username, target_zone, target_package</p>
-          </div>
-          <div className="flex items-end">
-            <Button type="submit" disabled={!csvFile || uploading} className="w-full">
-              {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-              Upload & Migrate
-            </Button>
-          </div>
-        </form>
-      </SectionCard>
-
-      {/* Single User Migration */}
-      <form onSubmit={handleMigrate}>
-        <SectionCard title="Single User Migration" description="Migrate one user from one zone to another">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Source Zone</Label>
-              <Select value={form.sourceZone} onValueChange={(v) => setForm({ ...form, sourceZone: v })}>
-                <SelectTrigger><SelectValue placeholder="Select source zone" /></SelectTrigger>
-                <SelectContent>
-                  {zones.map((z) => (
-                    <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-end">
+              <p className="text-xs text-muted-foreground">
+                The CSV file must include the required headers (username, target_zone, target_package, etc.).
+                Once uploaded, the migration job runs in the background.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label>Target Zone</Label>
-              <Select value={form.targetZone} onValueChange={(v) => setForm({ ...form, targetZone: v })}>
-                <SelectTrigger><SelectValue placeholder="Select target zone" /></SelectTrigger>
-                <SelectContent>
-                  {zones.map((z) => (
-                    <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Username</Label>
-              <Input
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-                placeholder="aakash080198"
-              />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center justify-end">
-            <Button type="submit" disabled={migrating || !form.sourceZone || !form.targetZone}>
-              {migrating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-              Migrate User
-            </Button>
           </div>
         </SectionCard>
       </form>
-
-      {/* Migration History */}
-      <SectionCard title="Migration History" description={`${migrationHistory.length} past migrations`}>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>CSV File</TableHead>
-                <TableHead>Users Migrated</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {migrationHistory.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="text-xs text-muted-foreground">{m.date}</TableCell>
-                  <TableCell className="font-mono text-xs">{m.file}</TableCell>
-                  <TableCell>{m.users}</TableCell>
-                  <TableCell><StatusBadge status={m.status} /></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
     </div>
   );
 }
@@ -3230,105 +3681,124 @@ const AUTH_LOGS_MOCK = [
 ];
 
 function AuthLogsPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [search, setSearch] = React.useState("");
-  const [resultFilter, setResultFilter] = React.useState("all");
-  const [fromDate, setFromDate] = React.useState("");
-  const [toDate, setToDate] = React.useState("");
-
-  const filtered = AUTH_LOGS_MOCK.filter((r) => {
-    if (resultFilter !== "all" && r.result !== resultFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      if (!r.username.toLowerCase().includes(q) && !r.ip.includes(q) && !r.nas.toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
-
-  const accepts = AUTH_LOGS_MOCK.filter((r) => r.result === "Accept").length;
-  const rejects = AUTH_LOGS_MOCK.filter((r) => r.result === "Reject").length;
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online Auth Logs — Buttons: Download (x4), Live View
+  // Sections: "Download User Authentication Logs", "Live view of User Authentication Logs"
+  const [live, setLive] = React.useState(false);
+  const [liveRows, setLiveRows] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    if (!live) return;
+    const id = setInterval(() => {
+      const r = {
+        id: Date.now(),
+        timestamp: new Date().toLocaleString(),
+        username: `user_${Math.floor(Math.random() * 9999)}`,
+        ip: `10.10.${Math.floor(Math.random() * 5)}.${Math.floor(Math.random() * 254) + 1}`,
+        nas: `sms-core-0${(Math.floor(Math.random() * 2) + 1)}`,
+        result: Math.random() > 0.25 ? "Accept" : "Reject",
+      };
+      setLiveRows((prev) => [r, ...prev].slice(0, 30));
+    }, 1500);
+    return () => clearInterval(id);
+  }, [live]);
+
+  const download = (label: string) => {
+    toast({ title: "Download started", description: label });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Authentication Logs"}
-        description="RADIUS authentication logs for user sessions."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Download user authentication logs as CSV files (per log type) or open a live view of authentication attempts."
+        icon={<KeyRound className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total Attempts" value={String(AUTH_LOGS_MOCK.length)} icon={<KeyRound className="h-4 w-4" />} accent />
-        <KpiCard label="Accepted" value={String(accepts)} icon={<ShieldCheck className="h-4 w-4" />} />
-        <KpiCard label="Rejected" value={String(rejects)} icon={<ShieldAlert className="h-4 w-4" />} />
-        <KpiCard label="Success Rate" value={`${Math.round((accepts / AUTH_LOGS_MOCK.length) * 100)}%`} icon={<Activity className="h-4 w-4" />} />
-      </div>
+      <SectionCard title="Download User Authentication Logs" description="Download each authentication log type as a CSV file">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {[
+            "Accept Logs (CSV)",
+            "Reject Logs (CSV)",
+            "All Authentication Logs (CSV)",
+            "Authentication Logs (Date Range CSV)",
+          ].map((label) => (
+            <div key={label} className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/20 p-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">{label}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Click Download to export the file.</p>
+              </div>
+              <Button size="sm" onClick={() => download(label)}>
+                <Download className="mr-1.5 h-3.5 w-3.5" /> Download
+              </Button>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
 
-      <ActionBar>
-        <div className="relative flex-1 max-w-xs">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search user / IP / NAS…"
-            className="h-8 pl-8 text-xs"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+      <SectionCard
+        title="Live view of User Authentication Logs"
+        description="Real-time authentication attempts (auto-refresh every 1.5s)"
+        actions={
+          <Button
+            size="sm"
+            variant={live ? "destructive" : "default"}
+            onClick={() => {
+              setLive(!live);
+              if (live) setLiveRows([]);
+            }}
+          >
+            <Activity className="mr-1.5 h-3.5 w-3.5" /> {live ? "Stop Live View" : "Live View"}
+          </Button>
+        }
+      >
+        {!live ? (
+          <EmptyState
+            icon={<Activity className="h-5 w-5" />}
+            title="Live view is not running"
+            description="Click Live View to start streaming authentication attempts in real time."
           />
-        </div>
-        <Select value={resultFilter} onValueChange={setResultFilter}>
-          <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All results</SelectItem>
-            <SelectItem value="Accept">Accept</SelectItem>
-            <SelectItem value="Reject">Reject</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input type="date" className="h-8 w-[150px]" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-        <Input type="date" className="h-8 w-[150px]" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-        <Button size="sm" className="h-8" onClick={() => toast({ title: "Downloading", description: "RADIUS auth logs exported as CSV." })}>
-          <Download className="mr-1.5 h-3.5 w-3.5" /> Download CSV
-        </Button>
-        <Button size="sm" className="h-8" variant="outline" onClick={() => toast({ title: "Live View", description: "Opening live authentication log viewer…" })}>
-          <Activity className="mr-1.5 h-3.5 w-3.5" /> Live View
-        </Button>
-      </ActionBar>
-
-      <SectionCard title="RADIUS Auth Logs" description={`${filtered.length} of ${AUTH_LOGS_MOCK.length} entries`}>
-        <div className="overflow-x-auto max-h-96 overflow-y-auto scrollbar-thin">
-          <Table>
-            <TableHeader className="sticky top-0 bg-card z-10">
-              <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Username</TableHead>
-                <TableHead>IP</TableHead>
-                <TableHead>NAS</TableHead>
-                <TableHead>Result</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{r.timestamp}</TableCell>
-                  <TableCell className="font-medium text-xs">{r.username}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.ip}</TableCell>
-                  <TableCell className="text-xs">{r.nas}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={r.result === "Accept"
-                        ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
-                        : "bg-primary/10 text-primary hover:bg-primary/10"}
-                    >
-                      {r.result}
-                    </Badge>
-                  </TableCell>
+        ) : liveRows.length === 0 ? (
+          <PageLoader />
+        ) : (
+          <div className="overflow-x-auto max-h-96 overflow-y-auto scrollbar-thin">
+            <Table>
+              <TableHeader className="sticky top-0 bg-card z-10">
+                <TableRow>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Username</TableHead>
+                  <TableHead>IP</TableHead>
+                  <TableHead>NAS</TableHead>
+                  <TableHead>Result</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {liveRows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{r.timestamp}</TableCell>
+                    <TableCell className="font-medium text-xs">{r.username}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.ip}</TableCell>
+                    <TableCell className="text-xs">{r.nas}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={r.result === "Accept"
+                          ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
+                          : "bg-primary/10 text-primary hover:bg-primary/10"}
+                      >
+                        {r.result}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </SectionCard>
     </div>
   );
@@ -3339,101 +3809,252 @@ function AuthLogsPage({ moduleId, childId, grandchildId }: ViewProps) {
  * ===================================================================== */
 
 function ClientServicesParametersPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [saving, setSaving] = React.useState(false);
-  const [form, setForm] = React.useState({
-    sessionTimeout: "60",
-    maxLoginAttempts: "5",
-    lockoutDuration: "15",
-    passwordMinLength: "8",
-    requireSpecialChars: true,
-    requireNumbers: true,
-    allowMultipleSessions: false,
-    enableSelfCare: true,
-  });
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // 24online Client Services — Parameters — fields:
+  // servicekey, servicevalue (text), openurlinnewwindow (radio), addcache (submit),
+  // gracedays (radio), additionalday (text)
+  // Buttons: Update (many)
+  // Sections: "Customize Client Preferences", "Site to be opened after client logs on",
+  //   "No. of Records to Display Per Page", "Byte Reducer", "No. of days to reset"
+  const [kv, setKv] = React.useState<{ key: string; value: string }[]>([
+    { key: "LoginPageLogo", value: "/images/logo.png" },
+    { key: "LogoutPageMsg", value: "Thank you for using our service." },
+  ]);
+  const [newKey, setNewKey] = React.useState("");
+  const [newValue, setNewValue] = React.useState("");
+  const [openurlinnewwindow, setOpenurlinnewwindow] = React.useState("Yes");
+  const [postLoginUrl, setPostLoginUrl] = React.useState("http://www.example.com");
+  const [recordsPerPage, setRecordsPerPage] = React.useState("20");
+  const [byteReducer, setByteReducer] = React.useState("Enabled");
+  const [gracedays, setGracedays] = React.useState("0");
+  const [additionalday, setAdditionalday] = React.useState("1");
+  const [busy, setBusy] = React.useState<string | null>(null);
+
+  const update = async (key: string, label: string) => {
+    setBusy(key);
+    await new Promise((r) => setTimeout(r, 400));
+    setBusy(null);
+    toast({ title: `${label} updated`, description: "Client preferences saved successfully." });
+  };
+
+  const addKv = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    await new Promise((r) => setTimeout(r, 500));
-    setSaving(false);
-    toast({ title: "Parameters saved", description: "Client service parameters updated." });
+    if (!newKey.trim()) return;
+    setBusy("addcache");
+    await new Promise((r) => setTimeout(r, 300));
+    setBusy(null);
+    setKv([...kv, { key: newKey.trim(), value: newValue.trim() }]);
+    toast({ title: "Preference added", description: `${newKey} = ${newValue}` });
+    setNewKey("");
+    setNewValue("");
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Parameters"}
-        description="Configure client service parameters: session, login, and password policies."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Customize client-side preferences, post-login landing page, list page sizes, byte reducer, and grace-day policies."
+        icon={<SlidersHorizontal className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <SectionCard title="Session & Login" description="Session timeout and login attempt limits">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Session Timeout (minutes)</Label>
-              <Input type="number" min="1" value={form.sessionTimeout} onChange={(e) => setForm({ ...form, sessionTimeout: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Max Login Attempts</Label>
-              <Input type="number" min="1" value={form.maxLoginAttempts} onChange={(e) => setForm({ ...form, maxLoginAttempts: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Lockout Duration (minutes)</Label>
-              <Input type="number" min="1" value={form.lockoutDuration} onChange={(e) => setForm({ ...form, lockoutDuration: e.target.value })} />
-            </div>
-          </div>
-        </SectionCard>
 
-        <SectionCard title="Password Policy" description="Rules for user passwords">
+      <SectionCard
+        title="Customize Client Preferences"
+        description="Add / update service key-value pairs (servicekey + servicevalue)"
+        actions={
+          <Button size="sm" type="submit" form="kvForm" disabled={busy === "addcache" || !newKey.trim()}>
+            {busy === "addcache" ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-2 h-3.5 w-3.5" />}
+            Add
+          </Button>
+        }
+      >
+        <form id="kvForm" onSubmit={addKv} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Minimum Length</Label>
-              <Input type="number" min="6" value={form.passwordMinLength} onChange={(e) => setForm({ ...form, passwordMinLength: e.target.value })} />
+              <Label htmlFor="servicekey">Service Key</Label>
+              <Input
+                id="servicekey"
+                name="servicekey"
+                value={newKey}
+                onChange={(e) => setNewKey(e.target.value)}
+                placeholder="e.g. LoginpageTitle"
+              />
             </div>
-            <div className="flex items-center gap-6 pt-6">
-              <div className="flex items-center gap-2">
-                <Switch id="reqSpecial" checked={form.requireSpecialChars} onCheckedChange={(v) => setForm({ ...form, requireSpecialChars: v })} />
-                <Label htmlFor="reqSpecial" className="cursor-pointer text-xs">Special chars</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="reqNum" checked={form.requireNumbers} onCheckedChange={(v) => setForm({ ...form, requireNumbers: v })} />
-                <Label htmlFor="reqNum" className="cursor-pointer text-xs">Numbers</Label>
-              </div>
-            </div>
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Behavior" description="Session and self-care options">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Switch id="multiSession" checked={form.allowMultipleSessions} onCheckedChange={(v) => setForm({ ...form, allowMultipleSessions: v })} />
-              <div>
-                <Label htmlFor="multiSession" className="cursor-pointer">Allow Multiple Concurrent Sessions</Label>
-                <p className="text-xs text-muted-foreground">Allow the same user to log in from multiple devices simultaneously.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch id="selfCare" checked={form.enableSelfCare} onCheckedChange={(v) => setForm({ ...form, enableSelfCare: v })} />
-              <div>
-                <Label htmlFor="selfCare" className="cursor-pointer">Enable Self-Care Portal</Label>
-                <p className="text-xs text-muted-foreground">Let users change passwords and view usage from a self-service portal.</p>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="servicevalue">Service Value</Label>
+              <Input
+                id="servicevalue"
+                name="servicevalue"
+                value={newValue}
+                onChange={(e) => setNewValue(e.target.value)}
+                placeholder="e.g. Welcome to Cryptsk"
+              />
             </div>
           </div>
-        </SectionCard>
+          {kv.length > 0 && (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Service Key</TableHead>
+                    <TableHead>Service Value</TableHead>
+                    <TableHead className="text-right">Update</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {kv.map((r, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-mono text-xs">{r.key}</TableCell>
+                      <TableCell className="text-xs">{r.value}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => update(`kv_${i}`, r.key)} disabled={!!busy}>
+                          {busy === `kv_${i}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </form>
+      </SectionCard>
 
-        <div className="flex items-center justify-end gap-3">
-          <Button type="submit" disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Parameters
+      <SectionCard
+        title="Site to be opened after client logs on"
+        description="URL opened after a client successfully logs in (openurlinnewwindow radio)"
+        actions={
+          <Button size="sm" onClick={() => update("postlogin", "Post-login URL")} disabled={!!busy}>
+            {busy === "postlogin" ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+            Update
           </Button>
+        }
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="postloginurl">URL</Label>
+            <Input
+              id="postloginurl"
+              value={postLoginUrl}
+              onChange={(e) => setPostLoginUrl(e.target.value)}
+              placeholder="http://www.example.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Open URL in New Window</Label>
+            <div className="flex gap-6">
+              {["Yes", "No"].map((opt) => (
+                <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="openurlinnewwindow"
+                    value={opt}
+                    checked={openurlinnewwindow === opt}
+                    onChange={() => setOpenurlinnewwindow(opt)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  {opt}
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
-      </form>
+      </SectionCard>
+
+      <SectionCard
+        title="No. of Records to Display Per Page"
+        description="Default page size for client-side lists"
+        actions={
+          <Button size="sm" onClick={() => update("records", "Records per page")} disabled={!!busy}>
+            {busy === "records" ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+            Update
+          </Button>
+        }
+      >
+        <div className="space-y-2 max-w-xs">
+          <Label htmlFor="recordsperpage">Records per page</Label>
+          <Input
+            id="recordsperpage"
+            type="number"
+            min="5"
+            value={recordsPerPage}
+            onChange={(e) => setRecordsPerPage(e.target.value)}
+          />
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Byte Reducer"
+        description="Enable/disable byte-reducer (compression of HTTP responses)"
+        actions={
+          <Button size="sm" onClick={() => update("byte", "Byte Reducer")} disabled={!!busy}>
+            {busy === "byte" ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+            Update
+          </Button>
+        }
+      >
+        <div className="flex gap-6">
+          {["Enabled", "Disabled"].map((opt) => (
+            <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="byteReducer"
+                value={opt}
+                checked={byteReducer === opt}
+                onChange={() => setByteReducer(opt)}
+                className="h-4 w-4 accent-primary"
+              />
+              {opt}
+            </label>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="No. of days to reset"
+        description="Grace days before data is reset, plus additional day count (gracedays radio + additionalday text)"
+        actions={
+          <Button size="sm" onClick={() => update("reset", "Days to reset")} disabled={!!busy}>
+            {busy === "reset" ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-2 h-3.5 w-3.5" />}
+            Update
+          </Button>
+        }
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Grace Days</Label>
+            <div className="flex flex-wrap gap-4">
+              {["0", "1", "2", "3"].map((opt) => (
+                <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gracedays"
+                    value={opt}
+                    checked={gracedays === opt}
+                    onChange={() => setGracedays(opt)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  {opt}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="additionalday">Additional Day</Label>
+            <Input
+              id="additionalday"
+              name="additionalday"
+              type="number"
+              min="0"
+              value={additionalday}
+              onChange={(e) => setAdditionalday(e.target.value)}
+            />
+          </div>
+        </div>
+      </SectionCard>
     </div>
   );
 }
@@ -3456,57 +4077,123 @@ const ACL_MODULES_MOCK = [
 ];
 
 function AccessControlPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState(ACL_MODULES_MOCK);
-
-  const toggle = (id: number, field: "view" | "create" | "update" | "delete") => {
-    setRows(rows.map((r) => (r.id === id ? { ...r, [field]: !r[field] } : r)));
-  };
-
-  const handleSave = () => {
-    toast({ title: "Access control saved", description: "Module permissions updated." });
-  };
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online Access Control — fields:
+  // securitylevelid (select)
+  // Form action: ACLManager
+  // Matrix of modules vs user types with checkboxes for View/Create/Update/Delete permissions
+  const [securitylevelid, setSecuritylevelid] = React.useState("2");
+  // For each (module, user-type) cell, store a permission object {view, create, update, delete}
+  const modules = [
+    "System", "Policy", "Package", "Payment Gateway", "User",
+    "Ticket Management", "Sales Management", "Inventory", "Alert",
+    "Ott Service", "Payment Tracking", "Web Surfing Logger",
+    "Net Kapture", "Reports", "Help",
+  ];
+  const userTypes = ["Administrator", "Manager", "Operator", "User", "Leased Line", "Walkin User"];
+  const [matrix, setMatrix] = React.useState<Record<string, Record<string, { v: boolean; c: boolean; u: boolean; d: boolean }>>>(() => {
+    const m: Record<string, Record<string, { v: boolean; c: boolean; u: boolean; d: boolean }>> = {};
+    modules.forEach((modName) => {
+      m[modName] = {};
+      userTypes.forEach((ut) => {
+        m[modName][ut] = { v: ut === "Administrator", c: ut === "Administrator", u: ut === "Administrator", d: ut === "Administrator" };
+      });
+    });
+    return m;
+  });
+  const [saving, setSaving] = React.useState(false);
+
+  const togglePerm = (modName: string, ut: string, key: "v" | "c" | "u" | "d") => {
+    setMatrix((prev) => ({
+      ...prev,
+      [modName]: {
+        ...prev[modName],
+        [ut]: { ...prev[modName][ut], [key]: !prev[modName][ut][key] },
+      },
+    }));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 500));
+    setSaving(false);
+    toast({ title: "Access control saved", description: "ACL matrix updated successfully." });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Access Control"}
-        description="Configure module-level view/create/update/delete permissions."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Configure per-module View / Create / Update / Delete permissions for each user type."
+        icon={<Lock className="h-5 w-5" />}
         breadcrumb={breadcrumb}
-        actions={
-          <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" /> Save Permissions</Button>
-        }
       />
-      <SectionCard title="Module Permissions" description={`${rows.length} modules`}>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Module</TableHead>
-                <TableHead className="text-center">View</TableHead>
-                <TableHead className="text-center">Create</TableHead>
-                <TableHead className="text-center">Update</TableHead>
-                <TableHead className="text-center">Delete</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.module}</TableCell>
-                  <TableCell className="text-center"><Checkbox checked={r.view} onCheckedChange={() => toggle(r.id, "view")} /></TableCell>
-                  <TableCell className="text-center"><Checkbox checked={r.create} onCheckedChange={() => toggle(r.id, "create")} /></TableCell>
-                  <TableCell className="text-center"><Checkbox checked={r.update} onCheckedChange={() => toggle(r.id, "update")} /></TableCell>
-                  <TableCell className="text-center"><Checkbox checked={r.delete} onCheckedChange={() => toggle(r.id, "delete")} /></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
+      <form onSubmit={handleSave} action="ACLManager">
+        <SectionCard
+          title="Access Control Matrix"
+          description="Modules × User Types — tick the permission checkboxes"
+          actions={
+            <Button type="submit" disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save Permissions
+            </Button>
+          }
+        >
+          <div className="space-y-4">
+            <div className="max-w-xs">
+              <Label htmlFor="securitylevelid">Security Level</Label>
+              <Select value={securitylevelid} onValueChange={setSecuritylevelid}>
+                <SelectTrigger id="securitylevelid"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Level 1 (Full Access)</SelectItem>
+                  <SelectItem value="2">Level 2 (Standard)</SelectItem>
+                  <SelectItem value="3">Level 3 (Restricted)</SelectItem>
+                  <SelectItem value="4">Level 4 (Read Only)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="sticky left-0 bg-card">Module</TableHead>
+                    {userTypes.map((ut) => (
+                      <TableHead key={ut} className="text-center">{ut}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {modules.map((modName) => (
+                    <TableRow key={modName}>
+                      <TableCell className="font-medium sticky left-0 bg-card">{modName}</TableCell>
+                      {userTypes.map((ut) => {
+                        const p = matrix[modName][ut];
+                        return (
+                          <TableCell key={ut} className="text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <Checkbox checked={p.v} onCheckedChange={() => togglePerm(modName, ut, "v")} aria-label="View" />
+                              <Checkbox checked={p.c} onCheckedChange={() => togglePerm(modName, ut, "c")} aria-label="Create" />
+                              <Checkbox checked={p.u} onCheckedChange={() => togglePerm(modName, ut, "u")} aria-label="Update" />
+                              <Checkbox checked={p.d} onCheckedChange={() => togglePerm(modName, ut, "d")} aria-label="Delete" />
+                            </div>
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Each cell has 4 checkboxes (left to right): <span className="font-medium text-foreground">View / Create / Update / Delete</span>.
+            </p>
+          </div>
+        </SectionCard>
+      </form>
     </div>
   );
 }
@@ -3523,51 +4210,106 @@ const ACL_ROLES_MOCK = [
 ];
 
 function UserTypePage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online User Type — fields:
+  // userstatusadministrator (select), select (checkbox),
+  // userstatususer, userstatusLeasedLine, userstatusWalkinuser,
+  // userstatusmanager, userstatusoperator
+  // Buttons: Create, Delete, "Change Registration Status"
+  // Table columns: User Type | Description | User Registration Status | Select
+  const [rows, setRows] = React.useState<any[]>([
+    { id: 1, name: "User", desc: "Standard internet subscriber", regStatus: "Enabled", selected: false },
+    { id: 2, name: "Leased Line", desc: "Leased-line business customer", regStatus: "Enabled", selected: false },
+    { id: 3, name: "Walkin User", desc: "Walk-in / voucher-based customer", regStatus: "Disabled", selected: false },
+    { id: 4, name: "Manager", desc: "Console manager role", regStatus: "Enabled", selected: false },
+    { id: 5, name: "Operator", desc: "Console operator role", regStatus: "Enabled", selected: false },
+  ]);
+  const [adminStatus, setAdminStatus] = React.useState("Enabled");
+
+  const toggleSel = (id: number) => {
+    setRows(rows.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r)));
+  };
+
+  const handleCreate = async () => {
+    await new Promise((r) => setTimeout(r, 300));
+    toast({ title: "User type form opened", description: "Configure a new user type." });
+  };
+
+  const handleDelete = async () => {
+    const sel = rows.filter((r) => r.selected);
+    if (sel.length === 0) {
+      toast({ title: "No selection", description: "Select at least one user type to delete." });
+      return;
+    }
+    setRows(rows.filter((r) => !r.selected));
+    toast({ title: "User types deleted", description: `${sel.length} user type(s) removed.` });
+  };
+
+  const handleChangeStatus = async () => {
+    const sel = rows.filter((r) => r.selected);
+    if (sel.length === 0) {
+      toast({ title: "No selection", description: "Select at least one user type." });
+      return;
+    }
+    setRows(rows.map((r) => (r.selected ? { ...r, regStatus: r.regStatus === "Enabled" ? "Disabled" : "Enabled" } : r)));
+    toast({ title: "Registration status changed", description: `${sel.length} user type(s) updated.` });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "User Type"}
-        description="Manage user roles and their permission scopes."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Create / delete user types and toggle their self-registration status."
+        icon={<UserCog className="h-5 w-5" />}
         breadcrumb={breadcrumb}
-        actions={
-          <Button onClick={() => toast({ title: "Add role", description: "Role form will open." })}>
-            <Plus className="mr-2 h-4 w-4" /> Add Role
-          </Button>
-        }
       />
-      <SectionCard title="Roles" description={`${ACL_ROLES_MOCK.length} roles`}>
+      <ActionBar>
+        <Button size="sm" onClick={handleCreate}>
+          <Plus className="mr-2 h-3.5 w-3.5" /> Create
+        </Button>
+        <Button size="sm" variant="destructive" onClick={handleDelete}>
+          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+        </Button>
+        <Button size="sm" variant="outline" onClick={handleChangeStatus}>
+          <RefreshCw className="mr-2 h-3.5 w-3.5" /> Change Registration Status
+        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Label htmlFor="userstatusadministrator" className="text-xs text-muted-foreground">Administrator Status</Label>
+          <Select value={adminStatus} onValueChange={setAdminStatus}>
+            <SelectTrigger id="userstatusadministrator" className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Enabled">Enabled</SelectItem>
+              <SelectItem value="Disabled">Disabled</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </ActionBar>
+      <SectionCard title="User Types" description={`${rows.length} types`}>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Role Name</TableHead>
+                <TableHead>User Type</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>User Count</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>User Registration Status</TableHead>
+                <TableHead className="text-center">Select</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {ACL_ROLES_MOCK.map((r) => (
+              {rows.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.name}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{r.description}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-[10px]">{r.users} users</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit role", description: r.name })}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => toast({ title: "Delete role", description: r.name })}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                  <TableCell className="text-xs text-muted-foreground">{r.desc}</TableCell>
+                  <TableCell><StatusBadge status={r.regStatus} /></TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox
+                      name={`select_${r.id}`}
+                      checked={r.selected}
+                      onCheckedChange={() => toggleSel(r.id)}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
@@ -3591,53 +4333,148 @@ const USER_ACCESS_MOCK = [
 ];
 
 function UserAccessPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online User Access — fields:
+  // securityenabled (radio), configsave (button),
+  // telnetipallowfrom (radio), telnetIPList (select-multiple),
+  // addip (button), removeip (button), removeallip (button)
+  // Buttons: Save, Add, Remove, Remove All, Cancel
+  // Sections: "Access Configuration", "Access Restriction", "Console Access",
+  //   "SSH Access / Web Console Access", "Web Access" — each with IP allow/deny lists
+  const [securityenabled, setSecurityenabled] = React.useState("Yes");
+  const [allowIp, setAllowIp] = React.useState("Anywhere");
+  const [allowLists, setAllowLists] = React.useState<Record<string, string[]>>({
+    "Access Restriction": ["10.172.0.0/24", "10.10.3.0/24"],
+    "Console Access": ["127.0.0.1"],
+    "SSH Access / Web Console Access": ["10.10.3.0/24"],
+    "Web Access": ["0.0.0.0/0"],
+  });
+  const [newIps, setNewIps] = React.useState<Record<string, string>>({
+    "Access Restriction": "",
+    "Console Access": "",
+    "SSH Access / Web Console Access": "",
+    "Web Access": "",
+  });
+
+  const sections = ["Access Restriction", "Console Access", "SSH Access / Web Console Access", "Web Access"];
+
+  const handleSave = async () => {
+    await new Promise((r) => setTimeout(r, 400));
+    toast({ title: "Access configuration saved", description: "IP allow lists updated successfully." });
+  };
+
+  const addIp = (section: string) => {
+    const ip = newIps[section].trim();
+    if (!ip) return;
+    setAllowLists({ ...allowLists, [section]: [...allowLists[section], ip] });
+    setNewIps({ ...newIps, [section]: "" });
+  };
+  const removeIp = (section: string, ip: string) => {
+    setAllowLists({ ...allowLists, [section]: allowLists[section].filter((x) => x !== ip) });
+  };
+  const removeAll = (section: string) => {
+    setAllowLists({ ...allowLists, [section]: [] });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "User Access"}
-        description="Manage console user access rights and zone assignments."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Configure access security, IP allow-lists for console, SSH, and web access."
+        icon={<Lock className="h-5 w-5" />}
         breadcrumb={breadcrumb}
-        actions={
-          <Button onClick={() => toast({ title: "Add user access", description: "Form will open." })}>
-            <Plus className="mr-2 h-4 w-4" /> Add User Access
-          </Button>
-        }
       />
-      <SectionCard title="User Access" description={`${USER_ACCESS_MOCK.length} entries`}>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Username</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Zones</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {USER_ACCESS_MOCK.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-mono text-xs">{r.username}</TableCell>
-                  <TableCell><Badge variant="outline" className="text-[10px]">{r.role}</Badge></TableCell>
-                  <TableCell className="text-xs">{r.zones}</TableCell>
-                  <TableCell><StatusBadge status={r.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit access", description: r.username })}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+      <SectionCard title="Access Configuration" description="Enable / disable the security-enabled flag (securityenabled radio)">
+        <div className="space-y-4">
+          <div>
+            <Label className="block mb-2">Security Enabled</Label>
+            <div className="flex gap-6">
+              {["Yes", "No"].map((opt) => (
+                <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="securityenabled"
+                    value={opt}
+                    checked={securityenabled === opt}
+                    onChange={() => setSecurityenabled(opt)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  {opt}
+                </label>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          </div>
+          <div className="max-w-sm space-y-2">
+            <Label htmlFor="telnetipallowfrom">Telnet IP Allow From</Label>
+            <Select value={allowIp} onValueChange={setAllowIp}>
+              <SelectTrigger id="telnetipallowfrom"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Anywhere">Anywhere</SelectItem>
+                <SelectItem value="IP List">IP List (allow list below)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-end">
+            <Button name="configsave" onClick={handleSave}>
+              <Save className="mr-2 h-4 w-4" /> Save
+            </Button>
+          </div>
         </div>
       </SectionCard>
+
+      {sections.map((section) => (
+        <SectionCard key={section} title={section} description={`IP allow-list for ${section.toLowerCase()}`}>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor={`newip_${section}`}>Add IP / CIDR</Label>
+              <div className="flex gap-2">
+                <Input
+                  id={`newip_${section}`}
+                  value={newIps[section]}
+                  onChange={(e) => setNewIps({ ...newIps, [section]: e.target.value })}
+                  placeholder="10.0.0.0/24"
+                />
+                <Button size="sm" onClick={() => addIp(section)}>
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Allowed IPs</Label>
+              <select
+                name={`telnetIPList_${section}`}
+                multiple
+                size={4}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs font-mono"
+              >
+                {allowLists[section].length === 0 ? (
+                  <option disabled>No IPs in allow-list</option>
+                ) : (
+                  allowLists[section].map((ip) => (
+                    <option key={ip} value={ip} onDoubleClick={() => removeIp(section, ip)}>
+                      {ip}
+                    </option>
+                  ))
+                )}
+              </select>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => {
+                  const sel = allowLists[section];
+                  if (sel.length > 0) removeIp(section, sel[sel.length - 1]);
+                }}>
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => removeAll(section)}>
+                  <X className="mr-1.5 h-3.5 w-3.5" /> Remove All
+                </Button>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+      ))}
     </div>
   );
 }
@@ -3645,77 +4482,108 @@ function UserAccessPage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- Console ACL ---------- */
 
 function ConsoleAclPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [saving, setSaving] = React.useState(false);
-  const [form, setForm] = React.useState({
-    enableConsoleAcl: true,
-    sessionTimeout: "30",
-    maxFailedLogins: "5",
-    ipWhitelist: "10.172.0.0/24,10.10.3.0/24",
-    enforceHttps: true,
-  });
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // 24online Console ACL — fields:
+  // menuid, menuname, securitylevelid (select)
+  // Shows menu items with per-user-type access level dropdowns
+  const menuItems = [
+    { id: 1, name: "Dashboard" },
+    { id: 2, name: "System → Network → Interface" },
+    { id: 3, name: "System → Network → Gateway" },
+    { id: 4, name: "System → Network → DNS" },
+    { id: 5, name: "System → Firewall → Manage Rules" },
+    { id: 6, name: "System → DHCP → Manage DHCP" },
+    { id: 7, name: "User → Add User" },
+    { id: 8, name: "User → Manage Users" },
+    { id: 9, name: "Package → Add Package" },
+    { id: 10, name: "Reports → User Reports" },
+  ];
+  const userTypes = ["Administrator", "Manager", "Operator", "User", "Leased Line", "Walkin User"];
+  const [matrix, setMatrix] = React.useState<Record<number, Record<string, string>>>(() => {
+    const m: Record<number, Record<string, string>> = {};
+    menuItems.forEach((mi) => {
+      m[mi.id] = {};
+      userTypes.forEach((ut) => {
+        m[mi.id][ut] = ut === "Administrator" ? "Full Access" : ut === "Manager" ? "View Only" : "No Access";
+      });
+    });
+    return m;
+  });
+  const [saving, setSaving] = React.useState(false);
+
+  const handleSave = async () => {
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 400));
     setSaving(false);
-    toast({ title: "Console ACL saved", description: "Console access control settings updated." });
+    toast({ title: "Console ACL saved", description: "Menu access levels updated." });
+  };
+
+  const setAccess = (menuId: number, ut: string, v: string) => {
+    setMatrix((prev) => ({
+      ...prev,
+      [menuId]: { ...prev[menuId], [ut]: v },
+    }));
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Console ACL"}
-        description="Configure console access control — IP whitelists, login limits, and HTTPS enforcement."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Per-menu access level for each console user type (menuid + menuname + securitylevelid)."
+        icon={<Lock className="h-5 w-5" />}
         breadcrumb={breadcrumb}
+        actions={
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save ACL
+          </Button>
+        }
       />
-      <form onSubmit={handleSubmit}>
-        <SectionCard title="Console Access Control">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Switch id="enableAcl" checked={form.enableConsoleAcl} onCheckedChange={(v) => setForm({ ...form, enableConsoleAcl: v })} />
-              <div>
-                <Label htmlFor="enableAcl" className="cursor-pointer">Enable Console ACL</Label>
-                <p className="text-xs text-muted-foreground">When enabled, the rules below apply to all console logins.</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Session Timeout (minutes)</Label>
-                <Input type="number" value={form.sessionTimeout} onChange={(e) => setForm({ ...form, sessionTimeout: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Max Failed Logins</Label>
-                <Input type="number" value={form.maxFailedLogins} onChange={(e) => setForm({ ...form, maxFailedLogins: e.target.value })} />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>IP Whitelist (CIDR, comma-separated)</Label>
-                <Textarea
-                  rows={2}
-                  value={form.ipWhitelist}
-                  onChange={(e) => setForm({ ...form, ipWhitelist: e.target.value })}
-                  placeholder="10.172.0.0/24,10.10.3.0/24"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch id="httpsEnforce" checked={form.enforceHttps} onCheckedChange={(v) => setForm({ ...form, enforceHttps: v })} />
-              <Label htmlFor="httpsEnforce" className="cursor-pointer">Enforce HTTPS for Console Access</Label>
-            </div>
-          </div>
-          <div className="mt-4 flex items-center justify-end">
-            <Button type="submit" disabled={saving}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save Console ACL
-            </Button>
-          </div>
-        </SectionCard>
-      </form>
+      <SectionCard title="Menu Access Levels" description={`${menuItems.length} menu items × ${userTypes.length} user types`}>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Menu Item</TableHead>
+                {userTypes.map((ut) => (
+                  <TableHead key={ut} className="text-center">{ut}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {menuItems.map((mi) => (
+                <TableRow key={mi.id}>
+                  <TableCell className="font-medium">
+                    <input type="hidden" name={`menuid_${mi.id}`} value={mi.id} />
+                    <input type="hidden" name={`menuname_${mi.id}`} value={mi.name} />
+                    {mi.name}
+                  </TableCell>
+                  {userTypes.map((ut) => (
+                    <TableCell key={ut} className="text-center">
+                      <Select
+                        value={matrix[mi.id][ut]}
+                        onValueChange={(v) => setAccess(mi.id, ut, v)}
+                      >
+                        <SelectTrigger className="h-8 mx-auto w-[130px]" aria-label={`${mi.name} - ${ut}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="No Access">No Access</SelectItem>
+                          <SelectItem value="View Only">View Only</SelectItem>
+                          <SelectItem value="Full Access">Full Access</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
     </div>
   );
 }
@@ -3727,82 +4595,164 @@ function ConsoleAclPage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- Register Host ---------- */
 
 function DdnsRegisterPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [saving, setSaving] = React.useState(false);
-  const [form, setForm] = React.useState({
-    hostname: "",
-    domain: "cryptsk.ddns.net",
-    ipAddress: "",
-    updateUrl: "https://update.cryptsk.com/nic/update",
-    username: "",
-    password: "",
-  });
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online DDNS Register — fields:
+  // servicename (select), checkinterval (text), loginname (text), password (password),
+  // hostname (text), description (textarea), usemethod (radio)
+  // Buttons: Add
+  // Sections: "Service Information", "Login Information", "IP Obtaining Method",
+  //   "External Interface Information"
+  const [form, setForm] = React.useState({
+    servicename: "dyndns",
+    checkinterval: "10",
+    loginname: "",
+    password: "",
+    hostname: "",
+    description: "",
+    usemethod: "External Interface",
+    externalInterface: "eth1",
+  });
+  const [saving, setSaving] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 500));
     setSaving(false);
-    toast({
-      title: "DDNS host registered",
-      description: `${form.hostname}.${form.domain} → ${form.ipAddress}`,
-    });
-    setForm({ ...form, hostname: "", ipAddress: "", username: "", password: "" });
+    toast({ title: "DDNS host added", description: `${form.hostname} will be tracked via ${form.servicename}.` });
+    setForm({ ...form, loginname: "", password: "", hostname: "", description: "" });
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Register Host"}
-        description="Register a new dynamic DNS host."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Register a new dynamic DNS host. Configure the DDNS service, login credentials, IP detection method, and external interface."
+        icon={<Globe className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
-      <form onSubmit={handleSubmit}>
-        <SectionCard title="DDNS Host Registration">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <SectionCard title="Service Information" description="Pick a DDNS provider and check interval">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Hostname</Label>
-              <Input value={form.hostname} onChange={(e) => setForm({ ...form, hostname: e.target.value })} placeholder="myhost" required />
-            </div>
-            <div className="space-y-2">
-              <Label>Domain</Label>
-              <Select value={form.domain} onValueChange={(v) => setForm({ ...form, domain: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label htmlFor="servicename">Service Name</Label>
+              <Select value={form.servicename} onValueChange={(v) => setForm({ ...form, servicename: v })}>
+                <SelectTrigger id="servicename"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cryptsk.ddns.net">cryptsk.ddns.net</SelectItem>
-                  <SelectItem value="cryptsk.dyndns.org">cryptsk.dyndns.org</SelectItem>
-                  <SelectItem value="cryptsk.no-ip.com">cryptsk.no-ip.com</SelectItem>
+                  <SelectItem value="dyndns">DynDNS</SelectItem>
+                  <SelectItem value="noip">No-IP</SelectItem>
+                  <SelectItem value="freedns">FreeDNS</SelectItem>
+                  <SelectItem value="duckdns">DuckDNS</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>IP Address</Label>
-              <Input value={form.ipAddress} onChange={(e) => setForm({ ...form, ipAddress: e.target.value })} placeholder="0.0.0.0" required />
+              <Label htmlFor="checkinterval">Check Interval (minutes)</Label>
+              <Input
+                id="checkinterval"
+                name="checkinterval"
+                type="number"
+                min="1"
+                value={form.checkinterval}
+                onChange={(e) => setForm({ ...form, checkinterval: e.target.value })}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Update URL</Label>
-              <Input value={form.updateUrl} onChange={(e) => setForm({ ...form, updateUrl: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Username</Label>
-              <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
-            </div>
-            <div className="space-y-2">
-              <Label>Password</Label>
-              <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center justify-end">
-            <Button type="submit" disabled={saving}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Globe className="mr-2 h-4 w-4" />}
-              Register Host
-            </Button>
           </div>
         </SectionCard>
+
+        <SectionCard title="Login Information" description="Credentials for the DDNS service account">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="loginname">Login Name</Label>
+              <Input
+                id="loginname"
+                name="loginname"
+                value={form.loginname}
+                onChange={(e) => setForm({ ...form, loginname: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hostname">Host Name</Label>
+              <Input
+                id="hostname"
+                name="hostname"
+                value={form.hostname}
+                onChange={(e) => setForm({ ...form, hostname: e.target.value })}
+                placeholder="myhost.dyndns.org"
+                required
+              />
+            </div>
+            <div className="space-y-2 md:col-span-3">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                rows={2}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Optional description / notes for this DDNS entry"
+              />
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="IP Obtaining Method" description="How the WAN IP is determined (usemethod radio)">
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-6">
+              {["External Interface", "Web Page"].map((opt) => (
+                <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="usemethod"
+                    value={opt}
+                    checked={form.usemethod === opt}
+                    onChange={() => setForm({ ...form, usemethod: opt })}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  {opt}
+                </label>
+              ))}
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="External Interface Information" description="Pick the external interface whose IP will be reported to the DDNS provider">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="externalInterface">External Interface</Label>
+              <Select value={form.externalInterface} onValueChange={(v) => setForm({ ...form, externalInterface: v })}>
+                <SelectTrigger id="externalInterface"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="eth0">eth0</SelectItem>
+                  <SelectItem value="eth1">eth1</SelectItem>
+                  <SelectItem value="pppoe0">pppoe0</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </SectionCard>
+
+        <div className="flex items-center justify-end">
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+            Add
+          </Button>
+        </div>
       </form>
     </div>
   );
@@ -3817,57 +4767,83 @@ const DDNS_HOSTS_MOCK = [
 ];
 
 function DdnsManagePage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online Manage DDNS Hosts — table columns:
+  // Service Name | Login Name | Host Name | Method | Interface |
+  //   Check Interval (minutes) | Change Status | Select
+  const [rows, setRows] = React.useState<any[]>([
+    { id: 1, service: "DynDNS", login: "admin1", host: "bhiwani-gw.dyndns.org", method: "External Interface", iface: "eth1", checkInterval: "10", status: "Active", selected: false },
+    { id: 2, service: "No-IP", login: "noc", host: "hisar-gw.ddns.net", method: "Web Page", iface: "—", checkInterval: "15", status: "Active", selected: false },
+    { id: 3, service: "DuckDNS", login: "ops", host: "rohtak-gw.duckdns.org", method: "External Interface", iface: "pppoe0", checkInterval: "5", status: "Inactive", selected: false },
+  ]);
+
+  const toggleStatus = (id: number) => {
+    setRows(rows.map((r) => (r.id === id ? { ...r, status: r.status === "Active" ? "Inactive" : "Active" } : r)));
+    const r = rows.find((x) => x.id === id);
+    toast({ title: "Status changed", description: `${r?.host} is now ${r?.status === "Active" ? "Inactive" : "Active"}.` });
+  };
+  const toggleSel = (id: number) => {
+    setRows(rows.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r)));
+  };
+  const handleDelete = () => {
+    const sel = rows.filter((r) => r.selected);
+    if (sel.length === 0) {
+      toast({ title: "No selection", description: "Select at least one host to delete." });
+      return;
+    }
+    setRows(rows.filter((r) => !r.selected));
+    toast({ title: "Hosts deleted", description: `${sel.length} host(s) removed.` });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Manage Hosts"}
-        description="View, update, and delete dynamic DNS hosts."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="View, change status, and delete dynamic DNS hosts."
+        icon={<Globe className="h-5 w-5" />}
         breadcrumb={breadcrumb}
+        actions={
+          <Button variant="destructive" size="sm" onClick={handleDelete}>
+            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Selected
+          </Button>
+        }
       />
-      <SectionCard title="DDNS Hosts" description={`${DDNS_HOSTS_MOCK.length} hosts`}>
+      <SectionCard title="DDNS Hosts" description={`${rows.length} hosts`}>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Hostname</TableHead>
-                <TableHead>Domain</TableHead>
-                <TableHead>IP Address</TableHead>
-                <TableHead>Last Update</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Service Name</TableHead>
+                <TableHead>Login Name</TableHead>
+                <TableHead>Host Name</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Interface</TableHead>
+                <TableHead>Check Interval (minutes)</TableHead>
+                <TableHead>Change Status</TableHead>
+                <TableHead className="text-center">Select</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {DDNS_HOSTS_MOCK.map((r) => (
+              {rows.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="font-mono text-xs font-semibold">{r.hostname}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{r.domain}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.ip}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{r.lastUpdate}</TableCell>
-                  <TableCell><StatusBadge status={r.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toast({ title: "IP updated", description: `${r.hostname}.${r.domain} IP refreshed.` })}
-                      >
-                        <RefreshCw className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-primary hover:text-primary"
-                        onClick={() => toast({ title: "Host deleted", description: r.hostname })}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                  <TableCell className="font-medium">{r.service}</TableCell>
+                  <TableCell className="font-mono text-xs">{r.login}</TableCell>
+                  <TableCell className="font-mono text-xs">{r.host}</TableCell>
+                  <TableCell className="text-xs">{r.method}</TableCell>
+                  <TableCell className="font-mono text-xs">{r.iface}</TableCell>
+                  <TableCell className="font-mono text-xs">{r.checkInterval}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => toggleStatus(r.id)}>
+                        <StatusBadge status={r.status} />
+                      </button>
                     </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox checked={r.selected} onCheckedChange={() => toggleSel(r.id)} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -4156,119 +5132,94 @@ function CaptiveManagePage({ moduleId, childId, grandchildId }: ViewProps) {
  * ===================================================================== */
 
 function NasIpConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editing, setEditing] = React.useState<any | null>(null);
-  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
-  const [busy, setBusy] = React.useState(false);
-
-  const load = React.useCallback(() => {
-    setLoading(true);
-    systemApi.list("nasDevices").then((res) => {
-      setRows(res.data ?? []);
-      setLoading(false);
-    });
-  }, []);
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setBusy(true);
-    await systemApi.delete("nasDevices", deleteTarget.id);
-    setBusy(false);
-    toast({ title: "NAS device deleted", description: deleteTarget.name });
-    setDeleteTarget(null);
-    load();
-  };
-
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online NAS IP Configuration — fields:
+  // nasipaddress, calledstationid, nasidentifier, rejectreasonip, rejectreasonippoollimit,
+  // naserror, userlicenseover, zonelicenseover, btnsave (submit)
+  // Buttons: Update
+  // Form action: NASGUIManager
+  const [form, setForm] = React.useState({
+    nasipaddress: "203.0.113.5",
+    calledstationid: "00:1A:2B:3C:4D:5E",
+    nasidentifier: "sms-core-01",
+    rejectreasonip: "Invalid NAS IP",
+    rejectreasonippoollimit: "IP pool exhausted",
+    naserror: "RADIUS auth timeout",
+    userlicenseover: "User license limit exceeded",
+    zonelicenseover: "Zone license limit exceeded",
+  });
+  const [saving, setSaving] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 500));
+    setSaving(false);
+    toast({ title: "NAS IP configuration updated", description: "NASGUIManager: settings saved successfully." });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "NAS IP Configuration"}
-        description="Configure RADIUS NAS clients (network access servers)."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Configure NAS identification and the various reject-reason / error messages shown to users."
+        icon={<HardDrive className="h-5 w-5" />}
         breadcrumb={breadcrumb}
-        actions={
-          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" /> Add NAS
-          </Button>
-        }
       />
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total NAS" value={String(rows.length)} icon={<HardDrive className="h-4 w-4" />} accent />
-        <KpiCard label="Online" value={String(rows.filter((r) => r.status === "Online").length)} icon={<Activity className="h-4 w-4" />} />
-        <KpiCard label="Offline" value={String(rows.filter((r) => r.status === "Offline").length)} icon={<Power className="h-4 w-4" />} />
-        <KpiCard label="Total Sessions" value={String(rows.reduce((a, r) => a + (r.sessions || 0), 0))} icon={<Wifi className="h-4 w-4" />} />
-      </div>
-
-      <SectionCard title="NAS Devices" description={`${rows.length} devices`}>
-        {loading ? <PageLoader /> : rows.length === 0 ? (
-          <EmptyState icon={<HardDrive className="h-5 w-5" />} title="No NAS devices" description="Add a RADIUS client." />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>IP</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Secret</TableHead>
-                  <TableHead>Sessions</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.name}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.ip}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-[10px]">{r.type}</Badge></TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{r.secret}</TableCell>
-                    <TableCell className="text-xs">{r.sessions}</TableCell>
-                    <TableCell><StatusBadge status={r.status} /></TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => { setEditing(r); setDialogOpen(true); }}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(r)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      <form onSubmit={handleSubmit} action="NASGUIManager">
+        <SectionCard
+          title="NAS IP & Identification"
+          description="NAS IP, called-station ID, and NAS identifier"
+          actions={
+            <Button type="submit" name="btnsave" disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Update
+            </Button>
+          }
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="nasipaddress">NAS IP Address</Label>
+              <Input id="nasipaddress" name="nasipaddress" value={form.nasipaddress} onChange={(e) => setForm({ ...form, nasipaddress: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="calledstationid">Called Station ID</Label>
+              <Input id="calledstationid" name="calledstationid" value={form.calledstationid} onChange={(e) => setForm({ ...form, calledstationid: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nasidentifier">NAS Identifier</Label>
+              <Input id="nasidentifier" name="nasidentifier" value={form.nasidentifier} onChange={(e) => setForm({ ...form, nasidentifier: e.target.value })} />
+            </div>
           </div>
-        )}
-      </SectionCard>
-
-      <NasDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        editing={editing}
-        onSaved={() => { setDialogOpen(false); load(); }}
-      />
-
-      <DeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Delete NAS Device"
-        description={<>Delete NAS <span className="font-medium text-foreground">{deleteTarget?.name}</span>?</>}
-        busy={busy}
-      />
+        </SectionCard>
+        <SectionCard title="Reject Reason Messages" description="Customize the messages shown for various reject reasons">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="rejectreasonip">Reject Reason (Invalid IP)</Label>
+              <Input id="rejectreasonip" name="rejectreasonip" value={form.rejectreasonip} onChange={(e) => setForm({ ...form, rejectreasonip: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rejectreasonippoollimit">Reject Reason (IP Pool Limit)</Label>
+              <Input id="rejectreasonippoollimit" name="rejectreasonippoollimit" value={form.rejectreasonippoollimit} onChange={(e) => setForm({ ...form, rejectreasonippoollimit: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="naserror">NAS Error</Label>
+              <Input id="naserror" name="naserror" value={form.naserror} onChange={(e) => setForm({ ...form, naserror: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="userlicenseover">User License Over</Label>
+              <Input id="userlicenseover" name="userlicenseover" value={form.userlicenseover} onChange={(e) => setForm({ ...form, userlicenseover: e.target.value })} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="zonelicenseover">Zone License Over</Label>
+              <Input id="zonelicenseover" name="zonelicenseover" value={form.zonelicenseover} onChange={(e) => setForm({ ...form, zonelicenseover: e.target.value })} />
+            </div>
+          </div>
+        </SectionCard>
+      </form>
     </div>
   );
 }
@@ -4447,103 +5398,122 @@ function AddDevicePage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- Manage Devices ---------- */
 
 function ManageDevicesPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
-  const [busy, setBusy] = React.useState(false);
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
 
-  const load = React.useCallback(() => {
-    setLoading(true);
-    systemApi.list("managedDevices").then((res) => {
-      setRows(res.data ?? []);
-      setLoading(false);
-    });
-  }, []);
+  // 24online Manage Devices — table columns:
+  // IPv4 Address | Description | Comments | Status | Select
+  // Buttons: Add, Delete
+  // Form action: DevicesManager
+  const [rows, setRows] = React.useState<any[]>([
+    { id: 1, ip: "192.168.1.10", desc: "Core Switch", comments: "Main distribution switch", status: "Online", selected: false },
+    { id: 2, ip: "192.168.1.11", desc: "Edge Router", comments: "BGP edge router", status: "Online", selected: false },
+    { id: 3, ip: "192.168.1.20", desc: "OLT Bhiwani", comments: "GPON OLT for Bhiwani zone", status: "Warning", selected: false },
+    { id: 4, ip: "192.168.1.21", desc: "OLT Hisar", comments: "GPON OLT for Hisar zone", status: "Offline", selected: false },
+  ]);
+  const [showForm, setShowForm] = React.useState(false);
+  const [form, setForm] = React.useState({ ip: "", desc: "", comments: "" });
 
-  React.useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setBusy(true);
-    await systemApi.delete("managedDevices", deleteTarget.id);
-    setBusy(false);
-    toast({ title: "Device deleted", description: deleteTarget.name });
-    setDeleteTarget(null);
-    load();
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRows([...rows, { id: Date.now(), ip: form.ip, desc: form.desc, comments: form.comments, status: "Online", selected: false }]);
+    toast({ title: "Device added", description: `${form.desc} (${form.ip})` });
+    setForm({ ip: "", desc: "", comments: "" });
+    setShowForm(false);
   };
 
-  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const handleDelete = () => {
+    const sel = rows.filter((r) => r.selected);
+    if (sel.length === 0) {
+      toast({ title: "No selection", description: "Select at least one device to delete." });
+      return;
+    }
+    setRows(rows.filter((r) => !r.selected));
+    toast({ title: "Devices deleted", description: `${sel.length} device(s) removed.` });
+  };
+
+  const toggleSel = (id: number) => {
+    setRows(rows.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r)));
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Manage Devices"}
-        description="View and manage tracked network devices."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Track IPv4 devices (switches, routers, OLTs) for status monitoring."
+        icon={<Cpu className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
+      <form action="DevicesManager">
+        <ActionBar>
+          <Button type="button" size="sm" onClick={() => setShowForm(!showForm)}>
+            <Plus className="mr-2 h-3.5 w-3.5" /> Add
+          </Button>
+          <Button type="button" size="sm" variant="destructive" onClick={handleDelete}>
+            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+          </Button>
+        </ActionBar>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total" value={String(rows.length)} icon={<Cpu className="h-4 w-4" />} accent />
-        <KpiCard label="Online" value={String(rows.filter((r) => r.status === "Online").length)} icon={<Activity className="h-4 w-4" />} />
-        <KpiCard label="Warning" value={String(rows.filter((r) => r.status === "Warning").length)} icon={<AlertTriangle className="h-4 w-4" />} />
-        <KpiCard label="Offline" value={String(rows.filter((r) => r.status === "Offline").length)} icon={<Power className="h-4 w-4" />} />
-      </div>
+        {showForm && (
+          <SectionCard title="Add Device" description="Register a new device for monitoring">
+            <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="space-y-2">
+                <Label htmlFor="devip">IPv4 Address</Label>
+                <Input id="devip" type="text" value={form.ip} onChange={(e) => setForm({ ...form, ip: e.target.value })} placeholder="192.168.1.10" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="devdesc">Description</Label>
+                <Input id="devdesc" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Core Switch" required />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="devcomments">Comments</Label>
+                <Input id="devcomments" value={form.comments} onChange={(e) => setForm({ ...form, comments: e.target.value })} placeholder="Optional notes" />
+              </div>
+              <div className="md:col-span-4 flex justify-end">
+                <Button type="submit" size="sm">
+                  <Plus className="mr-2 h-3.5 w-3.5" /> Add Device
+                </Button>
+              </div>
+            </form>
+          </SectionCard>
+        )}
 
-      <SectionCard title="Devices" description={`${rows.length} devices`}>
-        {loading ? <PageLoader /> : rows.length === 0 ? (
-          <EmptyState icon={<Cpu className="h-5 w-5" />} title="No devices" description="Add a device to track." />
-        ) : (
+        <SectionCard title="Devices" description={`${rows.length} devices`}>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>IP</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>IPv4 Address</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Comments</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Last Seen</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-center">Select</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => (
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-8">
+                      No devices tracked. Click Add to register a device.
+                    </TableCell>
+                  </TableRow>
+                ) : rows.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.name}</TableCell>
                     <TableCell className="font-mono text-xs">{r.ip}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-[10px]">{r.type}</Badge></TableCell>
+                    <TableCell className="font-medium">{r.desc}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{r.comments}</TableCell>
                     <TableCell><StatusBadge status={r.status} /></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.lastSeen}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit device", description: r.name })}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(r)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                    <TableCell className="text-center">
+                      <Checkbox checked={r.selected} onCheckedChange={() => toggleSel(r.id)} />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
-        )}
-      </SectionCard>
-
-      <DeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Delete Device"
-        description={<>Delete device <span className="font-medium text-foreground">{deleteTarget?.name}</span>?</>}
-        busy={busy}
-      />
+        </SectionCard>
+      </form>
     </div>
   );
 }
@@ -4551,97 +5521,116 @@ function ManageDevicesPage({ moduleId, childId, grandchildId }: ViewProps) {
 /* ---------- Device Logs ---------- */
 
 function DeviceLogsPage({ moduleId, childId, grandchildId }: ViewProps) {
-  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
-  const [rows, setRows] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [search, setSearch] = React.useState("");
-  const [levelFilter, setLevelFilter] = React.useState("all");
-
-  const load = React.useCallback(() => {
-    setLoading(true);
-    systemApi.list("deviceLogs").then((res) => {
-      setRows(res.data ?? []);
-      setLoading(false);
-    });
-  }, []);
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
-
-  const filtered = rows.filter((r) => {
-    if (levelFilter !== "all" && r.level !== levelFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return r.device?.toLowerCase().includes(q) || r.message?.toLowerCase().includes(q);
-    }
-    return true;
-  });
-
+  const { grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const { toast } = useToast();
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+
+  // 24online Device Logs — fields:
+  // displaystartdate (text), displayenddate (text), newstatus (select),
+  // deviceip (text), search (submit)
+  // Buttons: "Get Device Log Details"
+  // Form action: devicelogdetails.jsp
+  const [form, setForm] = React.useState({
+    displaystartdate: "",
+    displayenddate: "",
+    newstatus: "all",
+    deviceip: "",
+  });
+  const [loading, setLoading] = React.useState(false);
+  const [rows, setRows] = React.useState<any[]>([]);
+
+  const allLogs: any[] = [
+    { id: 1, timestamp: "2026-01-15 14:32:11", deviceIp: "192.168.1.10", level: "INFO", message: "Device reachable via SNMP" },
+    { id: 2, timestamp: "2026-01-15 14:25:08", deviceIp: "192.168.1.20", level: "WARN", message: "Interface utilization above 80%" },
+    { id: 3, timestamp: "2026-01-15 14:18:42", deviceIp: "192.168.1.21", level: "ERROR", message: "SNMP timeout - device offline" },
+    { id: 4, timestamp: "2026-01-15 14:10:15", deviceIp: "192.168.1.11", level: "INFO", message: "BGP session established" },
+    { id: 5, timestamp: "2026-01-15 14:00:00", deviceIp: "192.168.1.20", level: "WARN", message: "High CPU usage detected" },
+  ];
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 400));
+    setLoading(false);
+    const filtered = allLogs.filter((r) => {
+      if (form.newstatus !== "all" && r.level !== form.newstatus) return false;
+      if (form.deviceip && !r.deviceIp.includes(form.deviceip)) return false;
+      return true;
+    });
+    setRows(filtered);
+    toast({
+      title: "Device log details retrieved",
+      description: `${filtered.length} matching log entries.`,
+    });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={grandchild?.label ?? "Device Logs"}
-        description="Real-time logs from all tracked devices."
-        icon={<Settings2 className="h-5 w-5" />}
+        description="Search and view status-tracker device logs by date range, status, and device IP."
+        icon={<FileText className="h-5 w-5" />}
         breadcrumb={breadcrumb}
-        actions={
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
-          </Button>
-        }
       />
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total Logs" value={String(rows.length)} icon={<FileText className="h-4 w-4" />} accent />
-        <KpiCard label="INFO" value={String(rows.filter((r) => r.level === "INFO").length)} icon={<Info className="h-4 w-4" />} />
-        <KpiCard label="WARN" value={String(rows.filter((r) => r.level === "WARN").length)} icon={<AlertTriangle className="h-4 w-4" />} />
-        <KpiCard label="ERROR" value={String(rows.filter((r) => r.level === "ERROR").length)} icon={<AlertCircle className="h-4 w-4" />} />
-      </div>
-
-      <ActionBar>
-        <div className="relative flex-1 max-w-xs">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search device / message…"
-            className="h-8 pl-8 text-xs"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Select value={levelFilter} onValueChange={setLevelFilter}>
-          <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All levels</SelectItem>
-            <SelectItem value="INFO">INFO</SelectItem>
-            <SelectItem value="WARN">WARN</SelectItem>
-            <SelectItem value="ERROR">ERROR</SelectItem>
-          </SelectContent>
-        </Select>
-      </ActionBar>
-
-      <SectionCard title="Device Logs" description={`${filtered.length} of ${rows.length} entries`}>
-        {loading ? <PageLoader /> : filtered.length === 0 ? (
-          <EmptyState icon={<FileText className="h-5 w-5" />} title="No logs" description="No matching log entries." />
+      <form onSubmit={handleSearch} action="devicelogdetails.jsp">
+        <SectionCard
+          title="Filter Device Logs"
+          description="Filter by date range, log status, and device IP"
+          actions={
+            <Button type="submit" name="search" disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+              Get Device Log Details
+            </Button>
+          }
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="space-y-2">
+              <Label htmlFor="displaystartdate">Start Date</Label>
+              <Input id="displaystartdate" name="displaystartdate" type="date" value={form.displaystartdate} onChange={(e) => setForm({ ...form, displaystartdate: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="displayenddate">End Date</Label>
+              <Input id="displayenddate" name="displayenddate" type="date" value={form.displayenddate} onChange={(e) => setForm({ ...form, displayenddate: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newstatus">Status</Label>
+              <Select value={form.newstatus} onValueChange={(v) => setForm({ ...form, newstatus: v })}>
+                <SelectTrigger id="newstatus"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="INFO">INFO</SelectItem>
+                  <SelectItem value="WARN">WARN</SelectItem>
+                  <SelectItem value="ERROR">ERROR</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deviceip">Device IP</Label>
+              <Input id="deviceip" name="deviceip" value={form.deviceip} onChange={(e) => setForm({ ...form, deviceip: e.target.value })} placeholder="192.168.1.10" />
+            </div>
+          </div>
+        </SectionCard>
+      </form>
+      <SectionCard title="Device Log Details" description={`${rows.length} entries`}>
+        {rows.length === 0 ? (
+          <EmptyState icon={<FileText className="h-5 w-5" />} title="No logs retrieved" description="Click Get Device Log Details to retrieve logs." />
         ) : (
           <div className="max-h-96 overflow-y-auto scrollbar-thin">
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
                   <TableHead>Timestamp</TableHead>
+                  <TableHead>Device IP</TableHead>
                   <TableHead>Level</TableHead>
-                  <TableHead>Device</TableHead>
                   <TableHead>Message</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((r) => (
+                {rows.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">{r.timestamp}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.deviceIp}</TableCell>
                     <TableCell><LevelBadge level={r.level} /></TableCell>
-                    <TableCell className="font-mono text-xs">{r.device}</TableCell>
                     <TableCell className="text-xs">{r.message}</TableCell>
                   </TableRow>
                 ))}
@@ -4948,73 +5937,83 @@ function PacketCapturePage({ moduleId, childId, grandchildId }: ViewProps) {
 function CustomizedImagesPage({ moduleId, childId, grandchildId }: ViewProps) {
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [images, setImages] = React.useState([
-    { id: 1, name: "Top Banner", filename: "topbanner_default.jpg", size: "45 KB", uploaded: "01 Oct 2026" },
-    { id: 2, name: "Bottom Banner", filename: "bottombanner_default.jpg", size: "32 KB", uploaded: "01 Oct 2026" },
-    { id: 3, name: "Top Left Corner", filename: "topleft_logo.png", size: "12 KB", uploaded: "01 Oct 2026" },
-    { id: 4, name: "Coupon Logo", filename: "coupon_logo.png", size: "8 KB", uploaded: "01 Oct 2026" },
-    { id: 5, name: "Default Image", filename: "default_bg.jpg", size: "120 KB", uploaded: "01 Oct 2026" },
-  ]);
+
+  // 24online Customized Images — fields:
+  // topfilename (file), bottomfilename (file), preViewT (button),
+  // topleftcornerfilename (file), preViewTL (button), upLoad (button)
+  // Buttons: Preview, Upload File
+  const [topfilename, setTopfilename] = React.useState("");
+  const [bottomfilename, setBottomfilename] = React.useState("");
+  const [topleftcornerfilename, setTopleftcornerfilename] = React.useState("");
+  const [uploading, setUploading] = React.useState(false);
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUploading(true);
+    await new Promise((r) => setTimeout(r, 600));
+    setUploading(false);
+    toast({
+      title: "Images uploaded",
+      description: "Customized images uploaded successfully.",
+    });
+  };
+
+  const renderFileField = (
+    id: string,
+    label: string,
+    previewBtn: string,
+    value: string,
+    set: (v: string) => void
+  ) => (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1fr] md:items-end">
+      <div className="space-y-2">
+        <Label htmlFor={id}>{label}</Label>
+        <Input
+          id={id}
+          name={id}
+          type="file"
+          accept="image/*"
+          onChange={(e) => set(e.target.files?.[0]?.name ?? "")}
+        />
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        name={previewBtn}
+        disabled={!value}
+        onClick={() => toast({ title: "Preview", description: `Previewing ${value}` })}
+      >
+        <FileText className="mr-2 h-4 w-4" /> Preview
+      </Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Customized Images" description="Upload and manage custom banner/logo images for the client portal." breadcrumb={breadcrumb} icon={<Settings2 className="h-5 w-5" />} />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total Images" value={String(images.length)} icon={<FileText className="h-4 w-4" />} accent />
-        <KpiCard label="Default Set" value="5" icon={<Layers className="h-4 w-4" />} />
-      </div>
-      <SectionCard title="Uploaded Images" description="Custom images displayed on the client login page and my-account portal">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Image Type</TableHead><TableHead>Filename</TableHead><TableHead>Size</TableHead><TableHead>Uploaded</TableHead><TableHead className="text-right">Actions</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {images.map((img) => (
-                <TableRow key={img.id}>
-                  <TableCell className="font-medium">{img.name}</TableCell>
-                  <TableCell className="font-mono text-xs">{img.filename}</TableCell>
-                  <TableCell className="text-muted-foreground">{img.size}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{img.uploaded}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Replace image", description: `Upload new ${img.name}` })}><Upload className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setImages(images.filter((i) => i.id !== img.id)); toast({ title: "Image removed", description: img.name }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
-      <SectionCard title="Upload New Image" description="Select an image type and upload a file (JPG/PNG/GIF, max 500 KB)">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            <Label>Image Type</Label>
-            <Select defaultValue="topfilename">
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="topfilename">Top Banner</SelectItem>
-                <SelectItem value="bottomfilename">Bottom Banner</SelectItem>
-                <SelectItem value="topleftcornerfilename">Top Left Corner</SelectItem>
-                <SelectItem value="couponlogo1">Coupon Logo 1</SelectItem>
-                <SelectItem value="couponlogo2">Coupon Logo 2</SelectItem>
-                <SelectItem value="defaultimage">Default Image</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>File</Label>
-            <div className="flex h-10 items-center justify-center rounded-md border border-dashed border-border bg-muted/30 text-sm text-muted-foreground">
-              <Upload className="mr-2 h-4 w-4" /> Choose file…
-            </div>
-          </div>
-          <div className="flex items-end">
-            <Button className="w-full" onClick={() => toast({ title: "Image uploaded", description: "Image has been uploaded successfully." })}>
-              <Upload className="mr-2 h-4 w-4" /> Upload
+      <PageHeader
+        title="Customized Images"
+        description="Upload custom images for the top banner, bottom banner, and top-left corner of the client portal."
+        breadcrumb={breadcrumb}
+        icon={<SlidersHorizontal className="h-5 w-5" />}
+      />
+      <form onSubmit={handleUpload}>
+        <SectionCard
+          title="Upload Customized Images"
+          description="Choose image files (PNG / JPG / GIF) — max 500 KB each"
+          actions={
+            <Button type="submit" name="upLoad" disabled={uploading}>
+              {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Upload File
             </Button>
+          }
+        >
+          <div className="space-y-6">
+            {renderFileField("topfilename", "Top Banner Image", "preViewT", topfilename, setTopfilename)}
+            {renderFileField("bottomfilename", "Bottom Banner Image", "preViewB", bottomfilename, setBottomfilename)}
+            {renderFileField("topleftcornerfilename", "Top Left Corner Image", "preViewTL", topleftcornerfilename, setTopleftcornerfilename)}
           </div>
-        </div>
-      </SectionCard>
+        </SectionCard>
+      </form>
     </div>
   );
 }
@@ -5084,39 +6083,90 @@ function ForgotPasswordConfigPage({ moduleId, childId, grandchildId }: ViewProps
 function ClientGuiUrlsPage({ moduleId, childId, grandchildId }: ViewProps) {
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
   const { toast } = useToast();
+  // 24online Client GUI URLs — fields:
+  // radiuslocation (radio) + txtregusingpinurl, txtrenewusingpinurl, txttopupusingpinurl,
+  // txtmyaccounturl, txtbuypkgusingpgwayurl, txtrenewusingpgwayurl, txtbuypkgusingsmswayurl,
+  // txtrenewpkgusingsmswayurl, txtchangebodurl, txtresetpasswordurl, txtcoupondetailsurl,
+  // txtregwithoutusingpinurl, txtpackageplansurl, txtrecoverpasswdurl
+  // Buttons: Update
+  const [radiuslocation, setRadiuslocation] = React.useState("Local");
   const [urls, setUrls] = React.useState([
+    { id: "txtregusingpinurl", label: "Registration using PIN URL", value: "https://portal.cryptsk.com/register?mode=pin" },
+    { id: "txtrenewusingpinurl", label: "Renew using PIN URL", value: "https://portal.cryptsk.com/renew?mode=pin" },
+    { id: "txttopupusingpinurl", label: "Top-up using PIN URL", value: "https://portal.cryptsk.com/topup?mode=pin" },
     { id: "txtmyaccounturl", label: "My Account URL", value: "https://portal.cryptsk.com/myaccount" },
-    { id: "txtpackageplansurl", label: "Package Plans URL", value: "https://portal.cryptsk.com/plans" },
-    { id: "txtregusingpinurl", label: "Registration via PIN URL", value: "https://portal.cryptsk.com/register?mode=pin" },
-    { id: "txtregwithoutusingpinurl", label: "Registration without PIN URL", value: "https://portal.cryptsk.com/register" },
-    { id: "txtrecoverpasswdurl", label: "Recover Password URL", value: "https://portal.cryptsk.com/recover" },
-    { id: "txtrenewusingpinurl", label: "Renew via PIN URL", value: "https://portal.cryptsk.com/renew?mode=pin" },
-    { id: "txtrenewusingpgwayurl", label: "Renew via Payment Gateway URL", value: "https://portal.cryptsk.com/renew?mode=pg" },
-    { id: "txtbuypkgusingpgwayurl", label: "Buy Package via PG URL", value: "https://portal.cryptsk.com/buy?mode=pg" },
-    { id: "txtbuypkgusingsmswayurl", label: "Buy Package via SMS URL", value: "https://portal.cryptsk.com/buy?mode=sms" },
-    { id: "txtrenewpkgusingsmswayurl", label: "Renew via SMS URL", value: "https://portal.cryptsk.com/renew?mode=sms" },
+    { id: "txtbuypkgusingpgwayurl", label: "Buy Package using Payment Gateway URL", value: "https://portal.cryptsk.com/buy?mode=pg" },
+    { id: "txtrenewusingpgwayurl", label: "Renew using Payment Gateway URL", value: "https://portal.cryptsk.com/renew?mode=pg" },
+    { id: "txtbuypkgusingsmswayurl", label: "Buy Package using SMS URL", value: "https://portal.cryptsk.com/buy?mode=sms" },
+    { id: "txtrenewpkgusingsmswayurl", label: "Renew Package using SMS URL", value: "https://portal.cryptsk.com/renew?mode=sms" },
     { id: "txtchangebodurl", label: "Change BOD URL", value: "https://portal.cryptsk.com/bod" },
     { id: "txtresetpasswordurl", label: "Reset Password URL", value: "https://portal.cryptsk.com/reset" },
     { id: "txtcoupondetailsurl", label: "Coupon Details URL", value: "https://portal.cryptsk.com/coupon" },
+    { id: "txtregwithoutusingpinurl", label: "Registration without using PIN URL", value: "https://portal.cryptsk.com/register" },
+    { id: "txtpackageplansurl", label: "Package Plans URL", value: "https://portal.cryptsk.com/plans" },
+    { id: "txtrecoverpasswdurl", label: "Recover Password URL", value: "https://portal.cryptsk.com/recover" },
   ]);
+  const [saving, setSaving] = React.useState(false);
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 400));
+    setSaving(false);
+    toast({ title: "Client GUI URLs updated", description: `${urls.length} URLs saved.` });
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Client GUI URLs" description="Configure the URLs used by the client GUI and self-service portal." breadcrumb={breadcrumb} icon={<Settings2 className="h-5 w-5" />} />
-      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "URLs saved", description: `${urls.length} client GUI URLs updated.` }); }}>
-        <SectionCard title="Portal URLs" description="These URLs are used for client login redirects and self-service actions">
+      <PageHeader
+        title="Client GUI URLs"
+        description="Configure the URLs used by the client GUI / self-service portal for registration, renewal, top-up, password recovery, etc."
+        breadcrumb={breadcrumb}
+        icon={<Globe className="h-5 w-5" />}
+      />
+      <form onSubmit={handleUpdate}>
+        <SectionCard title="RADIUS Location" description="Choose where RADIUS authentication is performed (radiuslocation radio)">
+          <div className="flex flex-wrap gap-6">
+            {["Local", "Remote"].map((opt) => (
+              <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="radiuslocation"
+                  value={opt}
+                  checked={radiuslocation === opt}
+                  onChange={() => setRadiuslocation(opt)}
+                  className="h-4 w-4 accent-primary"
+                />
+                {opt}
+              </label>
+            ))}
+          </div>
+        </SectionCard>
+        <SectionCard
+          title="Portal URLs"
+          description="URLs used for client login redirects and self-service actions"
+          actions={
+            <Button type="submit" disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Update
+            </Button>
+          }
+        >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {urls.map((u) => (
               <div key={u.id} className="space-y-2">
                 <Label htmlFor={u.id}>{u.label}</Label>
-                <Input id={u.id} value={u.value} onChange={(e) => setUrls((arr) => arr.map((x) => x.id === u.id ? { ...x, value: e.target.value } : x))} className="font-mono text-xs" />
+                <Input
+                  id={u.id}
+                  name={u.id}
+                  value={u.value}
+                  onChange={(e) => setUrls((arr) => arr.map((x) => x.id === u.id ? { ...x, value: e.target.value } : x))}
+                  className="font-mono text-xs"
+                />
               </div>
             ))}
           </div>
         </SectionCard>
-        <div className="mt-4 flex justify-end">
-          <Button type="submit"><Save className="mr-2 h-4 w-4" /> Save All URLs</Button>
-        </div>
       </form>
     </div>
   );
@@ -5126,45 +6176,147 @@ function ClientGuiUrlsPage({ moduleId, childId, grandchildId }: ViewProps) {
 function WebserviceConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [mq, setMq] = React.useState({ serviceUrl: "https://spearhd.cryptsk.com/ws", userId: "cryptsk_api", password: "••••••••", maxDays: "30", maxDaysLimit: "90", enableAuthUser: true, bindToMac: false, generateInvoice: true, ipAllocation: "0", packageId: "1", poolId: "1", restrictionValue: "0", userStatus: "Y" });
-  const [spearhd, setSpearhd] = React.useState({ serviceUrl: "https://spearhd.cryptsk.com/api", userId: "cryptsk_sph", password: "••••••••" });
+
+  // 24online Webservice Config — fields:
+  // restrictionvalue, packageid (select), ipallocation (radio), poolid (select),
+  // bindtomac (radio), generateinvoice (radio)
+  // Buttons: Update
+  // Sections: "Configure Web Service Parameters", "Default User Creation Template",
+  //   "Service Related Parameters"
+  const [restrictionvalue, setRestrictionvalue] = React.useState("0");
+  const [packageid, setPackageid] = React.useState("1");
+  const [ipallocation, setIpallocation] = React.useState("Dynamic");
+  const [poolid, setPoolid] = React.useState("1");
+  const [bindtomac, setBindtomac] = React.useState("No");
+  const [generateinvoice, setGenerateinvoice] = React.useState("Yes");
+  const [saving, setSaving] = React.useState(false);
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 400));
+    setSaving(false);
+    toast({ title: "Webservice configuration updated", description: "Web service parameters saved successfully." });
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Webservice Configuration" description="Configure integration with external web services (Spearhead, MQ)." breadcrumb={breadcrumb} icon={<Settings2 className="h-5 w-5" />} />
-      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "Webservice config saved", description: "External web service settings updated." }); }}>
-        <div className="space-y-6">
-          <SectionCard title="Spearhead Integration" description="Spearhead web service for user synchronization">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label>Service URL</Label>
-                <Input value={spearhd.serviceUrl} onChange={(e) => setSpearhd((s) => ({ ...s, serviceUrl: e.target.value }))} className="font-mono text-xs" />
-              </div>
-              <div className="space-y-2"><Label>User ID</Label><Input value={spearhd.userId} onChange={(e) => setSpearhd((s) => ({ ...s, userId: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>Password</Label><Input type="password" value={spearhd.password} onChange={(e) => setSpearhd((s) => ({ ...s, password: e.target.value }))} /></div>
+      <PageHeader
+        title="Webservice Configuration"
+        description="Configure web-service parameters, default user creation template, and service-related parameters."
+        breadcrumb={breadcrumb}
+        icon={<SlidersHorizontal className="h-5 w-5" />}
+      />
+      <form onSubmit={handleUpdate} className="space-y-6">
+        <SectionCard
+          title="Configure Web Service Parameters"
+          description="Restriction value applied to web-service-created users"
+          actions={
+            <Button type="submit" disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Update
+            </Button>
+          }
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="restrictionvalue">Restriction Value</Label>
+              <Input
+                id="restrictionvalue"
+                name="restrictionvalue"
+                value={restrictionvalue}
+                onChange={(e) => setRestrictionvalue(e.target.value)}
+              />
             </div>
-          </SectionCard>
-          <SectionCard title="MQ Integration" description="Message Queue web service for external user management">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label>MQ Service URL</Label>
-                <Input value={mq.serviceUrl} onChange={(e) => setMq((s) => ({ ...s, serviceUrl: e.target.value }))} className="font-mono text-xs" />
-              </div>
-              <div className="space-y-2"><Label>MQ User ID</Label><Input value={mq.userId} onChange={(e) => setMq((s) => ({ ...s, userId: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>MQ Password</Label><Input type="password" value={mq.password} onChange={(e) => setMq((s) => ({ ...s, password: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>Max Days</Label><Input type="number" value={mq.maxDays} onChange={(e) => setMq((s) => ({ ...s, maxDays: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>Max Days Limit</Label><Input type="number" value={mq.maxDaysLimit} onChange={(e) => setMq((s) => ({ ...s, maxDaysLimit: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>IP Allocation</Label><Select value={mq.ipAllocation} onValueChange={(v) => setMq((s) => ({ ...s, ipAllocation: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="0">Dynamic</SelectItem><SelectItem value="1">Static</SelectItem><SelectItem value="2">Pool</SelectItem></SelectContent></Select></div>
-              <div className="space-y-2"><Label>User Status</Label><Select value={mq.userStatus} onValueChange={(v) => setMq((s) => ({ ...s, userStatus: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Y">Active</SelectItem><SelectItem value="D">Deactive</SelectItem><SelectItem value="N">Suspended</SelectItem></SelectContent></Select></div>
-              <div className="flex items-center gap-3"><Switch checked={mq.enableAuthUser} onCheckedChange={(v) => setMq((s) => ({ ...s, enableAuthUser: v }))} /><Label>Enable Auth User</Label></div>
-              <div className="flex items-center gap-3"><Switch checked={mq.bindToMac} onCheckedChange={(v) => setMq((s) => ({ ...s, bindToMac: v }))} /><Label>Bind to MAC</Label></div>
-              <div className="flex items-center gap-3"><Switch checked={mq.generateInvoice} onCheckedChange={(v) => setMq((s) => ({ ...s, generateInvoice: v }))} /><Label>Generate Invoice</Label></div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Default User Creation Template" description="Default package, IP allocation, and pool for new users">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="packageid">Package</Label>
+              <Select value={packageid} onValueChange={setPackageid}>
+                <SelectTrigger id="packageid"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Basic 10 Mbps — 30 days</SelectItem>
+                  <SelectItem value="2">Standard 25 Mbps — 30 days</SelectItem>
+                  <SelectItem value="3">Premium 50 Mbps — 30 days</SelectItem>
+                  <SelectItem value="4">Unlimited 100 Mbps — 30 days</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </SectionCard>
-        </div>
-        <div className="mt-4 flex justify-end">
-          <Button type="submit"><Save className="mr-2 h-4 w-4" /> Save Configuration</Button>
-        </div>
+            <div className="space-y-2">
+              <Label>IP Allocation</Label>
+              <div className="flex flex-wrap gap-4">
+                {["Dynamic", "Static", "Pool"].map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="ipallocation"
+                      value={opt}
+                      checked={ipallocation === opt}
+                      onChange={() => setIpallocation(opt)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="poolid">IP Pool</Label>
+              <Select value={poolid} onValueChange={setPoolid}>
+                <SelectTrigger id="poolid"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">LAN-Pool-A (192.168.1.0/24)</SelectItem>
+                  <SelectItem value="2">LAN-Pool-B (192.168.2.0/24)</SelectItem>
+                  <SelectItem value="3">WLAN-Pool (10.10.10.0/24)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Service Related Parameters" description="Bind to MAC and invoice generation toggles">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Bind to MAC</Label>
+              <div className="flex gap-6">
+                {["Yes", "No"].map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="bindtomac"
+                      value={opt}
+                      checked={bindtomac === opt}
+                      onChange={() => setBindtomac(opt)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Generate Invoice</Label>
+              <div className="flex gap-6">
+                {["Yes", "No"].map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="generateinvoice"
+                      value={opt}
+                      checked={generateinvoice === opt}
+                      onChange={() => setGenerateinvoice(opt)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SectionCard>
       </form>
     </div>
   );
@@ -5754,51 +6906,134 @@ function CpRegistrationPolicyPage({ moduleId, childId, grandchildId }: ViewProps
 function RadiusConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [form, setForm] = React.useState({
-    authPort: "1812",
-    acctPort: "1813",
-    coaPort: "3799",
-    timeout: "5",
-    retries: "3",
-    secret: "••••••••••••",
-    deadTime: "10",
-    maxConnections: "16",
-    enableAccounting: true,
-    enableCoA: true,
-    interimUpdate: "300",
-  });
-  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  // 24online Radius Config — table columns:
+  // Realm Name | Remote Server IP | Auth Remote Port | Acct Remote Port | Options | Del
+  // Buttons: Add, Delete
+  // Form action: NASGUIManager
+  const [rows, setRows] = React.useState<any[]>([
+    { id: 1, realm: "cryptsk.local", remoteIp: "203.0.113.5", authPort: "1812", acctPort: "1813", options: "Auth+Acct", selected: false },
+    { id: 2, realm: "rohtak.cryptsk", remoteIp: "103.205.151.10", authPort: "1812", acctPort: "1813", options: "Auth Only", selected: false },
+    { id: 3, realm: "hisar.cryptsk", remoteIp: "103.205.151.20", authPort: "1812", acctPort: "1813", options: "Acct Only", selected: false },
+  ]);
+  const [showForm, setShowForm] = React.useState(false);
+  const [form, setForm] = React.useState({ realm: "", remoteIp: "", authPort: "1812", acctPort: "1813", options: "Auth+Acct" });
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRows([...rows, { id: Date.now(), ...form, selected: false }]);
+    toast({ title: "Realm added", description: `${form.realm} → ${form.remoteIp}` });
+    setForm({ realm: "", remoteIp: "", authPort: "1812", acctPort: "1813", options: "Auth+Acct" });
+    setShowForm(false);
+  };
+
+  const handleDelete = () => {
+    const sel = rows.filter((r) => r.selected);
+    if (sel.length === 0) {
+      toast({ title: "No selection", description: "Select at least one realm to delete." });
+      return;
+    }
+    setRows(rows.filter((r) => !r.selected));
+    toast({ title: "Realms deleted", description: `${sel.length} realm(s) removed.` });
+  };
+
+  const toggleSel = (id: number) => {
+    setRows(rows.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r)));
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="RADIUS Configuration" description="Global RADIUS server settings for authentication and accounting." breadcrumb={breadcrumb} icon={<HardDrive className="h-5 w-5" />} />
-      <form onSubmit={(e) => { e.preventDefault(); toast({ title: "RADIUS config saved", description: "Global RADIUS settings updated." }); }}>
-        <div className="space-y-6">
-          <SectionCard title="Server Ports" description="RADIUS authentication, accounting and CoA ports">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="space-y-2"><Label htmlFor="authPort">Authentication Port</Label><Input id="authPort" type="number" value={form.authPort} onChange={(e) => set("authPort", e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="acctPort">Accounting Port</Label><Input id="acctPort" type="number" value={form.acctPort} onChange={(e) => set("acctPort", e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="coaPort">CoA Port</Label><Input id="coaPort" type="number" value={form.coaPort} onChange={(e) => set("coaPort", e.target.value)} /></div>
-            </div>
+      <PageHeader
+        title="RADIUS Configuration"
+        description="Configure RADIUS realms — remote server IP, auth/acct remote ports, and options."
+        breadcrumb={breadcrumb}
+        icon={<HardDrive className="h-5 w-5" />}
+      />
+      <form action="NASGUIManager">
+        <ActionBar>
+          <Button type="button" size="sm" onClick={() => setShowForm(!showForm)}>
+            <Plus className="mr-2 h-3.5 w-3.5" /> Add
+          </Button>
+          <Button type="button" size="sm" variant="destructive" onClick={handleDelete}>
+            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+          </Button>
+        </ActionBar>
+
+        {showForm && (
+          <SectionCard title="Add Realm" description="Configure a new RADIUS realm">
+            <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 md:grid-cols-5">
+              <div className="space-y-2">
+                <Label htmlFor="realm">Realm Name</Label>
+                <Input id="realm" value={form.realm} onChange={(e) => setForm({ ...form, realm: e.target.value })} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="remoteIp">Remote Server IP</Label>
+                <Input id="remoteIp" value={form.remoteIp} onChange={(e) => setForm({ ...form, remoteIp: e.target.value })} placeholder="203.0.113.5" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="authPort">Auth Remote Port</Label>
+                <Input id="authPort" type="number" value={form.authPort} onChange={(e) => setForm({ ...form, authPort: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="acctPort">Acct Remote Port</Label>
+                <Input id="acctPort" type="number" value={form.acctPort} onChange={(e) => setForm({ ...form, acctPort: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="options">Options</Label>
+                <Select value={form.options} onValueChange={(v) => setForm({ ...form, options: v })}>
+                  <SelectTrigger id="options"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Auth+Acct">Auth + Acct</SelectItem>
+                    <SelectItem value="Auth Only">Auth Only</SelectItem>
+                    <SelectItem value="Acct Only">Acct Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-5 flex justify-end">
+                <Button type="submit" size="sm">
+                  <Plus className="mr-2 h-3.5 w-3.5" /> Add Realm
+                </Button>
+              </div>
+            </form>
           </SectionCard>
-          <SectionCard title="Connection Settings" description="Timeout, retries and connection pool">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2"><Label htmlFor="timeout">Timeout (seconds)</Label><Input id="timeout" type="number" value={form.timeout} onChange={(e) => set("timeout", e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="retries">Retries</Label><Input id="retries" type="number" value={form.retries} onChange={(e) => set("retries", e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="deadTime">Dead Time (minutes)</Label><Input id="deadTime" type="number" value={form.deadTime} onChange={(e) => set("deadTime", e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="maxConnections">Max Connections</Label><Input id="maxConnections" type="number" value={form.maxConnections} onChange={(e) => set("maxConnections", e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="interimUpdate">Interim Update Interval (seconds)</Label><Input id="interimUpdate" type="number" value={form.interimUpdate} onChange={(e) => set("interimUpdate", e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="secret">Shared Secret</Label><Input id="secret" type="password" value={form.secret} onChange={(e) => set("secret", e.target.value)} /></div>
-            </div>
-          </SectionCard>
-          <SectionCard title="Features" description="Enable/disable RADIUS features">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="flex items-center gap-3"><Switch checked={form.enableAccounting} onCheckedChange={(v) => set("enableAccounting", v)} /><Label>Enable Accounting</Label></div>
-              <div className="flex items-center gap-3"><Switch checked={form.enableCoA} onCheckedChange={(v) => set("enableCoA", v)} /><Label>Enable Change of Authorization (CoA)</Label></div>
-            </div>
-          </SectionCard>
-        </div>
-        <div className="mt-4 flex justify-end"><Button type="submit"><Save className="mr-2 h-4 w-4" /> Save RADIUS Configuration</Button></div>
+        )}
+
+        <SectionCard title="RADIUS Realms" description={`${rows.length} realms`}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Realm Name</TableHead>
+                  <TableHead>Remote Server IP</TableHead>
+                  <TableHead>Auth Remote Port</TableHead>
+                  <TableHead>Acct Remote Port</TableHead>
+                  <TableHead>Options</TableHead>
+                  <TableHead className="text-center">Del</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-xs text-muted-foreground py-8">
+                      No realms configured.
+                    </TableCell>
+                  </TableRow>
+                ) : rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-mono text-xs font-semibold">{r.realm}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.remoteIp}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.authPort}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.acctPort}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px]">{r.options}</Badge></TableCell>
+                    <TableCell className="text-center">
+                      <Checkbox checked={r.selected} onCheckedChange={() => toggleSel(r.id)} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </SectionCard>
       </form>
     </div>
   );
@@ -5904,47 +7139,59 @@ function NasPreferencesPage({ moduleId, childId, grandchildId }: ViewProps) {
 /* --- NAS Connectivity --- */
 function NasConnectivityPage({ moduleId, childId, grandchildId }: ViewProps) {
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
-  const { toast } = useToast();
-  const [devices, setDevices] = React.useState([
-    { id: 1, name: "sms-core-01", ip: "172.16.16.16", port: "1812", status: "Online", latency: "2ms", lastConnected: "Just now", sessions: 612 },
-    { id: 2, name: "sms-core-02", ip: "172.16.16.17", port: "1812", status: "Online", latency: "3ms", lastConnected: "Just now", sessions: 187 },
-    { id: 3, name: "br-5000-edge", ip: "103.205.148.26", port: "1812", status: "Online", latency: "5ms", lastConnected: "1 min ago", sessions: 0 },
-    { id: 4, name: "hotspot-gw-01", ip: "10.10.5.1", port: "1812", status: "Offline", latency: "—", lastConnected: "2 hours ago", sessions: 0 },
-  ]);
+
+  // 24online NAS Connectivity — table columns:
+  // NAS IPAddress | NAS ID | Last Interaction Time | 24online Info NAS | No of Live users
+  // Read-only monitoring page
+  const rows = [
+    { id: 1, nasIp: "172.16.16.16", nasId: "sms-core-01", lastInteraction: "2026-01-15 14:32:11", is24onlineInfo: "Yes", liveUsers: 612 },
+    { id: 2, nasIp: "172.16.16.17", nasId: "sms-core-02", lastInteraction: "2026-01-15 14:31:58", is24onlineInfo: "Yes", liveUsers: 187 },
+    { id: 3, nasIp: "103.205.148.26", nasId: "br-5000-edge", lastInteraction: "2026-01-15 14:30:22", is24onlineInfo: "No", liveUsers: 0 },
+    { id: 4, nasIp: "10.10.5.1", nasId: "hotspot-gw-01", lastInteraction: "2026-01-15 12:11:09", is24onlineInfo: "No", liveUsers: 0 },
+  ];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="NAS Connectivity" description="Monitor real-time connectivity status of all NAS devices." breadcrumb={breadcrumb} icon={<HardDrive className="h-5 w-5" />} />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total NAS" value={String(devices.length)} icon={<HardDrive className="h-4 w-4" />} accent />
-        <KpiCard label="Online" value={String(devices.filter((d) => d.status === "Online").length)} icon={<Activity className="h-4 w-4" />} />
-        <KpiCard label="Offline" value={String(devices.filter((d) => d.status === "Offline").length)} icon={<AlertTriangle className="h-4 w-4" />} />
-        <KpiCard label="Total Sessions" value={String(devices.reduce((a, d) => a + d.sessions, 0))} icon={<Wifi className="h-4 w-4" />} />
-      </div>
-      <SectionCard title="NAS Connectivity Status" description="Real-time status of all configured NAS devices">
+      <PageHeader
+        title="NAS Connectivity"
+        description="Real-time monitoring of NAS connectivity, last interaction time, and live user counts. Read-only."
+        breadcrumb={breadcrumb}
+        icon={<Activity className="h-5 w-5" />}
+      />
+      <SectionCard title="NAS Connectivity Status" description={`${rows.length} NAS devices`}>
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader><TableRow>
-              <TableHead>Name</TableHead><TableHead>IP Address</TableHead><TableHead>Port</TableHead><TableHead>Status</TableHead><TableHead>Latency</TableHead><TableHead>Last Connected</TableHead><TableHead>Sessions</TableHead><TableHead className="text-right">Actions</TableHead>
-            </TableRow></TableHeader>
+            <TableHeader>
+              <TableRow>
+                <TableHead>NAS IPAddress</TableHead>
+                <TableHead>NAS ID</TableHead>
+                <TableHead>Last Interaction Time</TableHead>
+                <TableHead>24online Info NAS</TableHead>
+                <TableHead>No of Live users</TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
-              {devices.map((d) => (
-                <TableRow key={d.id}>
-                  <TableCell className="font-medium">{d.name}</TableCell>
-                  <TableCell className="font-mono text-xs">{d.ip}</TableCell>
-                  <TableCell className="font-mono text-xs">{d.port}</TableCell>
-                  <TableCell><StatusBadge status={d.status} /></TableCell>
-                  <TableCell className="font-mono text-xs">{d.latency}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{d.lastConnected}</TableCell>
-                  <TableCell>{d.sessions}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Test connection", description: `Pinging ${d.name} (${d.ip})…` })}><Activity className="h-3.5 w-3.5" /></Button>
+              {rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-mono text-xs">{r.nasIp}</TableCell>
+                  <TableCell className="font-medium">{r.nasId}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{r.lastInteraction}</TableCell>
+                  <TableCell>
+                    {r.is24onlineInfo === "Yes" ? (
+                      <Badge variant="outline" className="border-emerald-500/30 text-emerald-700 dark:text-emerald-400">Yes</Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-amber-500/30 text-amber-700 dark:text-amber-400">No</Badge>
+                    )}
                   </TableCell>
+                  <TableCell className="font-mono text-sm font-semibold">{r.liveUsers}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          This is a read-only monitoring page. To add or remove NAS devices, use the NAS Client Configuration page.
+        </p>
       </SectionCard>
     </div>
   );
@@ -5954,62 +7201,117 @@ function NasConnectivityPage({ moduleId, childId, grandchildId }: ViewProps) {
 function NasClientConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [clients, setClients] = React.useState([
-    { id: 1, name: "sms-core-01", ip: "172.16.16.16", secret: "secret123", nasType: "24online SMS", status: "Active" },
-    { id: 2, name: "sms-core-02", ip: "172.16.16.17", secret: "secret456", nasType: "24online SMS", status: "Active" },
-    { id: 3, name: "br-5000-edge", ip: "103.205.148.26", secret: "bras789", nasType: "BRAS", status: "Active" },
-    { id: 4, name: "hotspot-gw-01", ip: "10.10.5.1", secret: "hotspot000", nasType: "Hotspot", status: "Inactive" },
+
+  // 24online NAS Client Config — table columns:
+  // Client IP Address | NAS Identifier | Secret Key | Del
+  // Buttons: Add, Delete
+  // Form action: NASGUIManager
+  const [rows, setRows] = React.useState<any[]>([
+    { id: 1, clientIp: "172.16.16.16", nasIdentifier: "sms-core-01", secretKey: "secret123", selected: false },
+    { id: 2, clientIp: "172.16.16.17", nasIdentifier: "sms-core-02", secretKey: "secret456", selected: false },
+    { id: 3, clientIp: "103.205.148.26", nasIdentifier: "br-5000-edge", secretKey: "bras789", selected: false },
+    { id: 4, clientIp: "10.10.5.1", nasIdentifier: "hotspot-gw-01", secretKey: "hotspot000", selected: false },
   ]);
   const [showForm, setShowForm] = React.useState(false);
-  const [form, setForm] = React.useState({ name: "", ip: "", secret: "", nasType: "24online SMS" });
+  const [form, setForm] = React.useState({ clientIp: "", nasIdentifier: "", secretKey: "" });
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRows([...rows, { id: Date.now(), ...form, selected: false }]);
+    toast({ title: "Client added", description: `${form.nasIdentifier} (${form.clientIp})` });
+    setForm({ clientIp: "", nasIdentifier: "", secretKey: "" });
+    setShowForm(false);
+  };
+
+  const handleDelete = () => {
+    const sel = rows.filter((r) => r.selected);
+    if (sel.length === 0) {
+      toast({ title: "No selection", description: "Select at least one client to delete." });
+      return;
+    }
+    setRows(rows.filter((r) => !r.selected));
+    toast({ title: "Clients deleted", description: `${sel.length} client(s) removed.` });
+  };
+
+  const toggleSel = (id: number) => {
+    setRows(rows.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r)));
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="NAS Client Configuration" description="Configure RADIUS clients (NAS devices that send auth requests)." breadcrumb={breadcrumb} icon={<HardDrive className="h-5 w-5" />} />
-      <ActionBar>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Add Client"}</Button>
-      </ActionBar>
-      {showForm && (
-        <SectionCard title="Add RADIUS Client" description="Register a new NAS device as a RADIUS client">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2"><Label>Client Name</Label><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. mikrotik-01" /></div>
-            <div className="space-y-2"><Label>IP Address</Label><Input value={form.ip} onChange={(e) => setForm((f) => ({ ...f, ip: e.target.value }))} placeholder="e.g. 10.10.5.2" /></div>
-            <div className="space-y-2"><Label>Shared Secret</Label><Input type="password" value={form.secret} onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value }))} /></div>
-            <div className="space-y-2"><Label>NAS Type</Label><Select value={form.nasType} onValueChange={(v) => setForm((f) => ({ ...f, nasType: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="24online SMS">24online SMS</SelectItem><SelectItem value="BRAS">BRAS</SelectItem><SelectItem value="Hotspot">Hotspot</SelectItem><SelectItem value="Mikrotik">Mikrotik</SelectItem></SelectContent></Select></div>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <Button onClick={() => {
-              setClients((arr) => [...arr, { id: Math.max(...arr.map((x) => x.id)) + 1, name: form.name, ip: form.ip, secret: form.secret, nasType: form.nasType, status: "Active" }]);
-              setShowForm(false); setForm({ name: "", ip: "", secret: "", nasType: "24online SMS" });
-              toast({ title: "Client added", description: `${form.name} (${form.ip})` });
-            }}><Save className="mr-2 h-4 w-4" /> Add Client</Button>
+      <PageHeader
+        title="NAS Client Configuration"
+        description="Configure RADIUS clients — Client IP, NAS Identifier, and Secret Key."
+        breadcrumb={breadcrumb}
+        icon={<HardDrive className="h-5 w-5" />}
+      />
+      <form action="NASGUIManager">
+        <ActionBar>
+          <Button type="button" size="sm" onClick={() => setShowForm(!showForm)}>
+            <Plus className="mr-2 h-3.5 w-3.5" /> Add
+          </Button>
+          <Button type="button" size="sm" variant="destructive" onClick={handleDelete}>
+            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+          </Button>
+        </ActionBar>
+
+        {showForm && (
+          <SectionCard title="Add RADIUS Client" description="Register a new NAS device as a RADIUS client">
+            <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="space-y-2">
+                <Label htmlFor="clientIp">Client IP Address</Label>
+                <Input id="clientIp" value={form.clientIp} onChange={(e) => setForm({ ...form, clientIp: e.target.value })} placeholder="10.10.5.2" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nasIdentifier">NAS Identifier</Label>
+                <Input id="nasIdentifier" value={form.nasIdentifier} onChange={(e) => setForm({ ...form, nasIdentifier: e.target.value })} placeholder="mikrotik-01" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="secretKey">Secret Key</Label>
+                <Input id="secretKey" type="password" value={form.secretKey} onChange={(e) => setForm({ ...form, secretKey: e.target.value })} required />
+              </div>
+              <div className="flex items-end">
+                <Button type="submit" size="sm" className="w-full">
+                  <Plus className="mr-2 h-3.5 w-3.5" /> Add Client
+                </Button>
+              </div>
+            </form>
+          </SectionCard>
+        )}
+
+        <SectionCard title="RADIUS Clients" description={`${rows.length} clients`}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client IP Address</TableHead>
+                  <TableHead>NAS Identifier</TableHead>
+                  <TableHead>Secret Key</TableHead>
+                  <TableHead className="text-center">Del</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-xs text-muted-foreground py-8">
+                      No RADIUS clients configured.
+                    </TableCell>
+                  </TableRow>
+                ) : rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-mono text-xs">{r.clientIp}</TableCell>
+                    <TableCell className="font-medium">{r.nasIdentifier}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">••••••••</TableCell>
+                    <TableCell className="text-center">
+                      <Checkbox checked={r.selected} onCheckedChange={() => toggleSel(r.id)} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </SectionCard>
-      )}
-      <SectionCard title="RADIUS Clients" description={`${clients.length} clients`}>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Name</TableHead><TableHead>IP Address</TableHead><TableHead>Secret</TableHead><TableHead>NAS Type</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {clients.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
-                  <TableCell className="font-mono text-xs">{c.ip}</TableCell>
-                  <TableCell className="font-mono text-xs">••••••••</TableCell>
-                  <TableCell><Badge variant="outline" className="text-[10px]">{c.nasType}</Badge></TableCell>
-                  <TableCell><StatusBadge status={c.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit client", description: c.name })}><Pencil className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setClients(clients.filter((x) => x.id !== c.id)); toast({ title: "Client deleted", description: c.name }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
+      </form>
     </div>
   );
 }
@@ -6018,63 +7320,81 @@ function NasClientConfigPage({ moduleId, childId, grandchildId }: ViewProps) {
 function AttributeMappingPage({ moduleId, childId, grandchildId }: ViewProps) {
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [mappings, setMappings] = React.useState([
-    { id: 1, radiusAttr: "User-Name", vendorAttr: "Cryptsk-Username", vendor: "Cryptsk", op: ":=", status: "Active" },
-    { id: 2, radiusAttr: "Framed-IP-Address", vendorAttr: "Cryptsk-IP", vendor: "Cryptsk", op: ":=", status: "Active" },
-    { id: 3, radiusAttr: "Session-Timeout", vendorAttr: "Cryptsk-Session-Timeout", vendor: "Cryptsk", op: ":=", status: "Active" },
-    { id: 4, radiusAttr: "Acct-Interim-Interval", vendorAttr: "Cryptsk-Interim", vendor: "Cryptsk", op: ":=", status: "Active" },
-    { id: 5, radiusAttr: "Mikrotik-Rate-Limit", vendorAttr: "Cryptsk-Bandwidth", vendor: "Mikrotik", op: ":=", status: "Active" },
-  ]);
-  const [showForm, setShowForm] = React.useState(false);
-  const [form, setForm] = React.useState({ radiusAttr: "", vendorAttr: "", vendor: "Cryptsk", op: ":=" });
+
+  // 24online Attribute Mapping — multiple "Packet Mapping List" sections,
+  // each with Name, Description columns. Buttons: Create, Delete per section.
+  // Form action: PacketMappingConfigManager
+  const sections = [
+    { id: "access", title: "Access-Request Packet Mapping List", rows: [
+      { id: 1, name: "User-Name", desc: "Mapped from HTTP-Username header" },
+      { id: 2, name: "User-Password", desc: "PAP password from form field" },
+      { id: 3, name: "NAS-IP-Address", desc: "Source IP of RADIUS client" },
+    ]},
+    { id: "accounting", title: "Accounting-Request Packet Mapping List", rows: [
+      { id: 4, name: "Acct-Status-Type", desc: "Start / Stop / Interim" },
+      { id: 5, name: "Acct-Session-Id", desc: "Unique session identifier" },
+    ]},
+    { id: "coa", title: "CoA-Request Packet Mapping List", rows: [
+      { id: 6, name: "Acct-Session-Id", desc: "Identifies the session to disconnect" },
+    ]},
+  ];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Attribute Mapping" description="Map standard RADIUS attributes to vendor-specific attributes." breadcrumb={breadcrumb} icon={<HardDrive className="h-5 w-5" />} />
-      <ActionBar>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Add Mapping"}</Button>
-      </ActionBar>
-      {showForm && (
-        <SectionCard title="Add Attribute Mapping" description="Create a new RADIUS-to-vendor attribute mapping">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2"><Label>RADIUS Attribute</Label><Input value={form.radiusAttr} onChange={(e) => setForm((f) => ({ ...f, radiusAttr: e.target.value }))} placeholder="e.g. User-Name" /></div>
-            <div className="space-y-2"><Label>Vendor Attribute</Label><Input value={form.vendorAttr} onChange={(e) => setForm((f) => ({ ...f, vendorAttr: e.target.value }))} placeholder="e.g. Cryptsk-Username" /></div>
-            <div className="space-y-2"><Label>Vendor</Label><Select value={form.vendor} onValueChange={(v) => setForm((f) => ({ ...f, vendor: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Cryptsk">Cryptsk</SelectItem><SelectItem value="Mikrotik">Mikrotik</SelectItem><SelectItem value="Cisco">Cisco</SelectItem><SelectItem value="Juniper">Juniper</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Operator</Label><Select value={form.op} onValueChange={(v) => setForm((f) => ({ ...f, op: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value=":=">:= (Assign)</SelectItem><SelectItem value="==">== (Equal)</SelectItem><SelectItem value="+=">+= (Append)</SelectItem></SelectContent></Select></div>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <Button onClick={() => {
-              setMappings((arr) => [...arr, { id: Math.max(...arr.map((x) => x.id)) + 1, ...form, status: "Active" }]);
-              setShowForm(false); setForm({ radiusAttr: "", vendorAttr: "", vendor: "Cryptsk", op: ":=" });
-              toast({ title: "Mapping added", description: `${form.radiusAttr} → ${form.vendorAttr}` });
-            }}><Save className="mr-2 h-4 w-4" /> Add Mapping</Button>
-          </div>
-        </SectionCard>
-      )}
-      <SectionCard title="Attribute Mappings" description={`${mappings.length} mappings`}>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>RADIUS Attribute</TableHead><TableHead>Vendor Attribute</TableHead><TableHead>Vendor</TableHead><TableHead>Operator</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {mappings.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="font-mono text-xs font-medium">{m.radiusAttr}</TableCell>
-                  <TableCell className="font-mono text-xs">{m.vendorAttr}</TableCell>
-                  <TableCell><Badge variant="outline" className="text-[10px]">{m.vendor}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs">{m.op}</TableCell>
-                  <TableCell><StatusBadge status={m.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit mapping", description: m.radiusAttr })}><Pencil className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setMappings(mappings.filter((x) => x.id !== m.id)); toast({ title: "Mapping deleted", description: m.radiusAttr }); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
+      <PageHeader
+        title="Attribute Mapping"
+        description="Configure packet-mapping lists for Access-Request, Accounting-Request, and CoA-Request RADIUS packets."
+        breadcrumb={breadcrumb}
+        icon={<HardDrive className="h-5 w-5" />}
+      />
+      <form action="PacketMappingConfigManager" className="space-y-6">
+        {sections.map((sec) => (
+          <SectionCard
+            key={sec.id}
+            title={sec.title}
+            description={`${sec.rows.length} attribute mappings`}
+            actions={
+              <>
+                <Button type="button" size="sm" onClick={() => toast({ title: "Create mapping", description: `New mapping in ${sec.title}` })}>
+                  <Plus className="mr-2 h-3.5 w-3.5" /> Create
+                </Button>
+                <Button type="button" size="sm" variant="destructive" onClick={() => toast({ title: "Delete mapping", description: `Selected mappings in ${sec.title} removed.` })}>
+                  <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                </Button>
+              </>
+            }
+          >
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-center">Select</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sec.rows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-xs text-muted-foreground py-6">
+                        No mappings in this list.
+                      </TableCell>
+                    </TableRow>
+                  ) : sec.rows.map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-mono text-xs font-medium">{m.name}</TableCell>
+                      <TableCell className="text-xs">{m.desc}</TableCell>
+                      <TableCell className="text-center">
+                        <Checkbox name={`select_${sec.id}_${m.id}`} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </SectionCard>
+        ))}
+      </form>
     </div>
   );
 }

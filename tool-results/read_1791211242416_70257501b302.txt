@@ -1,0 +1,2002 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import {
+     5→  ViewProps,
+     6→  useModuleHeader,
+     7→  useViewRouter,
+     8→  ChildOverview,
+     9→  LeafPlaceholder,
+    10→} from "./_shared";
+    11→import {
+    12→  PageHeader,
+    13→  KpiCard,
+    14→  SectionCard,
+    15→  EmptyState,
+    16→  ActionBar,
+    17→} from "@/components/app/shared";
+    18→import { useAppStore } from "@/lib/store";
+    19→import { useToast } from "@/hooks/use-toast";
+    20→import {
+    21→  Table,
+    22→  TableBody,
+    23→  TableCell,
+    24→  TableHead,
+    25→  TableHeader,
+    26→  TableRow,
+    27→} from "@/components/ui/table";
+    28→import {
+    29→  Select,
+    30→  SelectContent,
+    31→  SelectItem,
+    32→  SelectTrigger,
+    33→  SelectValue,
+    34→} from "@/components/ui/select";
+    35→import { Input } from "@/components/ui/input";
+    36→import { Label } from "@/components/ui/label";
+    37→import { Textarea } from "@/components/ui/textarea";
+    38→import { Button } from "@/components/ui/button";
+    39→import { Badge } from "@/components/ui/badge";
+    40→import { Checkbox } from "@/components/ui/checkbox";
+    41→import { Switch } from "@/components/ui/switch";
+    42→import {
+    43→  Dialog,
+    44→  DialogContent,
+    45→  DialogHeader,
+    46→  DialogTitle,
+    47→  DialogFooter,
+    48→  DialogDescription,
+    49→} from "@/components/ui/dialog";
+    50→import {
+    51→  Settings2,
+    52→  Network as NetworkIcon,
+    53→  ShieldAlert,
+    54→  Server,
+    55→  Database,
+    56→  Power,
+    57→  RefreshCw,
+    58→  Plus,
+    59→  Pencil,
+    60→  Trash2,
+    61→  Download,
+    62→  Upload,
+    63→  Play,
+    64→  Square,
+    65→  Save,
+    66→  Terminal,
+    67→  Globe,
+    68→  Wifi,
+    69→  Activity,
+    70→  SlidersHorizontal,
+    71→  LayoutGrid,
+    72→  Wrench,
+    73→  AlertTriangle,
+    74→  Info,
+    75→  Clock,
+    76→  KeyRound,
+    77→  HardDrive,
+    78→  Layers,
+    79→  Route as RouteIcon,
+    80→  Lock,
+    81→  UserCog,
+    82→  ArrowRight,
+    83→  ArrowUp,
+    84→  ArrowDown,
+    85→  Search,
+    86→  Filter,
+    87→  Loader2,
+    88→  X,
+    89→  AlertCircle,
+    90→  FileText,
+    91→  CalendarClock,
+    92→  Cpu,
+    93→  ShieldCheck,
+    94→  Plug,
+    95→  ListChecks,
+    96→} from "lucide-react";
+    97→import { systemApi } from "@/lib/api";
+    98→import { CkEditorField } from "@/components/app/CkEditorField";
+    99→
+   100→/* ===================================================================== *
+   101→ *  SystemView — top-level router for the System module
+   102→ * ===================================================================== */
+   103→
+   104→export function SystemView({ moduleId, childId, grandchildId }: ViewProps) {
+   105→  const router = useViewRouter(moduleId, childId, grandchildId);
+   106→
+   107→  if (router.state === "loading") return null;
+   108→  if (router.state === "module-overview")
+   109→    return <SystemOverview moduleId={moduleId} />;
+   110→  if (router.state === "child-overview")
+   111→    return <ChildOverview moduleId={moduleId} childId={router.childId} />;
+   112→
+   113→  if (router.state === "grandchild") {
+   114→    /* ---------------- Network ---------------- */
+   115→    if (childId === "network" && grandchildId === "interface")
+   116→      return <InterfacePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   117→    if (childId === "network" && grandchildId === "gateway")
+   118→      return <GatewayPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   119→    if (childId === "network" && grandchildId === "priorities")
+   120→      return <PrioritiesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   121→    if (childId === "network" && grandchildId === "dns")
+   122→      return <DnsPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   123→    if (childId === "network" && grandchildId === "static-route")
+   124→      return <StaticRoutePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   125→
+   126→    /* ---------------- Firewall ---------------- */
+   127→    if (childId === "firewall" && grandchildId === "create")
+   128→      return <FirewallCreatePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   129→    if (childId === "firewall" && grandchildId === "manage")
+   130→      return <FirewallManagePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   131→    if (childId === "firewall" && grandchildId === "dos-settings")
+   132→      return <DosSettingsPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   133→    if (childId === "firewall" && grandchildId === "dos-bypass")
+   134→      return <DosBypassPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   135→    if (childId === "firewall" && grandchildId === "free-sites")
+   136→      return <FreeSitesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   137→
+   138→    /* ---------------- DHCP ---------------- */
+   139→    if (childId === "dhcp" && grandchildId === "manage-dhcp")
+   140→      return <ManageDhcpPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   141→    if (childId === "dhcp" && grandchildId === "ip-leasing")
+   142→      return <IpLeasingPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   143→
+   144→    /* ---------------- PPPoE ---------------- */
+   145→    if (childId === "pppoe" && grandchildId === "manage-pppoe")
+   146→      return <ManagePppoePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   147→
+   148→    /* ---------------- Manage Data ---------------- */
+   149→    if (childId === "manage-data" && grandchildId === "backup")
+   150→      return <BackupPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   151→    if (childId === "manage-data" && grandchildId === "backup-schedule")
+   152→      return <BackupSchedulePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   153→    if (childId === "manage-data" && grandchildId === "restore")
+   154→      return <RestorePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   155→    if (childId === "manage-data" && grandchildId === "auto-purge")
+   156→      return <AutoPurgePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   157→    if (childId === "manage-data" && grandchildId === "manual-purge")
+   158→      return <ManualPurgePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   159→    if (childId === "manage-data" && grandchildId === "migrate-user")
+   160→      return <MigrateUserPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   161→    if (childId === "manage-data" && grandchildId === "auth-logs")
+   162→      return <AuthLogsPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   163→
+   164→    /* ---------------- Client Services ---------------- */
+   165→    if (childId === "client-services" && grandchildId === "parameters")
+   166→      return <ClientServicesParametersPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   167→    if (childId === "client-services" && grandchildId === "customized-images")
+   168→      return <CustomizedImagesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   169→    if (childId === "client-services" && grandchildId === "forgot-password")
+   170→      return <ForgotPasswordConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   171→    if (childId === "client-services" && grandchildId === "clientgui-urls")
+   172→      return <ClientGuiUrlsPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   173→    if (childId === "client-services" && grandchildId === "webservice-config")
+   174→      return <WebserviceConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   175→    if (childId === "client-services" && grandchildId === "password-config")
+   176→      return <PasswordConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   177→    if (childId === "client-services" && grandchildId === "configuration")
+   178→      return <ClientConfigurationPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   179→
+   180→    /* ---------------- ACL ---------------- */
+   181→    if (childId === "acl" && grandchildId === "access-control")
+   182→      return <AccessControlPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   183→    if (childId === "acl" && grandchildId === "user-type")
+   184→      return <UserTypePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   185→    if (childId === "acl" && grandchildId === "user-access")
+   186→      return <UserAccessPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   187→    if (childId === "acl" && grandchildId === "console-acl")
+   188→      return <ConsoleAclPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   189→
+   190→    /* ---------------- Dynamic DNS ---------------- */
+   191→    if (childId === "dynamic-dns" && grandchildId === "register-host")
+   192→      return <DdnsRegisterPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   193→    if (childId === "dynamic-dns" && grandchildId === "manage-hosts")
+   194→      return <DdnsManagePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   195→
+   196→    /* ---------------- Captive Portal ---------------- */
+   197→    if (childId === "captive-portal" && grandchildId === "create")
+   198→      return <CaptiveCreatePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   199→    if (childId === "captive-portal" && grandchildId === "manage")
+   200→      return <CaptiveManagePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   201→    if (childId === "captive-portal" && grandchildId === "client-page")
+   202→      return <CpClientPagePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   203→    if (childId === "captive-portal" && grandchildId === "portal-networks")
+   204→      return <PortalNetworksPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   205→    if (childId === "captive-portal" && grandchildId === "leased-line-page")
+   206→      return <LeasedLinePageConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   207→    if (childId === "captive-portal" && grandchildId === "messages")
+   208→      return <PortalMessagesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   209→    if (childId === "captive-portal" && grandchildId === "portal-config")
+   210→      return <PortalConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   211→    if (childId === "captive-portal" && grandchildId === "configure-profile")
+   212→      return <ConfigureProfilePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   213→    if (childId === "captive-portal" && grandchildId === "security-config")
+   214→      return <CpSecurityConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   215→    if (childId === "captive-portal" && grandchildId === "social-media")
+   216→      return <SocialMediaConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   217→    if (childId === "captive-portal" && grandchildId === "cp-registration")
+   218→      return <CpRegistrationPolicyPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   219→
+   220→    /* ---------------- NAS Management ---------------- */
+   221→    if (childId === "nas" && grandchildId === "nas-ip-config")
+   222→      return <NasIpConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   223→    if (childId === "nas" && grandchildId === "radius-config")
+   224→      return <RadiusConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   225→    if (childId === "nas" && grandchildId === "nas-configuration")
+   226→      return <NasConfigurationPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   227→    if (childId === "nas" && grandchildId === "preferences")
+   228→      return <NasPreferencesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   229→    if (childId === "nas" && grandchildId === "connectivity")
+   230→      return <NasConnectivityPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   231→    if (childId === "nas" && grandchildId === "nas-client-config")
+   232→      return <NasClientConfigPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   233→    if (childId === "nas" && grandchildId === "attribute-mapping")
+   234→      return <AttributeMappingPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   235→
+   236→    /* ---------------- Status Tracker ---------------- */
+   237→    if (childId === "status-tracker" && grandchildId === "add-device")
+   238→      return <AddDevicePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   239→    if (childId === "status-tracker" && grandchildId === "manage-devices")
+   240→      return <ManageDevicesPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   241→    if (childId === "status-tracker" && grandchildId === "device-logs")
+   242→      return <DeviceLogsPage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   243→
+   244→    /* ---------------- System Tools ---------------- */
+   245→    if (childId === "system-tools" && grandchildId === "packet-capture")
+   246→      return <PacketCapturePage moduleId={moduleId} childId={childId} grandchildId={grandchildId} />;
+   247→
+   248→    /* Default fallback to placeholder */
+   249→    return (
+   250→      <LeafPlaceholder
+   251→        moduleId={moduleId}
+   252→        childId={router.childId}
+   253→        grandchildId={router.grandchildId}
+   254→      />
+   255→    );
+   256→  }
+   257→
+   258→  // state === "child" — children without grandchildren
+   259→  switch (childId) {
+   260→    case "services":
+   261→      return <ServicesPage moduleId={moduleId} childId={childId} />;
+   262→    case "console":
+   263→      return <ConsolePage moduleId={moduleId} childId={childId} />;
+   264→    case "system-settings":
+   265→      return <SystemSettingsPage moduleId={moduleId} childId={childId} />;
+   266→    case "dashboard-conf":
+   267→      return <DashboardConfPage moduleId={moduleId} childId={childId} />;
+   268→    default:
+   269→      return <SystemOverview moduleId={moduleId} />;
+   270→  }
+   271→}
+   272→
+   273→/* ===================================================================== *
+   274→ *  Small shared helpers
+   275→ * ===================================================================== */
+   276→
+   277→function StatusBadge({
+   278→  status,
+   279→  type = "default",
+   280→}: {
+   281→  status: string;
+   282→  type?: "default" | "running" | "active" | "online" | "completed";
+   283→}) {
+   284→  const map: Record<string, string> = {
+   285→    Up: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400",
+   286→    Active: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400",
+   287→    Online: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400",
+   288→    Running: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400",
+   289→    Completed: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400",
+   290→    Enabled: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400",
+   291→    Accept: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400",
+   292→    Down: "bg-primary/10 text-primary hover:bg-primary/10",
+   293→    Inactive: "bg-slate-500/10 text-slate-700 hover:bg-slate-500/10 dark:text-slate-300",
+   294→    Offline: "bg-primary/10 text-primary hover:bg-primary/10",
+   295→    Stopped: "bg-primary/10 text-primary hover:bg-primary/10",
+   296→    Disabled: "bg-slate-500/10 text-slate-700 hover:bg-slate-500/10 dark:text-slate-300",
+   297→    Failed: "bg-primary/10 text-primary hover:bg-primary/10",
+   298→    Expired: "bg-primary/10 text-primary hover:bg-primary/10",
+   299→    Reject: "bg-primary/10 text-primary hover:bg-primary/10",
+   300→    Warning: "bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400",
+   301→    "In Progress": "bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400",
+   302→  };
+   303→  const cls = map[status] ?? "bg-slate-500/10 text-slate-700 hover:bg-slate-500/10 dark:text-slate-300";
+   304→  return (
+   305→    <Badge variant="secondary" className={cls} data-type={type}>
+   306→      {status}
+   307→    </Badge>
+   308→  );
+   309→}
+   310→
+   311→function LevelBadge({ level }: { level: string }) {
+   312→  if (level === "ERROR")
+   313→    return <Badge className="bg-primary/10 text-primary hover:bg-primary/10">ERROR</Badge>;
+   314→  if (level === "WARN")
+   315→    return <Badge className="bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400">WARN</Badge>;
+   316→  return <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">INFO</Badge>;
+   317→}
+   318→
+   319→function PageLoader() {
+   320→  return (
+   321→    <div className="flex items-center justify-center py-12">
+   322→      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+   323→    </div>
+   324→  );
+   325→}
+   326→
+   327→/** Standard 3-level breadcrumb builder for grandchild pages */
+   328→function useBreadcrumb(moduleId: string, childId: string, grandchildId?: string) {
+   329→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   330→  const setActive = useAppStore((s) => s.setActive);
+   331→  return [
+   332→    { label: "Cryptsk" },
+   333→    { label: mod?.label ?? "System", onClick: () => setActive(moduleId, "", "") },
+   334→    { label: child?.label ?? childId, onClick: () => setActive(moduleId, childId, "") },
+   335→    ...(grandchild ? [{ label: grandchild.label }] : []),
+   336→  ];
+   337→}
+   338→
+   339→/** Delete confirmation dialog */
+   340→function DeleteDialog({
+   341→  open,
+   342→  onOpenChange,
+   343→  onConfirm,
+   344→  title,
+   345→  description,
+   346→  busy,
+   347→}: {
+   348→  open: boolean;
+   349→  onOpenChange: (open: boolean) => void;
+   350→  onConfirm: () => void;
+   351→  title: string;
+   352→  description: React.ReactNode;
+   353→  busy: boolean;
+   354→}) {
+   355→  return (
+   356→    <Dialog open={open} onOpenChange={onOpenChange}>
+   357→      <DialogContent>
+   358→        <DialogHeader>
+   359→          <DialogTitle>{title}</DialogTitle>
+   360→          <DialogDescription>{description}</DialogDescription>
+   361→        </DialogHeader>
+   362→        <DialogFooter>
+   363→          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+   364→            Cancel
+   365→          </Button>
+   366→          <Button variant="destructive" onClick={onConfirm} disabled={busy}>
+   367→            {busy ? (
+   368→              <>
+   369→                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…
+   370→              </>
+   371→            ) : (
+   372→              <>
+   373→                <Trash2 className="mr-2 h-4 w-4" /> Delete
+   374→              </>
+   375→            )}
+   376→          </Button>
+   377→        </DialogFooter>
+   378→      </DialogContent>
+   379→    </Dialog>
+   380→  );
+   381→}
+   382→
+   383→/* ===================================================================== *
+   384→ *  SystemOverview — module landing page
+   385→ * ===================================================================== */
+   386→
+   387→function SystemOverview({ moduleId }: { moduleId: string }) {
+   388→  const { mod } = useModuleHeader(moduleId);
+   389→  const setActive = useAppStore((s) => s.setActive);
+   390→
+   391→  const cards = [
+   392→    { label: "Network", desc: "Interfaces, gateways, DNS, routes", icon: NetworkIcon, child: "network" },
+   393→    { label: "Firewall", desc: "Rules, DoS, free sites", icon: ShieldAlert, child: "firewall" },
+   394→    { label: "DHCP", desc: "Scopes & IP leasing", icon: Wifi, child: "dhcp" },
+   395→    { label: "Services", desc: "Start, stop, restart services", icon: Server, child: "services" },
+   396→    { label: "Console", desc: "Reset console password", icon: Terminal, child: "console" },
+   397→    { label: "Manage Data", desc: "Backup, restore, purge, logs", icon: Database, child: "manage-data" },
+   398→    { label: "Client Services", desc: "Client GUI, web service, passwords", icon: SlidersHorizontal, child: "client-services" },
+   399→    { label: "ACL", desc: "Access control, user types", icon: Lock, child: "acl" },
+   400→    { label: "Dynamic DNS", desc: "Register & manage DDNS", icon: Globe, child: "dynamic-dns" },
+   401→    { label: "Captive Portal", desc: "Login pages & portal config", icon: Plug, child: "captive-portal" },
+   402→    { label: "NAS Management", desc: "RADIUS clients, attributes", icon: HardDrive, child: "nas" },
+   403→    { label: "Status Tracker", desc: "Devices & device logs", icon: Activity, child: "status-tracker" },
+   404→    { label: "System Settings", desc: "Proactive reports, GUI prefs", icon: Settings2, child: "system-settings" },
+   405→    { label: "Dashboard Conf", desc: "Dashboard layouts", icon: LayoutGrid, child: "dashboard-conf" },
+   406→    { label: "System Tools", desc: "Diagnostics & utilities", icon: Wrench, child: "system-tools" },
+   407→  ];
+   408→
+   409→  if (!mod) return null;
+   410→
+   411→  return (
+   412→    <div className="space-y-6">
+   413→      <PageHeader title={mod.label} description={mod.desc} icon={<mod.icon className="h-5 w-5" />} />
+   414→      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+   415→        {cards.map((c) => (
+   416→          <button
+   417→            key={c.child}
+   418→            onClick={() => setActive(moduleId, c.child, "")}
+   419→            className="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+   420→          >
+   421→            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+   422→              <c.icon className="h-5 w-5" />
+   423→            </div>
+   424→            <div className="min-w-0 flex-1">
+   425→              <div className="flex items-center justify-between gap-2">
+   426→                <p className="font-medium text-foreground">{c.label}</p>
+   427→                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+   428→              </div>
+   429→              <p className="mt-0.5 text-xs text-muted-foreground">{c.desc}</p>
+   430→            </div>
+   431→          </button>
+   432→        ))}
+   433→      </div>
+   434→    </div>
+   435→  );
+   436→}
+   437→
+   438→/* ===================================================================== *
+   439→ *  NETWORK
+   440→ * ===================================================================== */
+   441→
+   442→/* ---------- Interface ---------- */
+   443→
+   444→function InterfacePage({ moduleId, childId, grandchildId }: ViewProps) {
+   445→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   446→  const setActive = useAppStore((s) => s.setActive);
+   447→  const { toast } = useToast();
+   448→  const [rows, setRows] = React.useState<any[]>([]);
+   449→  const [loading, setLoading] = React.useState(true);
+   450→  const [dialogOpen, setDialogOpen] = React.useState(false);
+   451→  const [editing, setEditing] = React.useState<any | null>(null);
+   452→  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
+   453→  const [busy, setBusy] = React.useState(false);
+   454→
+   455→  const load = React.useCallback(() => {
+   456→    setLoading(true);
+   457→    systemApi.list("interfaces").then((res) => {
+   458→      setRows(res.data ?? []);
+   459→      setLoading(false);
+   460→    });
+   461→  }, []);
+   462→
+   463→  React.useEffect(() => {
+   464→    load();
+   465→  }, [load]);
+   466→
+   467→  const handleToggle = async (r: any) => {
+   468→    await systemApi.toggle("interfaces", r.id, "status");
+   469→    toast({
+   470→      title: "Status toggled",
+   471→      description: `${r.deviceName} is now ${r.status === "Up" ? "Down" : "Up"}.`,
+   472→    });
+   473→    load();
+   474→  };
+   475→
+   476→  const handleDelete = async () => {
+   477→    if (!deleteTarget) return;
+   478→    setBusy(true);
+   479→    await systemApi.delete("interfaces", deleteTarget.id);
+   480→    setBusy(false);
+   481→    toast({ title: "Interface deleted", description: deleteTarget.deviceName });
+   482→    setDeleteTarget(null);
+   483→    load();
+   484→  };
+   485→
+   486→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   487→
+   488→  return (
+   489→    <div className="space-y-6">
+   490→      <PageHeader
+   491→        title={grandchild?.label ?? "Interface"}
+   492→        description={grandchild?.desc ?? "View & configure network interfaces"}
+   493→        icon={<Settings2 className="h-5 w-5" />}
+   494→        breadcrumb={breadcrumb}
+   495→        actions={
+   496→          <Button
+   497→            onClick={() => {
+   498→              setEditing(null);
+   499→              setDialogOpen(true);
+   500→            }}
+   501→          >
+   502→            <Plus className="mr-2 h-4 w-4" /> Add Interface
+   503→          </Button>
+   504→        }
+   505→      />
+   506→
+   507→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+   508→        <KpiCard label="Total" value={String(rows.length)} icon={<NetworkIcon className="h-4 w-4" />} accent />
+   509→        <KpiCard label="Up" value={String(rows.filter((r) => r.status === "Up").length)} icon={<Activity className="h-4 w-4" />} />
+   510→        <KpiCard label="External" value={String(rows.filter((r) => r.interfaceType === "External").length)} icon={<Globe className="h-4 w-4" />} />
+   511→        <KpiCard label="Internal" value={String(rows.filter((r) => r.interfaceType === "Internal").length)} icon={<Wifi className="h-4 w-4" />} />
+   512→      </div>
+   513→
+   514→      <SectionCard title="Network Interfaces" description={`${rows.length} interfaces`}>
+   515→        {loading ? (
+   516→          <PageLoader />
+   517→        ) : rows.length === 0 ? (
+   518→          <EmptyState
+   519→            icon={<NetworkIcon className="h-5 w-5" />}
+   520→            title="No interfaces"
+   521→            description="Add your first network interface."
+   522→          />
+   523→        ) : (
+   524→          <div className="overflow-x-auto">
+   525→            <Table>
+   526→              <TableHeader>
+   527→                <TableRow>
+   528→                  <TableHead>Port</TableHead>
+   529→                  <TableHead>Device</TableHead>
+   530→                  <TableHead>IP Address</TableHead>
+   531→                  <TableHead>Netmask</TableHead>
+   532→                  <TableHead>Type</TableHead>
+   533→                  <TableHead>Description</TableHead>
+   534→                  <TableHead>Status</TableHead>
+   535→                  <TableHead className="text-right">Actions</TableHead>
+   536→                </TableRow>
+   537→              </TableHeader>
+   538→              <TableBody>
+   539→                {rows.map((r) => (
+   540→                  <TableRow key={r.id}>
+   541→                    <TableCell className="font-mono font-semibold">{r.port}</TableCell>
+   542→                    <TableCell className="font-mono text-xs">{r.deviceName}</TableCell>
+   543→                    <TableCell className="font-mono text-xs">{r.ipAddress}</TableCell>
+   544→                    <TableCell className="font-mono text-xs text-muted-foreground">{r.netmask}</TableCell>
+   545→                    <TableCell>
+   546→                      <Badge
+   547→                        variant="outline"
+   548→                        className={r.interfaceType === "External"
+   549→                          ? "border-amber-500/30 text-amber-700 dark:text-amber-400"
+   550→                          : "border-emerald-500/30 text-emerald-700 dark:text-emerald-400"}
+   551→                      >
+   552→                        {r.interfaceType}
+   553→                      </Badge>
+   554→                    </TableCell>
+   555→                    <TableCell className="text-xs">{r.description}</TableCell>
+   556→                    <TableCell>
+   557→                      <button onClick={() => handleToggle(r)}>
+   558→                        <StatusBadge status={r.status} />
+   559→                      </button>
+   560→                    </TableCell>
+   561→                    <TableCell className="text-right">
+   562→                      <div className="flex items-center justify-end gap-1">
+   563→                        <Button
+   564→                          variant="ghost"
+   565→                          size="sm"
+   566→                          onClick={() => {
+   567→                            setEditing(r);
+   568→                            setDialogOpen(true);
+   569→                          }}
+   570→                        >
+   571→                          <Pencil className="h-3.5 w-3.5" />
+   572→                        </Button>
+   573→                        <Button
+   574→                          variant="ghost"
+   575→                          size="sm"
+   576→                          className="text-primary hover:text-primary"
+   577→                          onClick={() => setDeleteTarget(r)}
+   578→                        >
+   579→                          <Trash2 className="h-3.5 w-3.5" />
+   580→                        </Button>
+   581→                      </div>
+   582→                    </TableCell>
+   583→                  </TableRow>
+   584→                ))}
+   585→              </TableBody>
+   586→            </Table>
+   587→          </div>
+   588→        )}
+   589→      </SectionCard>
+   590→
+   591→      <InterfaceDialog
+   592→        open={dialogOpen}
+   593→        onOpenChange={setDialogOpen}
+   594→        editing={editing}
+   595→        onSaved={() => {
+   596→          setDialogOpen(false);
+   597→          load();
+   598→        }}
+   599→      />
+   600→
+   601→      <DeleteDialog
+   602→        open={!!deleteTarget}
+   603→        onOpenChange={(o) => !o && setDeleteTarget(null)}
+   604→        onConfirm={handleDelete}
+   605→        title="Delete Interface"
+   606→        description={<>Delete interface <span className="font-medium text-foreground">{deleteTarget?.deviceName}</span>? This cannot be undone.</>}
+   607→        busy={busy}
+   608→      />
+   609→    </div>
+   610→  );
+   611→}
+   612→
+   613→function InterfaceDialog({
+   614→  open,
+   615→  onOpenChange,
+   616→  editing,
+   617→  onSaved,
+   618→}: {
+   619→  open: boolean;
+   620→  onOpenChange: (o: boolean) => void;
+   621→  editing: any | null;
+   622→  onSaved: () => void;
+   623→}) {
+   624→  const { toast } = useToast();
+   625→  const [saving, setSaving] = React.useState(false);
+   626→  const [form, setForm] = React.useState({
+   627→    deviceName: "",
+   628→    ipAddress: "",
+   629→    netmask: "255.255.255.0",
+   630→    interfaceType: "Internal",
+   631→    description: "",
+   632→    port: "",
+   633→  });
+   634→
+   635→  React.useEffect(() => {
+   636→    if (editing) {
+   637→      setForm({
+   638→        deviceName: editing.deviceName ?? "",
+   639→        ipAddress: editing.ipAddress ?? "",
+   640→        netmask: editing.netmask ?? "255.255.255.0",
+   641→        interfaceType: editing.interfaceType ?? "Internal",
+   642→        description: editing.description ?? "",
+   643→        port: editing.port ?? "",
+   644→      });
+   645→    } else {
+   646→      setForm({
+   647→        deviceName: "",
+   648→        ipAddress: "",
+   649→        netmask: "255.255.255.0",
+   650→        interfaceType: "Internal",
+   651→        description: "",
+   652→        port: "",
+   653→      });
+   654→    }
+   655→  }, [editing, open]);
+   656→
+   657→  const handleSubmit = async (e: React.FormEvent) => {
+   658→    e.preventDefault();
+   659→    setSaving(true);
+   660→    if (editing) {
+   661→      await systemApi.update("interfaces", { ...form, id: editing.id });
+   662→      toast({ title: "Interface updated", description: form.deviceName });
+   663→    } else {
+   664→      await systemApi.create("interfaces", { ...form, status: "Up" });
+   665→      toast({ title: "Interface created", description: form.deviceName });
+   666→    }
+   667→    setSaving(false);
+   668→    onSaved();
+   669→  };
+   670→
+   671→  return (
+   672→    <Dialog open={open} onOpenChange={onOpenChange}>
+   673→      <DialogContent>
+   674→        <DialogHeader>
+   675→          <DialogTitle>{editing ? "Edit Interface" : "Add Interface"}</DialogTitle>
+   676→          <DialogDescription>
+   677→            {editing ? "Update network interface configuration." : "Configure a new network interface."}
+   678→          </DialogDescription>
+   679→        </DialogHeader>
+   680→        <form onSubmit={handleSubmit} className="space-y-4">
+   681→          <div className="grid grid-cols-2 gap-4">
+   682→            <div className="space-y-2">
+   683→              <Label>Port</Label>
+   684→              <Input value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} placeholder="e.g. A" maxLength={2} />
+   685→            </div>
+   686→            <div className="space-y-2">
+   687→              <Label>Device Name</Label>
+   688→              <Input value={form.deviceName} onChange={(e) => setForm({ ...form, deviceName: e.target.value })} placeholder="eth0" required />
+   689→            </div>
+   690→            <div className="space-y-2">
+   691→              <Label>IP Address</Label>
+   692→              <Input value={form.ipAddress} onChange={(e) => setForm({ ...form, ipAddress: e.target.value })} placeholder="0.0.0.0" required />
+   693→            </div>
+   694→            <div className="space-y-2">
+   695→              <Label>Netmask</Label>
+   696→              <Input value={form.netmask} onChange={(e) => setForm({ ...form, netmask: e.target.value })} placeholder="255.255.255.0" />
+   697→            </div>
+   698→            <div className="space-y-2">
+   699→              <Label>Type</Label>
+   700→              <Select value={form.interfaceType} onValueChange={(v) => setForm({ ...form, interfaceType: v })}>
+   701→                <SelectTrigger><SelectValue /></SelectTrigger>
+   702→                <SelectContent>
+   703→                  <SelectItem value="Internal">Internal</SelectItem>
+   704→                  <SelectItem value="External">External</SelectItem>
+   705→                </SelectContent>
+   706→              </Select>
+   707→            </div>
+   708→            <div className="space-y-2">
+   709→              <Label>Description</Label>
+   710→              <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="LAN / WAN / DMZ" />
+   711→            </div>
+   712→          </div>
+   713→          <DialogFooter>
+   714→            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+   715→              Cancel
+   716→            </Button>
+   717→            <Button type="submit" disabled={saving}>
+   718→              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+   719→              {editing ? "Save Changes" : "Create Interface"}
+   720→            </Button>
+   721→          </DialogFooter>
+   722→        </form>
+   723→      </DialogContent>
+   724→    </Dialog>
+   725→  );
+   726→}
+   727→
+   728→/* ---------- Gateway ---------- */
+   729→
+   730→function GatewayPage({ moduleId, childId, grandchildId }: ViewProps) {
+   731→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   732→  const { toast } = useToast();
+   733→  const [rows, setRows] = React.useState<any[]>([]);
+   734→  const [loading, setLoading] = React.useState(true);
+   735→  const [dialogOpen, setDialogOpen] = React.useState(false);
+   736→  const [editing, setEditing] = React.useState<any | null>(null);
+   737→  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
+   738→  const [busy, setBusy] = React.useState(false);
+   739→
+   740→  const load = React.useCallback(() => {
+   741→    setLoading(true);
+   742→    systemApi.list("gateways").then((res) => {
+   743→      setRows(res.data ?? []);
+   744→      setLoading(false);
+   745→    });
+   746→  }, []);
+   747→
+   748→  React.useEffect(() => {
+   749→    load();
+   750→  }, [load]);
+   751→
+   752→  const handleDelete = async () => {
+   753→    if (!deleteTarget) return;
+   754→    setBusy(true);
+   755→    await systemApi.delete("gateways", deleteTarget.id);
+   756→    setBusy(false);
+   757→    toast({ title: "Gateway deleted", description: deleteTarget.priorityName });
+   758→    setDeleteTarget(null);
+   759→    load();
+   760→  };
+   761→
+   762→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   763→
+   764→  return (
+   765→    <div className="space-y-6">
+   766→      <PageHeader
+   767→        title={grandchild?.label ?? "Gateway"}
+   768→        description="Manage network gateways and routing priorities."
+   769→        icon={<Settings2 className="h-5 w-5" />}
+   770→        breadcrumb={breadcrumb}
+   771→        actions={
+   772→          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+   773→            <Plus className="mr-2 h-4 w-4" /> Add Gateway
+   774→          </Button>
+   775→        }
+   776→      />
+   777→
+   778→      <SectionCard title="Gateways" description={`${rows.length} gateways`}>
+   779→        {loading ? <PageLoader /> : rows.length === 0 ? (
+   780→          <EmptyState icon={<RouteIcon className="h-5 w-5" />} title="No gateways" description="Add a gateway to get started." />
+   781→        ) : (
+   782→          <div className="overflow-x-auto">
+   783→            <Table>
+   784→              <TableHeader>
+   785→                <TableRow>
+   786→                  <TableHead>Priority Name</TableHead>
+   787→                  <TableHead>Description</TableHead>
+   788→                  <TableHead>Effective Gateway</TableHead>
+   789→                  <TableHead>IP Version</TableHead>
+   790→                  <TableHead>Default</TableHead>
+   791→                  <TableHead>Network</TableHead>
+   792→                  <TableHead>Status</TableHead>
+   793→                  <TableHead className="text-right">Actions</TableHead>
+   794→                </TableRow>
+   795→              </TableHeader>
+   796→              <TableBody>
+   797→                {rows.map((r) => (
+   798→                  <TableRow key={r.id}>
+   799→                    <TableCell className="font-medium">{r.priorityName}</TableCell>
+   800→                    <TableCell className="text-xs text-muted-foreground">{r.priorityDesc}</TableCell>
+   801→                    <TableCell className="font-mono text-xs">{r.effectiveGateway}</TableCell>
+   802→                    <TableCell>
+   803→                      <Badge variant="outline" className="text-[10px]">{r.ipVersion}</Badge>
+   804→                    </TableCell>
+   805→                    <TableCell>
+   806→                      {r.isDefault ? (
+   807→                        <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Default</Badge>
+   808→                      ) : (
+   809→                        <span className="text-xs text-muted-foreground">—</span>
+   810→                      )}
+   811→                    </TableCell>
+   812→                    <TableCell className="font-mono text-xs text-muted-foreground">{r.network}</TableCell>
+   813→                    <TableCell><StatusBadge status={r.status} /></TableCell>
+   814→                    <TableCell className="text-right">
+   815→                      <div className="flex items-center justify-end gap-1">
+   816→                        <Button variant="ghost" size="sm" onClick={() => { setEditing(r); setDialogOpen(true); }}>
+   817→                          <Pencil className="h-3.5 w-3.5" />
+   818→                        </Button>
+   819→                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(r)}>
+   820→                          <Trash2 className="h-3.5 w-3.5" />
+   821→                        </Button>
+   822→                      </div>
+   823→                    </TableCell>
+   824→                  </TableRow>
+   825→                ))}
+   826→              </TableBody>
+   827→            </Table>
+   828→          </div>
+   829→        )}
+   830→      </SectionCard>
+   831→
+   832→      <GatewayDialog
+   833→        open={dialogOpen}
+   834→        onOpenChange={setDialogOpen}
+   835→        editing={editing}
+   836→        onSaved={() => { setDialogOpen(false); load(); }}
+   837→      />
+   838→
+   839→      <DeleteDialog
+   840→        open={!!deleteTarget}
+   841→        onOpenChange={(o) => !o && setDeleteTarget(null)}
+   842→        onConfirm={handleDelete}
+   843→        title="Delete Gateway"
+   844→        description={<>Delete gateway <span className="font-medium text-foreground">{deleteTarget?.priorityName}</span>?</>}
+   845→        busy={busy}
+   846→      />
+   847→    </div>
+   848→  );
+   849→}
+   850→
+   851→function GatewayDialog({
+   852→  open, onOpenChange, editing, onSaved,
+   853→}: { open: boolean; onOpenChange: (o: boolean) => void; editing: any | null; onSaved: () => void; }) {
+   854→  const { toast } = useToast();
+   855→  const [saving, setSaving] = React.useState(false);
+   856→  const [form, setForm] = React.useState({
+   857→    priorityName: "",
+   858→    priorityDesc: "",
+   859→    effectiveGateway: "",
+   860→    ipVersion: "IPv4",
+   861→    isDefault: false,
+   862→    network: "0.0.0.0/0",
+   863→    status: "Active",
+   864→  });
+   865→
+   866→  React.useEffect(() => {
+   867→    if (editing) {
+   868→      setForm({
+   869→        priorityName: editing.priorityName ?? "",
+   870→        priorityDesc: editing.priorityDesc ?? "",
+   871→        effectiveGateway: editing.effectiveGateway ?? "",
+   872→        ipVersion: editing.ipVersion ?? "IPv4",
+   873→        isDefault: !!editing.isDefault,
+   874→        network: editing.network ?? "0.0.0.0/0",
+   875→        status: editing.status ?? "Active",
+   876→      });
+   877→    } else {
+   878→      setForm({ priorityName: "", priorityDesc: "", effectiveGateway: "", ipVersion: "IPv4", isDefault: false, network: "0.0.0.0/0", status: "Active" });
+   879→    }
+   880→  }, [editing, open]);
+   881→
+   882→  const handleSubmit = async (e: React.FormEvent) => {
+   883→    e.preventDefault();
+   884→    setSaving(true);
+   885→    if (editing) {
+   886→      await systemApi.update("gateways", { ...form, id: editing.id });
+   887→      toast({ title: "Gateway updated", description: form.priorityName });
+   888→    } else {
+   889→      await systemApi.create("gateways", form);
+   890→      toast({ title: "Gateway created", description: form.priorityName });
+   891→    }
+   892→    setSaving(false);
+   893→    onSaved();
+   894→  };
+   895→
+   896→  return (
+   897→    <Dialog open={open} onOpenChange={onOpenChange}>
+   898→      <DialogContent>
+   899→        <DialogHeader>
+   900→          <DialogTitle>{editing ? "Edit Gateway" : "Add Gateway"}</DialogTitle>
+   901→          <DialogDescription>Configure a routing gateway.</DialogDescription>
+   902→        </DialogHeader>
+   903→        <form onSubmit={handleSubmit} className="space-y-4">
+   904→          <div className="grid grid-cols-2 gap-4">
+   905→            <div className="space-y-2">
+   906→              <Label>Priority Name</Label>
+   907→              <Input value={form.priorityName} onChange={(e) => setForm({ ...form, priorityName: e.target.value })} required />
+   908→            </div>
+   909→            <div className="space-y-2">
+   910→              <Label>Effective Gateway</Label>
+   911→              <Input value={form.effectiveGateway} onChange={(e) => setForm({ ...form, effectiveGateway: e.target.value })} placeholder="0.0.0.0" required />
+   912→            </div>
+   913→            <div className="space-y-2">
+   914→              <Label>Description</Label>
+   915→              <Input value={form.priorityDesc} onChange={(e) => setForm({ ...form, priorityDesc: e.target.value })} />
+   916→            </div>
+   917→            <div className="space-y-2">
+   918→              <Label>Network</Label>
+   919→              <Input value={form.network} onChange={(e) => setForm({ ...form, network: e.target.value })} placeholder="0.0.0.0/0" />
+   920→            </div>
+   921→            <div className="space-y-2">
+   922→              <Label>IP Version</Label>
+   923→              <Select value={form.ipVersion} onValueChange={(v) => setForm({ ...form, ipVersion: v })}>
+   924→                <SelectTrigger><SelectValue /></SelectTrigger>
+   925→                <SelectContent>
+   926→                  <SelectItem value="IPv4">IPv4</SelectItem>
+   927→                  <SelectItem value="IPv6">IPv6</SelectItem>
+   928→                </SelectContent>
+   929→              </Select>
+   930→            </div>
+   931→            <div className="flex items-center gap-3">
+   932→              <Switch checked={form.isDefault} onCheckedChange={(v) => setForm({ ...form, isDefault: v })} id="isDefault" />
+   933→              <Label htmlFor="isDefault">Default Gateway</Label>
+   934→            </div>
+   935→          </div>
+   936→          <DialogFooter>
+   937→            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+   938→            <Button type="submit" disabled={saving}>
+   939→              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+   940→              {editing ? "Save Changes" : "Create Gateway"}
+   941→            </Button>
+   942→          </DialogFooter>
+   943→        </form>
+   944→      </DialogContent>
+   945→    </Dialog>
+   946→  );
+   947→}
+   948→
+   949→/* ---------- DNS ---------- */
+   950→
+   951→function DnsPage({ moduleId, childId, grandchildId }: ViewProps) {
+   952→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+   953→  const { toast } = useToast();
+   954→  const [loading, setLoading] = React.useState(true);
+   955→  const [saving, setSaving] = React.useState(false);
+   956→  const [form, setForm] = React.useState({
+   957→    id: 1,
+   958→    dnsServers: "",
+   959→    domainName: "",
+   960→    isEnabled: true,
+   961→    nxdomainIp: "",
+   962→    nxdomainUrl: "",
+   963→    reverseIp: "",
+   964→  });
+   965→
+   966→  React.useEffect(() => {
+   967→    systemApi.list("dns").then((res) => {
+   968→      if (res.data && res.data.length > 0) setForm(res.data[0]);
+   969→      setLoading(false);
+   970→    });
+   971→  }, []);
+   972→
+   973→  const handleSubmit = async (e: React.FormEvent) => {
+   974→    e.preventDefault();
+   975→    setSaving(true);
+   976→    if (form.id) {
+   977→      await systemApi.update("dns", form);
+   978→    } else {
+   979→      const r = await systemApi.create("dns", form);
+   980→      if (r.data) setForm(r.data);
+   981→    }
+   982→    setSaving(false);
+   983→    toast({ title: "DNS configuration saved", description: form.domainName || "DNS settings updated." });
+   984→  };
+   985→
+   986→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+   987→
+   988→  return (
+   989→    <div className="space-y-6">
+   990→      <PageHeader
+   991→        title={grandchild?.label ?? "DNS"}
+   992→        description="Configure DNS servers, domain and NXDOMAIN handling."
+   993→        icon={<Settings2 className="h-5 w-5" />}
+   994→        breadcrumb={breadcrumb}
+   995→      />
+   996→
+   997→      {loading ? (
+   998→        <SectionCard><PageLoader /></SectionCard>
+   999→      ) : (
+  1000→        <form onSubmit={handleSubmit} className="space-y-6">
+  1001→          <SectionCard title="DNS Settings" description="Server and domain configuration">
+  1002→            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  1003→              <div className="space-y-2">
+  1004→                <Label>DNS Servers</Label>
+  1005→                <Input
+  1006→                  value={form.dnsServers}
+  1007→                  onChange={(e) => setForm({ ...form, dnsServers: e.target.value })}
+  1008→                  placeholder="8.8.8.8, 8.8.4.4"
+  1009→                />
+  1010→                <p className="text-xs text-muted-foreground">Comma-separated list of DNS server IPs.</p>
+  1011→              </div>
+  1012→              <div className="space-y-2">
+  1013→                <Label>Domain Name</Label>
+  1014→                <Input
+  1015→                  value={form.domainName}
+  1016→                  onChange={(e) => setForm({ ...form, domainName: e.target.value })}
+  1017→                  placeholder="cryptsk.local"
+  1018→                />
+  1019→              </div>
+  1020→              <div className="space-y-2">
+  1021→                <Label>NXDOMAIN IP</Label>
+  1022→                <Input
+  1023→                  value={form.nxdomainIp}
+  1024→                  onChange={(e) => setForm({ ...form, nxdomainIp: e.target.value })}
+  1025→                  placeholder="10.172.0.1"
+  1026→                />
+  1027→              </div>
+  1028→              <div className="space-y-2">
+  1029→                <Label>NXDOMAIN URL</Label>
+  1030→                <Input
+  1031→                  value={form.nxdomainUrl}
+  1032→                  onChange={(e) => setForm({ ...form, nxdomainUrl: e.target.value })}
+  1033→                  placeholder="portal.cryptsk.com"
+  1034→                />
+  1035→              </div>
+  1036→              <div className="space-y-2 md:col-span-2">
+  1037→                <Label>Reverse IP Range</Label>
+  1038→                <Input
+  1039→                  value={form.reverseIp}
+  1040→                  onChange={(e) => setForm({ ...form, reverseIp: e.target.value })}
+  1041→                  placeholder="10.172.0.x"
+  1042→                />
+  1043→              </div>
+  1044→              <div className="flex items-center gap-3 md:col-span-2">
+  1045→                <Switch
+  1046→                  id="dnsEnabled"
+  1047→                  checked={form.isEnabled}
+  1048→                  onCheckedChange={(v) => setForm({ ...form, isEnabled: v })}
+  1049→                />
+  1050→                <Label htmlFor="dnsEnabled" className="cursor-pointer">
+  1051→                  Enable DNS Service
+  1052→                </Label>
+  1053→              </div>
+  1054→            </div>
+  1055→          </SectionCard>
+  1056→
+  1057→          <div className="flex items-center justify-end gap-3">
+  1058→            <Button type="submit" disabled={saving}>
+  1059→              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+  1060→              Save DNS Configuration
+  1061→            </Button>
+  1062→          </div>
+  1063→        </form>
+  1064→      )}
+  1065→    </div>
+  1066→  );
+  1067→}
+  1068→
+  1069→/* ---------- Static Route ---------- */
+  1070→
+  1071→function StaticRoutePage({ moduleId, childId, grandchildId }: ViewProps) {
+  1072→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  1073→  const { toast } = useToast();
+  1074→  const [rows, setRows] = React.useState<any[]>([]);
+  1075→  const [loading, setLoading] = React.useState(true);
+  1076→  const [dialogOpen, setDialogOpen] = React.useState(false);
+  1077→  const [editing, setEditing] = React.useState<any | null>(null);
+  1078→  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
+  1079→  const [busy, setBusy] = React.useState(false);
+  1080→
+  1081→  const load = React.useCallback(() => {
+  1082→    setLoading(true);
+  1083→    systemApi.list("routes").then((res) => {
+  1084→      setRows(res.data ?? []);
+  1085→      setLoading(false);
+  1086→    });
+  1087→  }, []);
+  1088→
+  1089→  React.useEffect(() => {
+  1090→    load();
+  1091→  }, [load]);
+  1092→
+  1093→  const handleDelete = async () => {
+  1094→    if (!deleteTarget) return;
+  1095→    setBusy(true);
+  1096→    await systemApi.delete("routes", deleteTarget.id);
+  1097→    setBusy(false);
+  1098→    toast({ title: "Route deleted", description: `${deleteTarget.destinationIp}/${deleteTarget.netmask}` });
+  1099→    setDeleteTarget(null);
+  1100→    load();
+  1101→  };
+  1102→
+  1103→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  1104→
+  1105→  return (
+  1106→    <div className="space-y-6">
+  1107→      <PageHeader
+  1108→        title={grandchild?.label ?? "Static Route"}
+  1109→        description="Manage static routes for network traffic."
+  1110→        icon={<Settings2 className="h-5 w-5" />}
+  1111→        breadcrumb={breadcrumb}
+  1112→        actions={
+  1113→          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+  1114→            <Plus className="mr-2 h-4 w-4" /> Add Route
+  1115→          </Button>
+  1116→        }
+  1117→      />
+  1118→
+  1119→      <SectionCard title="Static Routes" description={`${rows.length} routes`}>
+  1120→        {loading ? <PageLoader /> : rows.length === 0 ? (
+  1121→          <EmptyState icon={<RouteIcon className="h-5 w-5" />} title="No routes" description="Add a static route." />
+  1122→        ) : (
+  1123→          <div className="overflow-x-auto">
+  1124→            <Table>
+  1125→              <TableHeader>
+  1126→                <TableRow>
+  1127→                  <TableHead>Destination IP</TableHead>
+  1128→                  <TableHead>Netmask</TableHead>
+  1129→                  <TableHead>Gateway</TableHead>
+  1130→                  <TableHead>Interface</TableHead>
+  1131→                  <TableHead>Status</TableHead>
+  1132→                  <TableHead className="text-right">Actions</TableHead>
+  1133→                </TableRow>
+  1134→              </TableHeader>
+  1135→              <TableBody>
+  1136→                {rows.map((r) => (
+  1137→                  <TableRow key={r.id}>
+  1138→                    <TableCell className="font-mono text-xs">{r.destinationIp}</TableCell>
+  1139→                    <TableCell className="font-mono text-xs text-muted-foreground">{r.netmask}</TableCell>
+  1140→                    <TableCell className="font-mono text-xs">{r.gateway}</TableCell>
+  1141→                    <TableCell className="font-mono text-xs">{r.interface}</TableCell>
+  1142→                    <TableCell><StatusBadge status={r.status} /></TableCell>
+  1143→                    <TableCell className="text-right">
+  1144→                      <div className="flex items-center justify-end gap-1">
+  1145→                        <Button variant="ghost" size="sm" onClick={() => { setEditing(r); setDialogOpen(true); }}>
+  1146→                          <Pencil className="h-3.5 w-3.5" />
+  1147→                        </Button>
+  1148→                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(r)}>
+  1149→                          <Trash2 className="h-3.5 w-3.5" />
+  1150→                        </Button>
+  1151→                      </div>
+  1152→                    </TableCell>
+  1153→                  </TableRow>
+  1154→                ))}
+  1155→              </TableBody>
+  1156→            </Table>
+  1157→          </div>
+  1158→        )}
+  1159→      </SectionCard>
+  1160→
+  1161→      <RouteDialog
+  1162→        open={dialogOpen}
+  1163→        onOpenChange={setDialogOpen}
+  1164→        editing={editing}
+  1165→        onSaved={() => { setDialogOpen(false); load(); }}
+  1166→      />
+  1167→
+  1168→      <DeleteDialog
+  1169→        open={!!deleteTarget}
+  1170→        onOpenChange={(o) => !o && setDeleteTarget(null)}
+  1171→        onConfirm={handleDelete}
+  1172→        title="Delete Route"
+  1173→        description={<>Delete route <span className="font-medium text-foreground font-mono">{deleteTarget?.destinationIp}/{deleteTarget?.netmask}</span>?</>}
+  1174→        busy={busy}
+  1175→      />
+  1176→    </div>
+  1177→  );
+  1178→}
+  1179→
+  1180→function RouteDialog({
+  1181→  open, onOpenChange, editing, onSaved,
+  1182→}: { open: boolean; onOpenChange: (o: boolean) => void; editing: any | null; onSaved: () => void; }) {
+  1183→  const { toast } = useToast();
+  1184→  const [saving, setSaving] = React.useState(false);
+  1185→  const [form, setForm] = React.useState({
+  1186→    destinationIp: "",
+  1187→    netmask: "255.255.255.0",
+  1188→    gateway: "",
+  1189→    interface: "eth0",
+  1190→    status: "Active",
+  1191→  });
+  1192→
+  1193→  React.useEffect(() => {
+  1194→    if (editing) {
+  1195→      setForm({
+  1196→        destinationIp: editing.destinationIp ?? "",
+  1197→        netmask: editing.netmask ?? "255.255.255.0",
+  1198→        gateway: editing.gateway ?? "",
+  1199→        interface: editing.interface ?? "eth0",
+  1200→        status: editing.status ?? "Active",
+  1201→      });
+  1202→    } else {
+  1203→      setForm({ destinationIp: "", netmask: "255.255.255.0", gateway: "", interface: "eth0", status: "Active" });
+  1204→    }
+  1205→  }, [editing, open]);
+  1206→
+  1207→  const handleSubmit = async (e: React.FormEvent) => {
+  1208→    e.preventDefault();
+  1209→    setSaving(true);
+  1210→    if (editing) {
+  1211→      await systemApi.update("routes", { ...form, id: editing.id });
+  1212→      toast({ title: "Route updated" });
+  1213→    } else {
+  1214→      await systemApi.create("routes", form);
+  1215→      toast({ title: "Route created" });
+  1216→    }
+  1217→    setSaving(false);
+  1218→    onSaved();
+  1219→  };
+  1220→
+  1221→  return (
+  1222→    <Dialog open={open} onOpenChange={onOpenChange}>
+  1223→      <DialogContent>
+  1224→        <DialogHeader>
+  1225→          <DialogTitle>{editing ? "Edit Route" : "Add Static Route"}</DialogTitle>
+  1226→          <DialogDescription>Configure a static route entry.</DialogDescription>
+  1227→        </DialogHeader>
+  1228→        <form onSubmit={handleSubmit} className="space-y-4">
+  1229→          <div className="grid grid-cols-2 gap-4">
+  1230→            <div className="space-y-2">
+  1231→              <Label>Destination IP</Label>
+  1232→              <Input value={form.destinationIp} onChange={(e) => setForm({ ...form, destinationIp: e.target.value })} placeholder="10.172.0.0" required />
+  1233→            </div>
+  1234→            <div className="space-y-2">
+  1235→              <Label>Netmask</Label>
+  1236→              <Input value={form.netmask} onChange={(e) => setForm({ ...form, netmask: e.target.value })} placeholder="255.255.255.0" />
+  1237→            </div>
+  1238→            <div className="space-y-2">
+  1239→              <Label>Gateway</Label>
+  1240→              <Input value={form.gateway} onChange={(e) => setForm({ ...form, gateway: e.target.value })} placeholder="172.16.16.1" required />
+  1241→            </div>
+  1242→            <div className="space-y-2">
+  1243→              <Label>Interface</Label>
+  1244→              <Input value={form.interface} onChange={(e) => setForm({ ...form, interface: e.target.value })} placeholder="eth0" />
+  1245→            </div>
+  1246→          </div>
+  1247→          <DialogFooter>
+  1248→            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+  1249→            <Button type="submit" disabled={saving}>
+  1250→              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+  1251→              {editing ? "Save Changes" : "Create Route"}
+  1252→            </Button>
+  1253→          </DialogFooter>
+  1254→        </form>
+  1255→      </DialogContent>
+  1256→    </Dialog>
+  1257→  );
+  1258→}
+  1259→
+  1260→/* ===================================================================== *
+  1261→ *  FIREWALL
+  1262→ * ===================================================================== */
+  1263→
+  1264→/* ---------- Firewall Create ---------- */
+  1265→
+  1266→function FirewallCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+  1267→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  1268→  const setActive = useAppStore((s) => s.setActive);
+  1269→  const { toast } = useToast();
+  1270→  const [saving, setSaving] = React.useState(false);
+  1271→  const [form, setForm] = React.useState({
+  1272→    source: "*",
+  1273→    destination: "*",
+  1274→    sourcePort: "*",
+  1275→    srcPortType: "Include" as "Include" | "Exclude",
+  1276→    destPort: "*",
+  1277→    dstPortType: "Include" as "Include" | "Exclude",
+  1278→    protocol: "ANY" as "TCP" | "UDP" | "ICMP" | "ANY",
+  1279→    action: "Allow" as "Allow" | "Deny" | "Drop",
+  1280→    description: "",
+  1281→    bandwidth: "",
+  1282→    startDate: "",
+  1283→    endDate: "",
+  1284→  });
+  1285→
+  1286→  const handleSubmit = async (e: React.FormEvent) => {
+  1287→    e.preventDefault();
+  1288→    setSaving(true);
+  1289→    const res = await systemApi.create("firewallRules", { ...form, position: 999, enabled: true });
+  1290→    setSaving(false);
+  1291→    if (res.responseCode === "0") {
+  1292→      toast({ title: "Firewall rule created", description: form.description || "Rule added to chain." });
+  1293→      setActive(moduleId, "firewall", "manage");
+  1294→    } else {
+  1295→      toast({ title: "Failed to create rule", description: res.responseMsg, variant: "destructive" });
+  1296→    }
+  1297→  };
+  1298→
+  1299→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  1300→
+  1301→  return (
+  1302→    <div className="space-y-6">
+  1303→      <PageHeader
+  1304→        title={grandchild?.label ?? "Create Firewall Rule"}
+  1305→        description="Create a new firewall rule. Fields mirror the 24online createfirewall.jsp form."
+  1306→        icon={<Settings2 className="h-5 w-5" />}
+  1307→        breadcrumb={breadcrumb}
+  1308→        actions={
+  1309→          <Button variant="outline" onClick={() => setActive(moduleId, "firewall", "manage")}>
+  1310→            <X className="mr-2 h-4 w-4" /> Cancel
+  1311→          </Button>
+  1312→        }
+  1313→      />
+  1314→
+  1315→      <form onSubmit={handleSubmit} className="space-y-6">
+  1316→        <SectionCard title="Source & Destination" description="Define where traffic comes from and goes to">
+  1317→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  1318→            <div className="space-y-2">
+  1319→              <Label>Source</Label>
+  1320→              <Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="* or IP/CIDR or LAN" />
+  1321→            </div>
+  1322→            <div className="space-y-2">
+  1323→              <Label>Destination</Label>
+  1324→              <Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} placeholder="* or IP/CIDR or WAN" />
+  1325→            </div>
+  1326→          </div>
+  1327→        </SectionCard>
+  1328→
+  1329→        <SectionCard title="Ports & Protocol" description="Match specific ports and protocol">
+  1330→          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+  1331→            <div className="space-y-2">
+  1332→              <Label>Source Port</Label>
+  1333→              <Input value={form.sourcePort} onChange={(e) => setForm({ ...form, sourcePort: e.target.value })} placeholder="* or 80,443 or 1000-2000" />
+  1334→            </div>
+  1335→            <div className="space-y-2">
+  1336→              <Label>Source Port Type</Label>
+  1337→              <Select value={form.srcPortType} onValueChange={(v) => setForm({ ...form, srcPortType: v as any })}>
+  1338→                <SelectTrigger><SelectValue /></SelectTrigger>
+  1339→                <SelectContent>
+  1340→                  <SelectItem value="Include">Include</SelectItem>
+  1341→                  <SelectItem value="Exclude">Exclude</SelectItem>
+  1342→                </SelectContent>
+  1343→              </Select>
+  1344→            </div>
+  1345→            <div className="space-y-2">
+  1346→              <Label>Protocol</Label>
+  1347→              <Select value={form.protocol} onValueChange={(v) => setForm({ ...form, protocol: v as any })}>
+  1348→                <SelectTrigger><SelectValue /></SelectTrigger>
+  1349→                <SelectContent>
+  1350→                  <SelectItem value="ANY">ANY</SelectItem>
+  1351→                  <SelectItem value="TCP">TCP</SelectItem>
+  1352→                  <SelectItem value="UDP">UDP</SelectItem>
+  1353→                  <SelectItem value="ICMP">ICMP</SelectItem>
+  1354→                </SelectContent>
+  1355→              </Select>
+  1356→            </div>
+  1357→            <div className="space-y-2">
+  1358→              <Label>Destination Port</Label>
+  1359→              <Input value={form.destPort} onChange={(e) => setForm({ ...form, destPort: e.target.value })} placeholder="* or 80,443" />
+  1360→            </div>
+  1361→            <div className="space-y-2">
+  1362→              <Label>Dest Port Type</Label>
+  1363→              <Select value={form.dstPortType} onValueChange={(v) => setForm({ ...form, dstPortType: v as any })}>
+  1364→                <SelectTrigger><SelectValue /></SelectTrigger>
+  1365→                <SelectContent>
+  1366→                  <SelectItem value="Include">Include</SelectItem>
+  1367→                  <SelectItem value="Exclude">Exclude</SelectItem>
+  1368→                </SelectContent>
+  1369→              </Select>
+  1370→            </div>
+  1371→            <div className="space-y-2">
+  1372→              <Label>Action</Label>
+  1373→              <Select value={form.action} onValueChange={(v) => setForm({ ...form, action: v as any })}>
+  1374→                <SelectTrigger><SelectValue /></SelectTrigger>
+  1375→                <SelectContent>
+  1376→                  <SelectItem value="Allow">Allow</SelectItem>
+  1377→                  <SelectItem value="Deny">Deny</SelectItem>
+  1378→                  <SelectItem value="Drop">Drop</SelectItem>
+  1379→                </SelectContent>
+  1380→              </Select>
+  1381→            </div>
+  1382→          </div>
+  1383→        </SectionCard>
+  1384→
+  1385→        <SectionCard title="Schedule & Bandwidth" description="Optional time window and bandwidth limit">
+  1386→          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  1387→            <div className="space-y-2">
+  1388→              <Label>Start Date</Label>
+  1389→              <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+  1390→            </div>
+  1391→            <div className="space-y-2">
+  1392→              <Label>End Date</Label>
+  1393→              <Input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+  1394→            </div>
+  1395→            <div className="space-y-2">
+  1396→              <Label>Bandwidth Limit</Label>
+  1397→              <Input value={form.bandwidth} onChange={(e) => setForm({ ...form, bandwidth: e.target.value })} placeholder="e.g. 10M (empty = unlimited)" />
+  1398→            </div>
+  1399→            <div className="space-y-2 md:col-span-2">
+  1400→              <Label>Description</Label>
+  1401→              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Rule description…" />
+  1402→            </div>
+  1403→          </div>
+  1404→        </SectionCard>
+  1405→
+  1406→        <div className="flex items-center justify-end gap-3">
+  1407→          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "firewall", "manage")}>Cancel</Button>
+  1408→          <Button type="submit" disabled={saving}>
+  1409→            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+  1410→            Create Rule
+  1411→          </Button>
+  1412→        </div>
+  1413→      </form>
+  1414→    </div>
+  1415→  );
+  1416→}
+  1417→
+  1418→/* ---------- Firewall Manage ---------- */
+  1419→
+  1420→function FirewallManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+  1421→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  1422→  const setActive = useAppStore((s) => s.setActive);
+  1423→  const { toast } = useToast();
+  1424→  const [rows, setRows] = React.useState<any[]>([]);
+  1425→  const [loading, setLoading] = React.useState(true);
+  1426→  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
+  1427→  const [busy, setBusy] = React.useState(false);
+  1428→
+  1429→  const load = React.useCallback(() => {
+  1430→    setLoading(true);
+  1431→    systemApi.list("firewallRules").then((res) => {
+  1432→      setRows(res.data ?? []);
+  1433→      setLoading(false);
+  1434→    });
+  1435→  }, []);
+  1436→
+  1437→  React.useEffect(() => {
+  1438→    load();
+  1439→  }, [load]);
+  1440→
+  1441→  const handleToggle = async (r: any) => {
+  1442→    await systemApi.toggle("firewallRules", r.id, "enabled");
+  1443→    toast({ title: "Rule toggled", description: `Rule #${r.position} is now ${r.enabled ? "Disabled" : "Enabled"}.` });
+  1444→    load();
+  1445→  };
+  1446→
+  1447→  const handleDelete = async () => {
+  1448→    if (!deleteTarget) return;
+  1449→    setBusy(true);
+  1450→    await systemApi.delete("firewallRules", deleteTarget.id);
+  1451→    setBusy(false);
+  1452→    toast({ title: "Rule deleted", description: `Rule #${deleteTarget.position}` });
+  1453→    setDeleteTarget(null);
+  1454→    load();
+  1455→  };
+  1456→
+  1457→  const handleMove = (r: any, dir: "up" | "down") => {
+  1458→    toast({
+  1459→      title: `Rule moved ${dir}`,
+  1460→      description: `Rule #${r.position} reordered.`,
+  1461→    });
+  1462→  };
+  1463→
+  1464→  const actionBadge = (a: string) => {
+  1465→    if (a === "Allow") return <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">Allow</Badge>;
+  1466→    if (a === "Deny") return <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Deny</Badge>;
+  1467→    return <Badge className="bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400">Drop</Badge>;
+  1468→  };
+  1469→
+  1470→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  1471→
+  1472→  return (
+  1473→    <div className="space-y-6">
+  1474→      <PageHeader
+  1475→        title={grandchild?.label ?? "Manage Firewall Rules"}
+  1476→        description="View, toggle, reorder and delete firewall rules."
+  1477→        icon={<Settings2 className="h-5 w-5" />}
+  1478→        breadcrumb={breadcrumb}
+  1479→        actions={
+  1480→          <Button onClick={() => setActive(moduleId, "firewall", "create")}>
+  1481→            <Plus className="mr-2 h-4 w-4" /> Create Rule
+  1482→          </Button>
+  1483→        }
+  1484→      />
+  1485→
+  1486→      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+  1487→        <KpiCard label="Total Rules" value={String(rows.length)} icon={<ShieldAlert className="h-4 w-4" />} accent />
+  1488→        <KpiCard label="Enabled" value={String(rows.filter((r) => r.enabled).length)} icon={<ShieldCheck className="h-4 w-4" />} />
+  1489→        <KpiCard label="Allow" value={String(rows.filter((r) => r.action === "Allow").length)} icon={<ShieldCheck className="h-4 w-4" />} />
+  1490→        <KpiCard label="Deny/Drop" value={String(rows.filter((r) => r.action !== "Allow").length)} icon={<AlertTriangle className="h-4 w-4" />} />
+  1491→      </div>
+  1492→
+  1493→      <SectionCard title="Firewall Rules" description={`${rows.length} rules in chain`}>
+  1494→        {loading ? <PageLoader /> : rows.length === 0 ? (
+  1495→          <EmptyState icon={<ShieldAlert className="h-5 w-5" />} title="No rules" description="Create a firewall rule to get started." />
+  1496→        ) : (
+  1497→          <div className="overflow-x-auto">
+  1498→            <Table>
+  1499→              <TableHeader>
+  1500→                <TableRow>
+  1501→                  <TableHead>#</TableHead>
+  1502→                  <TableHead>Source</TableHead>
+  1503→                  <TableHead>Destination</TableHead>
+  1504→                  <TableHead>Port</TableHead>
+  1505→                  <TableHead>Protocol</TableHead>
+  1506→                  <TableHead>Action</TableHead>
+  1507→                  <TableHead>Description</TableHead>
+  1508→                  <TableHead>Bandwidth</TableHead>
+  1509→                  <TableHead>Enabled</TableHead>
+  1510→                  <TableHead className="text-right">Actions</TableHead>
+  1511→                </TableRow>
+  1512→              </TableHeader>
+  1513→              <TableBody>
+  1514→                {rows.map((r) => (
+  1515→                  <TableRow key={r.id}>
+  1516→                    <TableCell className="font-mono text-xs">{r.position}</TableCell>
+  1517→                    <TableCell className="font-mono text-xs">{r.source}</TableCell>
+  1518→                    <TableCell className="font-mono text-xs">{r.destination}</TableCell>
+  1519→                    <TableCell className="font-mono text-xs">
+  1520→                      <div>{r.destPort}</div>
+  1521→                      <div className="text-[10px] text-muted-foreground">{r.dstPortType}</div>
+  1522→                    </TableCell>
+  1523→                    <TableCell><Badge variant="outline" className="text-[10px]">{r.protocol}</Badge></TableCell>
+  1524→                    <TableCell>{actionBadge(r.action)}</TableCell>
+  1525→                    <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{r.description}</TableCell>
+  1526→                    <TableCell className="font-mono text-xs text-muted-foreground">{r.bandwidth || "—"}</TableCell>
+  1527→                    <TableCell>
+  1528→                      <Switch checked={!!r.enabled} onCheckedChange={() => handleToggle(r)} />
+  1529→                    </TableCell>
+  1530→                    <TableCell className="text-right">
+  1531→                      <div className="flex items-center justify-end gap-0.5">
+  1532→                        <Button variant="ghost" size="sm" onClick={() => handleMove(r, "up")} title="Move up">
+  1533→                          <ArrowUp className="h-3.5 w-3.5" />
+  1534→                        </Button>
+  1535→                        <Button variant="ghost" size="sm" onClick={() => handleMove(r, "down")} title="Move down">
+  1536→                          <ArrowDown className="h-3.5 w-3.5" />
+  1537→                        </Button>
+  1538→                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(r)}>
+  1539→                          <Trash2 className="h-3.5 w-3.5" />
+  1540→                        </Button>
+  1541→                      </div>
+  1542→                    </TableCell>
+  1543→                  </TableRow>
+  1544→                ))}
+  1545→              </TableBody>
+  1546→            </Table>
+  1547→          </div>
+  1548→        )}
+  1549→      </SectionCard>
+  1550→
+  1551→      <DeleteDialog
+  1552→        open={!!deleteTarget}
+  1553→        onOpenChange={(o) => !o && setDeleteTarget(null)}
+  1554→        onConfirm={handleDelete}
+  1555→        title="Delete Firewall Rule"
+  1556→        description={<>Delete rule #{deleteTarget?.position}? This cannot be undone.</>}
+  1557→        busy={busy}
+  1558→      />
+  1559→    </div>
+  1560→  );
+  1561→}
+  1562→
+  1563→/* ---------- DoS Settings ---------- */
+  1564→
+  1565→function DosSettingsPage({ moduleId, childId, grandchildId }: ViewProps) {
+  1566→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  1567→  const { toast } = useToast();
+  1568→  const [rows, setRows] = React.useState<any[]>([]);
+  1569→  const [loading, setLoading] = React.useState(true);
+  1570→
+  1571→  const load = React.useCallback(() => {
+  1572→    setLoading(true);
+  1573→    systemApi.list("dosSettings").then((res) => {
+  1574→      setRows(res.data ?? []);
+  1575→      setLoading(false);
+  1576→    });
+  1577→  }, []);
+  1578→
+  1579→  React.useEffect(() => {
+  1580→    load();
+  1581→  }, [load]);
+  1582→
+  1583→  const handleToggle = async (r: any) => {
+  1584→    await systemApi.toggle("dosSettings", r.id, "status");
+  1585→    toast({
+  1586→      title: "DoS protection toggled",
+  1587→      description: `${r.attackType} is now ${r.status === "Enabled" ? "Disabled" : "Enabled"}.`,
+  1588→    });
+  1589→    load();
+  1590→  };
+  1591→
+  1592→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  1593→
+  1594→  return (
+  1595→    <div className="space-y-6">
+  1596→      <PageHeader
+  1597→        title={grandchild?.label ?? "DoS Settings"}
+  1598→        description="Enable or disable protection against various Denial of Service attack types."
+  1599→        icon={<Settings2 className="h-5 w-5" />}
+  1600→        breadcrumb={breadcrumb}
+  1601→      />
+  1602→      <SectionCard title="DoS Attack Protection" description={`${rows.length} attack types`}>
+  1603→        {loading ? <PageLoader /> : (
+  1604→          <div className="overflow-x-auto">
+  1605→            <Table>
+  1606→              <TableHeader>
+  1607→                <TableRow>
+  1608→                  <TableHead>Attack Type</TableHead>
+  1609→                  <TableHead>Protocol</TableHead>
+  1610→                  <TableHead>Threshold</TableHead>
+  1611→                  <TableHead>Status</TableHead>
+  1612→                </TableRow>
+  1613→              </TableHeader>
+  1614→              <TableBody>
+  1615→                {rows.map((r) => (
+  1616→                  <TableRow key={r.id}>
+  1617→                    <TableCell className="font-medium">{r.attackType}</TableCell>
+  1618→                    <TableCell><Badge variant="outline" className="text-[10px]">{r.protocol}</Badge></TableCell>
+  1619→                    <TableCell className="font-mono text-xs">{r.threshold}</TableCell>
+  1620→                    <TableCell>
+  1621→                      <div className="flex items-center gap-2">
+  1622→                        <Switch checked={r.status === "Enabled"} onCheckedChange={() => handleToggle(r)} />
+  1623→                        <span className="text-xs text-muted-foreground">{r.status}</span>
+  1624→                      </div>
+  1625→                    </TableCell>
+  1626→                  </TableRow>
+  1627→                ))}
+  1628→              </TableBody>
+  1629→            </Table>
+  1630→          </div>
+  1631→        )}
+  1632→      </SectionCard>
+  1633→    </div>
+  1634→  );
+  1635→}
+  1636→
+  1637→/* ---------- DoS Bypass ---------- */
+  1638→
+  1639→function DosBypassPage({ moduleId, childId, grandchildId }: ViewProps) {
+  1640→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  1641→  const { toast } = useToast();
+  1642→  const [rows, setRows] = React.useState<any[]>([
+  1643→    { id: 1, source: "*", sourcePort: "*", destination: "127.0.0.1", destinationPort: "1812", protocol: "UDP" },
+  1644→    { id: 2, source: "192.168.1.0/24", sourcePort: "*", destination: "*", destinationPort: "53", protocol: "UDP" },
+  1645→  ]);
+  1646→  const [showForm, setShowForm] = React.useState(false);
+  1647→  const [form, setForm] = React.useState({ source: "", sourcePort: "*", destination: "", destinationPort: "*", protocol: "UDP" });
+  1648→  const [saving, setSaving] = React.useState(false);
+  1649→
+  1650→  const handleAdd = async (e: React.FormEvent) => {
+  1651→    e.preventDefault();
+  1652→    if (!form.source && !form.destination) return;
+  1653→    setSaving(true);
+  1654→    await systemApi.create("dosBypass", form);
+  1655→    setSaving(false);
+  1656→    setRows([...rows, { id: Date.now(), ...form }]);
+  1657→    setForm({ source: "", sourcePort: "*", destination: "", destinationPort: "*", protocol: "UDP" });
+  1658→    setShowForm(false);
+  1659→    toast({ title: "Bypass rule created", description: `${form.source || "*"} → ${form.destination || "*"}` });
+  1660→  };
+  1661→
+  1662→  const handleDelete = (r: any) => {
+  1663→    setRows(rows.filter((x) => x.id !== r.id));
+  1664→    toast({ title: "Bypass rule deleted", description: `${r.source || "*"} → ${r.destination || "*"}` });
+  1665→  };
+  1666→
+  1667→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  1668→
+  1669→  return (
+  1670→    <div className="space-y-6">
+  1671→      <PageHeader
+  1672→        title={grandchild?.label ?? "DoS Bypass"}
+  1673→        description="Create rules to bypass DoS protection for specific traffic (Source, Destination, Port, Protocol)."
+  1674→        icon={<Settings2 className="h-5 w-5" />}
+  1675→        breadcrumb={breadcrumb}
+  1676→      />
+  1677→      <ActionBar>
+  1678→        <Button size="sm" onClick={() => setShowForm(!showForm)}>
+  1679→          <Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Create"}
+  1680→        </Button>
+  1681→        {rows.length > 0 && (
+  1682→          <Button size="sm" variant="destructive" onClick={() => { setRows([]); toast({ title: "All bypass rules deleted" }); }}>
+  1683→            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete All
+  1684→          </Button>
+  1685→        )}
+  1686→      </ActionBar>
+  1687→
+  1688→      {showForm && (
+  1689→        <SectionCard title="Create Bypass Rule" description="Traffic matching this rule will bypass DoS protection">
+  1690→          <form onSubmit={handleAdd} className="grid grid-cols-1 gap-4 md:grid-cols-3">
+  1691→            <div className="space-y-2">
+  1692→              <Label>Source *</Label>
+  1693→              <Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="* for all or IP/Network" required />
+  1694→            </div>
+  1695→            <div className="space-y-2">
+  1696→              <Label>Source Port</Label>
+  1697→              <Input value={form.sourcePort} onChange={(e) => setForm({ ...form, sourcePort: e.target.value })} placeholder="* for all" />
+  1698→            </div>
+  1699→            <div className="space-y-2">
+  1700→              <Label>Protocol</Label>
+  1701→              <Select value={form.protocol} onValueChange={(v) => setForm({ ...form, protocol: v })}>
+  1702→                <SelectTrigger><SelectValue /></SelectTrigger>
+  1703→                <SelectContent>
+  1704→                  <SelectItem value="TCP">TCP</SelectItem>
+  1705→                  <SelectItem value="UDP">UDP</SelectItem>
+  1706→                  <SelectItem value="ICMP">ICMP</SelectItem>
+  1707→                  <SelectItem value="ANY">Any</SelectItem>
+  1708→                </SelectContent>
+  1709→              </Select>
+  1710→            </div>
+  1711→            <div className="space-y-2">
+  1712→              <Label>Destination *</Label>
+  1713→              <Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} placeholder="* for all or IP/Network" required />
+  1714→            </div>
+  1715→            <div className="space-y-2">
+  1716→              <Label>Destination Port</Label>
+  1717→              <Input value={form.destinationPort} onChange={(e) => setForm({ ...form, destinationPort: e.target.value })} placeholder="* for all" />
+  1718→            </div>
+  1719→            <div className="flex items-end">
+  1720→              <Button type="submit" disabled={saving} className="w-full">
+  1721→                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+  1722→                Create
+  1723→              </Button>
+  1724→            </div>
+  1725→          </form>
+  1726→        </SectionCard>
+  1727→      )}
+  1728→
+  1729→      <SectionCard title="Manage DoS Bypass Rules" description={`${rows.length} rules`}>
+  1730→        {rows.length === 0 ? (
+  1731→          <EmptyState icon={<ShieldCheck className="h-5 w-5" />} title="No bypass rules" description="Create a rule to bypass DoS protection for specific traffic." />
+  1732→        ) : (
+  1733→          <div className="overflow-x-auto">
+  1734→            <Table>
+  1735→              <TableHeader>
+  1736→                <TableRow>
+  1737→                  <TableHead>Source</TableHead>
+  1738→                  <TableHead>Source Port</TableHead>
+  1739→                  <TableHead>Destination</TableHead>
+  1740→                  <TableHead>Destination Port</TableHead>
+  1741→                  <TableHead>Protocol</TableHead>
+  1742→                  <TableHead className="text-right">Del</TableHead>
+  1743→                </TableRow>
+  1744→              </TableHeader>
+  1745→              <TableBody>
+  1746→                {rows.map((r) => (
+  1747→                  <TableRow key={r.id}>
+  1748→                    <TableCell className="font-mono text-xs">{r.source || "*"}</TableCell>
+  1749→                    <TableCell className="font-mono text-xs">{r.sourcePort || "*"}</TableCell>
+  1750→                    <TableCell className="font-mono text-xs">{r.destination || "*"}</TableCell>
+  1751→                    <TableCell className="font-mono text-xs">{r.destinationPort || "*"}</TableCell>
+  1752→                    <TableCell><Badge variant="outline" className="text-[10px]">{r.protocol}</Badge></TableCell>
+  1753→                    <TableCell className="text-right">
+  1754→                      <Checkbox onClick={() => handleDelete(r)} />
+  1755→                    </TableCell>
+  1756→                  </TableRow>
+  1757→                ))}
+  1758→              </TableBody>
+  1759→            </Table>
+  1760→          </div>
+  1761→        )}
+  1762→      </SectionCard>
+  1763→    </div>
+  1764→  );
+  1765→}
+  1766→
+  1767→/* ---------- Free Sites ---------- */
+  1768→
+  1769→function FreeSitesPage({ moduleId, childId, grandchildId }: ViewProps) {
+  1770→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  1771→  const { toast } = useToast();
+  1772→  const [rows, setRows] = React.useState<any[]>([]);
+  1773→  const [loading, setLoading] = React.useState(true);
+  1774→  const [dialogOpen, setDialogOpen] = React.useState(false);
+  1775→  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
+  1776→  const [busy, setBusy] = React.useState(false);
+  1777→
+  1778→  const load = React.useCallback(() => {
+  1779→    setLoading(true);
+  1780→    systemApi.list("freeSites").then((res) => {
+  1781→      setRows(res.data ?? []);
+  1782→      setLoading(false);
+  1783→    });
+  1784→  }, []);
+  1785→
+  1786→  React.useEffect(() => {
+  1787→    load();
+  1788→  }, [load]);
+  1789→
+  1790→  const handleToggle = async (r: any) => {
+  1791→    await systemApi.toggle("freeSites", r.id, "status");
+  1792→    toast({
+  1793→      title: "Free site toggled",
+  1794→      description: `${r.siteName} is now ${r.status === "Active" ? "Inactive" : "Active"}.`,
+  1795→    });
+  1796→    load();
+  1797→  };
+  1798→
+  1799→  const handleDelete = async () => {
+  1800→    if (!deleteTarget) return;
+  1801→    setBusy(true);
+  1802→    await systemApi.delete("freeSites", deleteTarget.id);
+  1803→    setBusy(false);
+  1804→    toast({ title: "Free site deleted", description: deleteTarget.siteName });
+  1805→    setDeleteTarget(null);
+  1806→    load();
+  1807→  };
+  1808→
+  1809→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  1810→
+  1811→  return (
+  1812→    <div className="space-y-6">
+  1813→      <PageHeader
+  1814→        title={grandchild?.label ?? "Free Sites"}
+  1815→        description="Zero-rated sites that don't count against user data quota."
+  1816→        icon={<Settings2 className="h-5 w-5" />}
+  1817→        breadcrumb={breadcrumb}
+  1818→        actions={
+  1819→          <Button onClick={() => setDialogOpen(true)}>
+  1820→            <Plus className="mr-2 h-4 w-4" /> Add Site
+  1821→          </Button>
+  1822→        }
+  1823→      />
+  1824→      <SectionCard title="Free Sites" description={`${rows.length} sites`}>
+  1825→        {loading ? <PageLoader /> : rows.length === 0 ? (
+  1826→          <EmptyState icon={<Globe className="h-5 w-5" />} title="No free sites" description="Add a zero-rated site." />
+  1827→        ) : (
+  1828→          <div className="overflow-x-auto">
+  1829→            <Table>
+  1830→              <TableHeader>
+  1831→                <TableRow>
+  1832→                  <TableHead>Site Name</TableHead>
+  1833→                  <TableHead>URL</TableHead>
+  1834→                  <TableHead>Status</TableHead>
+  1835→                  <TableHead className="text-right">Actions</TableHead>
+  1836→                </TableRow>
+  1837→              </TableHeader>
+  1838→              <TableBody>
+  1839→                {rows.map((r) => (
+  1840→                  <TableRow key={r.id}>
+  1841→                    <TableCell className="font-medium">{r.siteName}</TableCell>
+  1842→                    <TableCell className="font-mono text-xs">{r.url}</TableCell>
+  1843→                    <TableCell>
+  1844→                      <Switch checked={r.status === "Active"} onCheckedChange={() => handleToggle(r)} />
+  1845→                    </TableCell>
+  1846→                    <TableCell className="text-right">
+  1847→                      <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => setDeleteTarget(r)}>
+  1848→                        <Trash2 className="h-3.5 w-3.5" />
+  1849→                      </Button>
+  1850→                    </TableCell>
+  1851→                  </TableRow>
+  1852→                ))}
+  1853→              </TableBody>
+  1854→            </Table>
+  1855→          </div>
+  1856→        )}
+  1857→      </SectionCard>
+  1858→
+  1859→      <FreeSiteDialog
+  1860→        open={dialogOpen}
+  1861→        onOpenChange={setDialogOpen}
+  1862→        onSaved={() => { setDialogOpen(false); load(); }}
+  1863→      />
+  1864→
+  1865→      <DeleteDialog
+  1866→        open={!!deleteTarget}
+  1867→        onOpenChange={(o) => !o && setDeleteTarget(null)}
+  1868→        onConfirm={handleDelete}
+  1869→        title="Delete Free Site"
+  1870→        description={<>Delete free site <span className="font-medium text-foreground">{deleteTarget?.siteName}</span>?</>}
+  1871→        busy={busy}
+  1872→      />
+  1873→    </div>
+  1874→  );
+  1875→}
+  1876→
+  1877→function FreeSiteDialog({
+  1878→  open, onOpenChange, onSaved,
+  1879→}: { open: boolean; onOpenChange: (o: boolean) => void; onSaved: () => void; }) {
+  1880→  const { toast } = useToast();
+  1881→  const [saving, setSaving] = React.useState(false);
+  1882→  const [form, setForm] = React.useState({ siteName: "", url: "" });
+  1883→
+  1884→  React.useEffect(() => {
+  1885→    if (open) setForm({ siteName: "", url: "" });
+  1886→  }, [open]);
+  1887→
+  1888→  const handleSubmit = async (e: React.FormEvent) => {
+  1889→    e.preventDefault();
+  1890→    setSaving(true);
+  1891→    await systemApi.create("freeSites", { ...form, status: "Active" });
+  1892→    setSaving(false);
+  1893→    toast({ title: "Free site added", description: form.siteName });
+  1894→    onSaved();
+  1895→  };
+  1896→
+  1897→  return (
+  1898→    <Dialog open={open} onOpenChange={onOpenChange}>
+  1899→      <DialogContent>
+  1900→        <DialogHeader>
+  1901→          <DialogTitle>Add Free Site</DialogTitle>
+  1902→          <DialogDescription>Zero-rated sites don&apos;t count against user data quota.</DialogDescription>
+  1903→        </DialogHeader>
+  1904→        <form onSubmit={handleSubmit} className="space-y-4">
+  1905→          <div className="space-y-2">
+  1906→            <Label>Site Name</Label>
+  1907→            <Input value={form.siteName} onChange={(e) => setForm({ ...form, siteName: e.target.value })} placeholder="Google" required />
+  1908→          </div>
+  1909→          <div className="space-y-2">
+  1910→            <Label>URL</Label>
+  1911→            <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="google.com" required />
+  1912→          </div>
+  1913→          <DialogFooter>
+  1914→            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+  1915→            <Button type="submit" disabled={saving}>
+  1916→              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+  1917→              Add Site
+  1918→            </Button>
+  1919→          </DialogFooter>
+  1920→        </form>
+  1921→      </DialogContent>
+  1922→    </Dialog>
+  1923→  );
+  1924→}
+  1925→
+  1926→/* ===================================================================== *
+  1927→ *  DHCP
+  1928→ * ===================================================================== */
+  1929→
+  1930→/* ---------- Manage DHCP ---------- */
+  1931→
+  1932→function ManageDhcpPage({ moduleId, childId, grandchildId }: ViewProps) {
+  1933→  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  1934→  const { toast } = useToast();
+  1935→  const [rows, setRows] = React.useState<any[]>([]);
+  1936→  const [loading, setLoading] = React.useState(true);
+  1937→  const [dialogOpen, setDialogOpen] = React.useState(false);
+  1938→  const [editing, setEditing] = React.useState<any | null>(null);
+  1939→  const [deleteTarget, setDeleteTarget] = React.useState<any | null>(null);
+  1940→  const [busy, setBusy] = React.useState(false);
+  1941→
+  1942→  const load = React.useCallback(() => {
+  1943→    setLoading(true);
+  1944→    systemApi.list("dhcpScopes").then((res) => {
+  1945→      setRows(res.data ?? []);
+  1946→      setLoading(false);
+  1947→    });
+  1948→  }, []);
+  1949→
+  1950→  React.useEffect(() => {
+  1951→    load();
+  1952→  }, [load]);
+  1953→
+  1954→  const handleDelete = async () => {
+  1955→    if (!deleteTarget) return;
+  1956→    setBusy(true);
+  1957→    await systemApi.delete("dhcpScopes", deleteTarget.id);
+  1958→    setBusy(false);
+  1959→    toast({ title: "DHCP scope deleted", description: `${deleteTarget.startIp} – ${deleteTarget.endIp}` });
+  1960→    setDeleteTarget(null);
+  1961→    load();
+  1962→  };
+  1963→
+  1964→  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  1965→
+  1966→  return (
+  1967→    <div className="space-y-6">
+  1968→      <PageHeader
+  1969→        title={grandchild?.label ?? "Manage DHCP"}
+  1970→        description="Configure DHCP scopes for IP address allocation."
+  1971→        icon={<Settings2 className="h-5 w-5" />}
+  1972→        breadcrumb={breadcrumb}
+  1973→        actions={
+  1974→          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+  1975→            <Plus className="mr-2 h-4 w-4" /> Add Scope
+  1976→          </Button>
+  1977→        }
+  1978→      />
+  1979→      <SectionCard title="DHCP Scopes" description={`${rows.length} scopes`}>
+  1980→        {loading ? <PageLoader /> : rows.length === 0 ? (
+  1981→          <EmptyState icon={<Wifi className="h-5 w-5" />} title="No DHCP scopes" description="Add a DHCP scope." />
+  1982→        ) : (
+  1983→          <div className="overflow-x-auto">
+  1984→            <Table>
+  1985→              <TableHeader>
+  1986→                <TableRow>
+  1987→                  <TableHead>Interface</TableHead>
+  1988→                  <TableHead>Start IP</TableHead>
+  1989→                  <TableHead>End IP</TableHead>
+  1990→                  <TableHead>Netmask</TableHead>
+  1991→                  <TableHead>Gateway</TableHead>
+  1992→                  <TableHead>DNS</TableHead>
+  1993→                  <TableHead>Lease Time</TableHead>
+  1994→                  <TableHead>Status</TableHead>
+  1995→                  <TableHead className="text-right">Actions</TableHead>
+  1996→                </TableRow>
+  1997→              </TableHeader>
+  1998→              <TableBody>
+  1999→                {rows.map((r) => (
+  2000→                  <TableRow key={r.id}>
+
+[showing lines 1-2000 of 6211; use offset=2001 with limit to continue reading]
