@@ -95,6 +95,7 @@ import {
   ListChecks,
 } from "lucide-react";
 import { systemApi } from "@/lib/api";
+import { CkEditorField } from "@/components/app/CkEditorField";
 
 /* ===================================================================== *
  *  SystemView — top-level router for the System module
@@ -3891,69 +3892,87 @@ const CAPTIVE_TEMPLATES_MOCK = [
 function CaptiveCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
   const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
+  const setActive = useAppStore((s) => s.setActive);
   const [saving, setSaving] = React.useState(false);
   const [form, setForm] = React.useState({
-    name: "",
-    type: "Hotspot",
-    description: "",
+    templatename: "",
+    authtype: "4",
+    templatetype: "0",
   });
+  const [editorData, setEditorData] = React.useState("");
 
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.templatename.trim()) {
+      toast({ title: "Template name required", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     await new Promise((r) => setTimeout(r, 500));
     setSaving(false);
-    toast({ title: "Template created", description: `${form.name} (${form.type})` });
-    setForm({ name: "", type: "Hotspot", description: "" });
+    toast({ title: "Template created", description: `${form.templatename} — saved with WYSIWYG content (${editorData.length} chars)` });
+    setActive(moduleId, "captive-portal", "manage");
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={grandchild?.label ?? "Create Captive Portal Template"}
-        description="Create a new captive portal login page template."
+        title={grandchild?.label ?? "Create Client Login Template"}
+        description="Create a new captive portal login page template with WYSIWYG editor (same as 24online CKEditor)."
         icon={<Settings2 className="h-5 w-5" />}
         breadcrumb={breadcrumb}
       />
       <form onSubmit={handleSubmit}>
-        <SectionCard title="Template Details">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <SectionCard title="Template Details" description="Basic template configuration">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>Template Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Hotel Premium" required />
+              <Label>Template Name <span className="text-primary">*</span></Label>
+              <Input value={form.templatename} onChange={(e) => setForm({ ...form, templatename: e.target.value })} placeholder="e.g. Hotel Premium Login" required />
             </div>
             <div className="space-y-2">
-              <Label>Type</Label>
-              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+              <Label>Authentication Type</Label>
+              <Select value={form.authtype} onValueChange={(v) => setForm({ ...form, authtype: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Hotspot">Hotspot</SelectItem>
-                  <SelectItem value="Hotel">Hotel</SelectItem>
-                  <SelectItem value="Cafe">Cafe</SelectItem>
-                  <SelectItem value="Airport">Airport</SelectItem>
-                  <SelectItem value="Leased Line">Leased Line</SelectItem>
+                  <SelectItem value="0">Open (No Auth)</SelectItem>
+                  <SelectItem value="1">User Based</SelectItem>
+                  <SelectItem value="2">PIN Based</SelectItem>
+                  <SelectItem value="3">MAC Based</SelectItem>
+                  <SelectItem value="4">User + PIN</SelectItem>
+                  <SelectItem value="5">Hotel (Room+OTP)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Description</Label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={2}
-                placeholder="Template description…"
-              />
+            <div className="space-y-2">
+              <Label>Template Type</Label>
+              <Select value={form.templatetype} onValueChange={(v) => setForm({ ...form, templatetype: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Pre Login Page</SelectItem>
+                  <SelectItem value="1">Post Login Page</SelectItem>
+                  <SelectItem value="2">Default Template</SelectItem>
+                  <SelectItem value="3">Customizable Page</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-end">
-            <Button type="submit" disabled={saving}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Create Template
-            </Button>
-          </div>
         </SectionCard>
+
+        <SectionCard title="WYSIWYG Editor" description="Design the login page HTML (same CKEditor as 24online — Source, Bold, Italic, Links, Images, Tables, Colors, Forms, etc.)">
+          <CkEditorField value={editorData} onChange={setEditorData} />
+        </SectionCard>
+
+        <div className="flex items-center justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "captive-portal", "manage")}>
+            <X className="mr-2 h-4 w-4" /> Cancel
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Create Template
+          </Button>
+        </div>
       </form>
     </div>
   );
@@ -3962,13 +3981,42 @@ function CaptiveCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
 function CaptiveManagePage({ moduleId, childId, grandchildId }: ViewProps) {
   const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  const [rows, setRows] = React.useState(CAPTIVE_TEMPLATES_MOCK);
+  const setActive = useAppStore((s) => s.setActive);
+  const [rows, setRows] = React.useState([
+    { id: 1, name: "Default Template", type: "Pre Login Page", authType: "User + PIN", isDefault: true, status: "Active" },
+    { id: 2, name: "@DefaultLeasedLineWelcomePage@", type: "Pre Login Page", authType: "MAC Based", isDefault: true, status: "Active" },
+    { id: 3, name: "Self Registration", type: "Pre Login Page", authType: "Open", isDefault: false, status: "Active" },
+    { id: 4, name: "REGISTER USING PIN (Default)", type: "Pre Login Page", authType: "PIN Based", isDefault: true, status: "Active" },
+    { id: 5, name: "Change Password on Login", type: "Post Login Page", authType: "User Based", isDefault: false, status: "Active" },
+    { id: 6, name: "Forgot Password", type: "Pre Login Page", authType: "User Based", isDefault: false, status: "Active" },
+    { id: 7, name: "BUY PKG/PIN USING PG (Default)", type: "Pre Login Page", authType: "User + PIN", isDefault: true, status: "Active" },
+    { id: 8, name: "RENEW ACC USING PG (Default)", type: "Pre Login Page", authType: "User + PIN", isDefault: true, status: "Active" },
+    { id: 9, name: "MY ACC LOGIN PAGE (Default)", type: "Pre Login Page", authType: "User Based", isDefault: true, status: "Active" },
+    { id: 10, name: "PG PURCHASE CONFIRM (Default)", type: "Post Login Page", authType: "User Based", isDefault: true, status: "Active" },
+    { id: 11, name: "RENEW ACC USING PIN (Default)", type: "Pre Login Page", authType: "PIN Based", isDefault: true, status: "Active" },
+    { id: 12, name: "PG REDIRECTION PAGE (Default)", type: "Post Login Page", authType: "Open", isDefault: true, status: "Active" },
+  ]);
+  const [editing, setEditing] = React.useState<any | null>(null);
+  const [editorData, setEditorData] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const [search, setSearch] = React.useState("");
 
   const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
 
-  const handleToggle = (r: any) => {
-    setRows(rows.map((x) => (x.id === r.id ? { ...x, status: x.status === "Active" ? "Inactive" : "Active" } : x)));
-    toast({ title: "Template toggled", description: r.name });
+  const filtered = rows.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
+
+  const handleEdit = (r: any) => {
+    setEditing(r);
+    setEditorData(`<h1>${r.name}</h1>\n<p>Login page content for ${r.name}</p>\n<form>\n  <input type="text" placeholder="Username" />\n  <input type="password" placeholder="Password" />\n  <button type="submit">Login</button>\n</form>`);
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 500));
+    setSaving(false);
+    toast({ title: "Template updated", description: `${editing.name} — WYSIWYG content saved (${editorData.length} chars)` });
+    setEditing(null);
+    setEditorData("");
   };
 
   const handleDelete = (r: any) => {
@@ -3976,52 +4024,128 @@ function CaptiveManagePage({ moduleId, childId, grandchildId }: ViewProps) {
     toast({ title: "Template deleted", description: r.name });
   };
 
+  const handleExport = (r: any) => {
+    toast({ title: "Exporting template", description: `${r.name}.zip` });
+  };
+
+  const handlePreview = (r: any) => {
+    toast({ title: "Preview", description: `Opening preview for ${r.name}` });
+  };
+
+  // If editing a template, show the WYSIWYG editor page
+  if (editing) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={`Edit: ${editing.name}`}
+          description="Edit the template HTML with the WYSIWYG editor (same CKEditor as 24online)."
+          icon={<Settings2 className="h-5 w-5" />}
+          breadcrumb={[
+            ...breadcrumb.slice(0, -1),
+            { label: "Manage", onClick: () => setEditing(null) },
+            { label: editing.name },
+          ]}
+        />
+        <SectionCard title="Template Properties">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Template Name</Label>
+              <Input value={editing.name} readOnly className="bg-muted/50" />
+            </div>
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Input value={editing.type} readOnly className="bg-muted/50" />
+            </div>
+            <div className="space-y-2">
+              <Label>Auth Type</Label>
+              <Input value={editing.authType} readOnly className="bg-muted/50" />
+            </div>
+          </div>
+        </SectionCard>
+        <SectionCard title="WYSIWYG Editor" description="Full CKEditor with Source, Bold, Italic, Links, Images, Tables, Colors, Forms, etc.">
+          <CkEditorField value={editorData} onChange={setEditorData} />
+        </SectionCard>
+        <div className="flex items-center justify-end gap-3">
+          <Button variant="outline" onClick={() => setEditing(null)}><X className="mr-2 h-4 w-4" /> Cancel</Button>
+          <Button variant="outline" onClick={() => toast({ title: "Preview", description: "Opening template preview…" })}><FileText className="mr-2 h-4 w-4" /> Preview</Button>
+          <Button onClick={handleSaveEdit} disabled={saving}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Update Template
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title={grandchild?.label ?? "Manage Captive Portal Templates"}
-        description="View, edit, and delete captive portal templates."
+        title={grandchild?.label ?? "Manage Client Login Templates"}
+        description={`${rows.length} templates — click a template name to open the WYSIWYG editor.`}
         icon={<Settings2 className="h-5 w-5" />}
         breadcrumb={breadcrumb}
+        actions={<Button onClick={() => setActive(moduleId, "captive-portal", "create")}><Plus className="mr-2 h-4 w-4" /> Create Template</Button>}
       />
-      <SectionCard title="Templates" description={`${rows.length} templates`}>
-        {rows.length === 0 ? (
-          <EmptyState icon={<Plug className="h-5 w-5" />} title="No templates" description="Create a captive portal template." />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.name}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-[10px]">{r.type}</Badge></TableCell>
-                    <TableCell>
-                      <Switch checked={r.status === "Active"} onCheckedChange={() => handleToggle(r)} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit template", description: r.name })}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+      <ActionBar>
+        <div className="relative flex-1 max-w-xs">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input placeholder="Search templates…" className="h-8 pl-8 text-xs" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <Button size="sm" variant="outline" onClick={() => toast({ title: "Import template", description: "Upload a .zip template file" })}>
+          <Upload className="mr-2 h-3.5 w-3.5" /> Import Template
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => toast({ title: "Export all", description: "Exporting all templates as .zip" })}>
+          <Download className="mr-2 h-3.5 w-3.5" /> Export All
+        </Button>
+      </ActionBar>
+      <SectionCard title="Client Login Templates" description={`${filtered.length} of ${rows.length} templates`}>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Template Name</TableHead>
+                <TableHead>Template Type</TableHead>
+                <TableHead>Authentication Type</TableHead>
+                <TableHead>Default</TableHead>
+                <TableHead>Preview</TableHead>
+                <TableHead className="text-right">Export / Delete</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>
+                    <button className="font-medium text-primary hover:underline" onClick={() => handleEdit(r)}>
+                      {r.name}
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{r.type}</TableCell>
+                  <TableCell><Badge variant="outline" className="text-[10px]">{r.authType}</Badge></TableCell>
+                  <TableCell>
+                    {r.isDefault ? <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">Default</Badge> : <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" onClick={() => handlePreview(r)}>
+                      <FileText className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleExport(r)}>
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
+                      {!r.isDefault && (
                         <Button variant="ghost" size="sm" className="text-primary hover:text-primary" onClick={() => handleDelete(r)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </SectionCard>
     </div>
   );
