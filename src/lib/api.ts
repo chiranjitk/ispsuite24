@@ -275,3 +275,28 @@ export const systemApi = {
       body: JSON.stringify({ sub, action: "serviceControl", id, command }),
     }),
 };
+
+/* --- Policy --- */
+
+export const policyApi = {
+  list: (sub: string, search?: string) => {
+    const q = new URLSearchParams({ sub });
+    if (search) q.set("search", search);
+    return request<any[]>(`/api/policy?${q.toString()}`);
+  },
+  create: (sub: string, data: any) =>
+    request<any>("/api/policy", {
+      method: "POST",
+      body: JSON.stringify({ sub, action: "create", ...data }),
+    }),
+  update: (sub: string, data: any) =>
+    request<any>("/api/policy", {
+      method: "POST",
+      body: JSON.stringify({ sub, action: "update", ...data }),
+    }),
+  delete: (sub: string, id: number) =>
+    request<void>("/api/policy", {
+      method: "POST",
+      body: JSON.stringify({ sub, action: "delete", id }),
+    }),
+};

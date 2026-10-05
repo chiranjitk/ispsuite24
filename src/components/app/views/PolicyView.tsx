@@ -1,8 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { ViewProps, useModuleHeader } from "./_shared";
-import { PageHeader, KpiCard, SectionCard } from "@/components/app/shared";
+import {
+  ViewProps,
+  useModuleHeader,
+  useViewRouter,
+  ChildOverview,
+  LeafPlaceholder,
+} from "./_shared";
+import {
+  PageHeader,
+  KpiCard,
+  SectionCard,
+  EmptyState,
+  ActionBar,
+} from "@/components/app/shared";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -22,79 +34,160 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   ShieldCheck,
-  Waves,
+  Plus,
+  Trash2,
+  Save,
+  X,
+  Search,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
   Clock,
   Gauge,
   Database,
-  Scale,
   Zap,
-  Plus,
-  Pencil,
-  Save,
-  Calendar,
-  Trash2,
-  ArrowUp,
-  ArrowDown,
 } from "lucide-react";
-import {
-  SURFING_POLICIES,
-  ACCESS_TIME_POLICIES,
-  BANDWIDTH_POLICIES,
-  DATA_TRANSFER_POLICIES,
-  FAP_POLICIES,
-  QOS_POLICIES,
-} from "@/lib/mock-data";
+import { policyApi } from "@/lib/api";
 
-export function PolicyView({ moduleId, childId }: ViewProps) {
-  const { mod } = useModuleHeader(moduleId, childId);
-  if (!mod) return null;
-  if (!childId) return <PolicyOverview moduleId={moduleId} />;
-  switch (childId) {
-    case "surfing-quota":
-      return <SurfingQuotaChild moduleId={moduleId} childId={childId} />;
-    case "access-time":
-      return <AccessTimeChild moduleId={moduleId} childId={childId} />;
-    case "bandwidth":
-      return <BandwidthChild moduleId={moduleId} childId={childId} />;
-    case "data-transfer":
-      return <DataTransferChild moduleId={moduleId} childId={childId} />;
-    case "fap":
-      return <FapChild moduleId={moduleId} childId={childId} />;
-    case "qos":
-      return <QosChild moduleId={moduleId} childId={childId} />;
-    default:
-      return <PolicyOverview moduleId={moduleId} />;
+export function PolicyView({ moduleId, childId, grandchildId }: ViewProps) {
+  const router = useViewRouter(moduleId, childId, grandchildId);
+
+  if (router.state === "loading") return null;
+  if (router.state === "module-overview")
+    return <PolicyOverview moduleId={moduleId} />;
+  if (router.state === "child-overview")
+    return <ChildOverview moduleId={moduleId} childId={router.childId} />;
+
+  if (router.state === "grandchild") {
+    // Surfing Quota
+    if (childId === "surfing-quota" && grandchildId === "create")
+      return <SurfCreatePage {...{ moduleId, childId, grandchildId }} />;
+    if (childId === "surfing-quota" && grandchildId === "manage")
+      return <SurfManagePage {...{ moduleId, childId, grandchildId }} />;
+
+    // Access Time
+    if (childId === "access-time" && grandchildId === "create")
+      return <AccessCreatePage {...{ moduleId, childId, grandchildId }} />;
+    if (childId === "access-time" && grandchildId === "manage")
+      return <AccessManagePage {...{ moduleId, childId, grandchildId }} />;
+
+    // Bandwidth
+    if (childId === "bandwidth" && grandchildId === "create")
+      return <BwCreatePage {...{ moduleId, childId, grandchildId }} />;
+    if (childId === "bandwidth" && grandchildId === "manage")
+      return <BwManagePage {...{ moduleId, childId, grandchildId }} />;
+    if (childId === "bandwidth" && grandchildId === "schedule")
+      return <BwSchedulePage {...{ moduleId, childId, grandchildId }} />;
+
+    // Data Transfer
+    if (childId === "data-transfer" && grandchildId === "create")
+      return <DtCreatePage {...{ moduleId, childId, grandchildId }} />;
+    if (childId === "data-transfer" && grandchildId === "manage")
+      return <DtManagePage {...{ moduleId, childId, grandchildId }} />;
+
+    // FAP
+    if (childId === "fap" && grandchildId === "create-fap")
+      return <FapCreatePage {...{ moduleId, childId, grandchildId }} />;
+    if (childId === "fap" && grandchildId === "manage-fap")
+      return <FapManagePage {...{ moduleId, childId, grandchildId }} />;
+
+    // QoS
+    if (childId === "qos" && grandchildId === "create-cache")
+      return <QosCreatePage {...{ moduleId, childId, grandchildId }} />;
+    if (childId === "qos" && grandchildId === "manage-cache")
+      return <QosManagePage {...{ moduleId, childId, grandchildId }} />;
+
+    return (
+      <LeafPlaceholder
+        moduleId={moduleId}
+        childId={router.childId}
+        grandchildId={router.grandchildId}
+      />
+    );
   }
+
+  return <PolicyOverview moduleId={moduleId} />;
 }
 
-/* ---------------- Overview ---------------- */
+/* ================ Shared helpers ================ */
+
+function useBreadcrumb(moduleId: string, childId: string, grandchildId?: string) {
+  const { mod, child, grandchild } = useModuleHeader(moduleId, childId, grandchildId);
+  const setActive = useAppStore((s) => s.setActive);
+  return [
+    { label: "Cryptsk" },
+    { label: mod?.label ?? "Policy", onClick: () => setActive(moduleId, "", "") },
+    { label: child?.label ?? childId, onClick: () => setActive(moduleId, childId, "") },
+    ...(grandchild ? [{ label: grandchild.label }] : []),
+  ];
+}
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center py-12">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+function DeleteDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  title,
+  description,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => onOpenChange(false)}>
+      <div className="rounded-lg bg-card p-6 shadow-xl max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={() => { onConfirm(); onOpenChange(false); }}>
+            <Trash2 className="mr-2 h-4 w-4" /> Delete
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================ Overview ================ */
 
 function PolicyOverview({ moduleId }: { moduleId: string }) {
   const { mod } = useModuleHeader(moduleId);
   const setActive = useAppStore((s) => s.setActive);
   if (!mod) return null;
   const cards = [
-    { label: "Surfing Quota", desc: `${SURFING_POLICIES.length} policies · daily/monthly data caps`, icon: Waves, child: "surfing-quota" },
-    { label: "Access Time", desc: `${ACCESS_TIME_POLICIES.length} time-based policies`, icon: Clock, child: "access-time" },
-    { label: "Bandwidth", desc: `${BANDWIDTH_POLICIES.length} up/down restrictions`, icon: Gauge, child: "bandwidth" },
-    { label: "Data Transfer", desc: `${DATA_TRANSFER_POLICIES.length} data quota policies`, icon: Database, child: "data-transfer" },
-    { label: "Fair Access Policy", desc: `${FAP_POLICIES.length} FAP rules`, icon: Scale, child: "fap" },
-    { label: "QoS Policy", desc: `${QOS_POLICIES.length} QoS / cache policies`, icon: Zap, child: "qos" },
+    { label: "Surfing Quota", desc: "Create & manage surfing quota policies", icon: Clock, child: "surfing-quota" },
+    { label: "Access Time", desc: "Time-based access policies", icon: ShieldCheck, child: "access-time" },
+    { label: "Bandwidth", desc: "Bandwidth restriction policies", icon: Gauge, child: "bandwidth" },
+    { label: "Data Transfer Policy", desc: "Data transfer quotas", icon: Database, child: "data-transfer" },
+    { label: "Fair Access Policy", desc: "FAP rules and thresholds", icon: ShieldCheck, child: "fap" },
+    { label: "QoS Policy", desc: "Cache & QoS scheduling", icon: Zap, child: "qos" },
   ];
   return (
     <div className="space-y-6">
       <PageHeader title={mod.label} description={mod.desc} icon={<mod.icon className="h-5 w-5" />} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
-          <button
-            key={c.child}
-            onClick={() => setActive(moduleId, c.child)}
-            className="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
-          >
+          <button key={c.child} onClick={() => setActive(moduleId, c.child, "")}
+            className="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
               <c.icon className="h-5 w-5" />
             </div>
@@ -109,623 +202,748 @@ function PolicyOverview({ moduleId }: { moduleId: string }) {
   );
 }
 
-/* ---------------- Surfing Quota ---------------- */
+/* ================ SURFING QUOTA ================ */
 
-function SurfingQuotaChild({ moduleId, childId }: ViewProps) {
-  const { mod, child } = useModuleHeader(moduleId, childId);
+function SurfCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  if (!mod) return null;
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title={child!.label}
-        description="Define data caps per user / plan with daily or monthly reset periods."
-        icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
-        actions={
-          <Button onClick={() => toast({ title: "Create surf policy" })}>
-            <Plus className="mr-2 h-4 w-4" /> Create Policy
-          </Button>
-        }
-      />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total Policies" value={String(SURFING_POLICIES.length)} icon={<Waves className="h-4 w-4" />} accent />
-        <KpiCard label="Active" value={String(SURFING_POLICIES.filter((p) => p.status === "Active").length)} icon={<ShieldCheck className="h-4 w-4" />} />
-        <KpiCard label="Daily Reset" value={String(SURFING_POLICIES.filter((p) => p.resetPeriod === "Daily").length)} icon={<Clock className="h-4 w-4" />} />
-        <KpiCard label="Unlimited" value={String(SURFING_POLICIES.filter((p) => p.quotaMb === 0).length)} icon={<Database className="h-4 w-4" />} />
-      </div>
-      <SectionCard title="Surfing Quota Policies" description={`${SURFING_POLICIES.length} policies`}>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Policy Name</TableHead>
-                <TableHead>Quota (MB)</TableHead>
-                <TableHead>Reset Period</TableHead>
-                <TableHead>Applies To</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {SURFING_POLICIES.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {p.quotaMb === 0 ? <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">Unlimited</Badge> : p.quotaMb.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{p.resetPeriod}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.appliesTo}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={p.status === "Active"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-border bg-muted text-muted-foreground"}
-                    >
-                      {p.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit policy", description: p.name })}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
-      <CreateSurfPolicyForm />
-    </div>
-  );
-}
-
-function CreateSurfPolicyForm() {
-  const { toast } = useToast();
-  return (
-    <SectionCard title="Create Surf Policy">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label>Policy Name</Label>
-          <Input placeholder="e.g. Night Free Surf" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Quota (MB)</Label>
-          <Input type="number" placeholder="0 for unlimited" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Reset Period</Label>
-          <Select defaultValue="daily">
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daily">Daily</SelectItem>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="time">Time window</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Applies To</Label>
-          <Select defaultValue="all">
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Users</SelectItem>
-              <SelectItem value="prepaid">All Prepaid</SelectItem>
-              <SelectItem value="hotspot">Hotspot Plans</SelectItem>
-              <SelectItem value="ll">Leased Line</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <Button className="mt-4" onClick={() => toast({ title: "Policy created", description: "Surfing quota policy saved." })}>
-        <Save className="mr-2 h-4 w-4" /> Save Policy
-      </Button>
-    </SectionCard>
-  );
-}
-
-/* ---------------- Access Time ---------------- */
-
-function AccessTimeChild({ moduleId, childId }: ViewProps) {
-  const { mod, child } = useModuleHeader(moduleId, childId);
-  const { toast } = useToast();
-  // 7 days x 24 hours visual grid (default: Mon-Fri 09-18 + Night 22-06)
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const [grid, setGrid] = React.useState<boolean[][]>(() => {
-    return days.map((_, d) =>
-      Array.from({ length: 24 }, (_, h) => {
-        // Office hours 09-18 Mon-Fri
-        if (d < 5 && h >= 9 && h < 18) return true;
-        // Night unlimited 22-06 all days
-        if (h >= 22 || h < 6) return true;
-        return false;
-      })
-    );
+  const setActive = useAppStore((s) => s.setActive);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({
+    policyName: "",
+    policyType: "Time-based",
+    allotedhrs: "1",
+    allotedmin: "00",
+    unlimitedtime: false,
+    sessionpulse: "0",
+    setexpireallotedhrs: "0",
+    setexpireallotedmin: "00",
+    setexpirealloteddays: "30",
+    unlimitedvalue: false,
+    cycletype: "Daily",
+    cycleallotedhrs: "0",
+    cycleallotedmin: "00",
+    description: "",
   });
-  const toggle = (d: number, h: number) => {
-    setGrid((prev) => prev.map((row, di) => (di === d ? row.map((v, hi) => (hi === h ? !v : v)) : row)));
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.policyName.trim()) { toast({ title: "Policy name required", variant: "destructive" }); return; }
+    setSaving(true);
+    await policyApi.create("surfingPolicies", {
+      policyName: form.policyName,
+      policyType: form.policyType,
+      timeAllowed: form.unlimitedtime ? "Unlimited" : `${form.allotedhrs}:${form.allotedmin}`,
+      expirationDuration: form.unlimitedvalue ? "Unlimited" : form.setexpirealloteddays,
+      sessionPulse: form.sessionpulse,
+      description: form.description,
+      status: "Active",
+    });
+    setSaving(false);
+    toast({ title: "Surfing policy created", description: form.policyName });
+    setActive(moduleId, "surfing-quota", "manage");
   };
-  if (!mod) return null;
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={child!.label}
-        description="Time-based access policies with a visual weekly schedule grid."
-        icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
-        actions={
-          <Button onClick={() => toast({ title: "Create access policy" })}>
-            <Plus className="mr-2 h-4 w-4" /> Create Policy
-          </Button>
-        }
-      />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Policies" value={String(ACCESS_TIME_POLICIES.length)} icon={<Clock className="h-4 w-4" />} accent />
-        <KpiCard label="Active" value={String(ACCESS_TIME_POLICIES.filter((p) => p.status === "Active").length)} icon={<ShieldCheck className="h-4 w-4" />} />
-        <KpiCard label="Weekend" value={String(ACCESS_TIME_POLICIES.filter((p) => p.days.includes("Sat")).length)} icon={<Calendar className="h-4 w-4" />} />
-        <KpiCard label="24/7" value={String(ACCESS_TIME_POLICIES.filter((p) => p.days.includes("Mon-Sun")).length)} icon={<Clock className="h-4 w-4" />} />
-      </div>
-      <SectionCard title="Weekly Schedule Grid" description="Click a cell to toggle access for that day/hour. Green = allowed, muted = blocked.">
-        <div className="overflow-x-auto">
-          <div className="min-w-[640px]">
-            <div className="grid grid-cols-[40px_repeat(24,_1fr)] gap-0.5">
-              <div />
-              {Array.from({ length: 24 }).map((_, h) => (
-                <div key={h} className="text-center text-[9px] font-mono text-muted-foreground">{String(h).padStart(2, "0")}</div>
-              ))}
-              {days.map((d, di) => (
-                <React.Fragment key={d}>
-                  <div className="flex items-center text-xs font-medium text-foreground">{d}</div>
-                  {grid[di].map((on, h) => (
-                    <button
-                      key={h}
-                      onClick={() => toggle(di, h)}
-                      aria-label={`${d} ${h}:00`}
-                      className={`h-6 rounded-sm border border-border/50 transition-colors ${
-                        on
-                          ? "bg-emerald-500/70 hover:bg-emerald-500"
-                          : "bg-muted/60 hover:bg-muted"
-                      }`}
-                    />
-                  ))}
-                </React.Fragment>
-              ))}
+      <PageHeader title="Create Surfing Quota Policy" description="Create a new surfing quota policy (PolicyManager servlet)." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+        actions={<Button variant="outline" onClick={() => setActive(moduleId, "surfing-quota", "manage")}><X className="mr-2 h-4 w-4" /> Cancel</Button>} />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <SectionCard title="Create Policy" description="Surfing quota policy details">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Policy Name <span className="text-primary">*</span></Label>
+              <Input value={form.policyName} onChange={(e) => set("policyName", e.target.value)} placeholder="e.g. 1 Hour Daily" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Policy Type <span className="text-primary">*</span></Label>
+              <Select value={form.policyType} onValueChange={(v) => set("policyType", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="Time-based">Time-based</SelectItem><SelectItem value="Unlimited">Unlimited</SelectItem></SelectContent>
+              </Select>
+            </div>
+            {!form.unlimitedtime && form.policyType === "Time-based" && (
+              <>
+                <div className="space-y-2">
+                  <Label>Time Allowed (Hours)</Label>
+                  <Input type="number" min="0" value={form.allotedhrs} onChange={(e) => set("allotedhrs", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Time Allowed (Minutes)</Label>
+                  <Select value={form.allotedmin} onValueChange={(v) => set("allotedmin", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{Array.from({ length: 60 }, (_, i) => <SelectItem key={i} value={String(i).padStart(2, "0")}>{String(i).padStart(2, "0")}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+            <div className="flex items-center gap-3">
+              <Switch checked={form.unlimitedtime} onCheckedChange={(v) => set("unlimitedtime", v)} />
+              <Label>Unlimited Time</Label>
+            </div>
+            <div className="space-y-2">
+              <Label>Session Pulse (minutes)</Label>
+              <Input type="number" min="0" value={form.sessionpulse} onChange={(e) => set("sessionpulse", e.target.value)} />
             </div>
           </div>
+        </SectionCard>
+        <SectionCard title="Expiration Duration" description="When does the policy expire">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2"><Label>Expiration (Days)</Label><Input type="number" value={form.setexpirealloteddays} onChange={(e) => set("setexpirealloteddays", e.target.value)} disabled={form.unlimitedvalue} /></div>
+            <div className="space-y-2"><Label>Expiration (Hours)</Label><Input type="number" value={form.setexpireallotedhrs} onChange={(e) => set("setexpireallotedhrs", e.target.value)} disabled={form.unlimitedvalue} /></div>
+            <div className="flex items-center gap-3"><Switch checked={form.unlimitedvalue} onCheckedChange={(v) => set("unlimitedvalue", v)} /><Label>Unlimited Expiration</Label></div>
+          </div>
+        </SectionCard>
+        <SectionCard title="Cycle Settings" description="Reset cycle for the policy">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Cycle Type</Label>
+              <Select value={form.cycletype} onValueChange={(v) => set("cycletype", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="Daily">Daily</SelectItem><SelectItem value="Weekly">Weekly</SelectItem><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="Never">Never</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2"><Label>Cycle Hours</Label><Input type="number" value={form.cycleallotedhrs} onChange={(e) => set("cycleallotedhrs", e.target.value)} /></div>
+            <div className="space-y-2">
+              <Label>Cycle Minutes</Label>
+              <Select value={form.cycleallotedmin} onValueChange={(v) => set("cycleallotedmin", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{Array.from({ length: 60 }, (_, i) => <SelectItem key={i} value={String(i).padStart(2, "0")}>{String(i).padStart(2, "0")}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 md:col-span-3"><Label>Description</Label><Textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={2} placeholder="Policy description…" /></div>
+          </div>
+        </SectionCard>
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "surfing-quota", "manage")}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button>
         </div>
-        <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-emerald-500/70" /> Allowed</span>
-          <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-muted/60" /> Blocked</span>
-          <Button size="sm" variant="outline" className="ml-auto" onClick={() => toast({ title: "Schedule saved" })}>
-            <Save className="mr-1.5 h-3.5 w-3.5" /> Save Schedule
-          </Button>
-        </div>
-      </SectionCard>
-      <SectionCard title="Access Time Policies" description={`${ACCESS_TIME_POLICIES.length} policies`}>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Policy Name</TableHead>
-                <TableHead>From</TableHead>
-                <TableHead>To</TableHead>
-                <TableHead>Days</TableHead>
-                <TableHead>Applies To</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ACCESS_TIME_POLICIES.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell className="font-mono text-xs">{p.allowedFrom}</TableCell>
-                  <TableCell className="font-mono text-xs">{p.allowedTo}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.days}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.appliesTo}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={p.status === "Active"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-border bg-muted text-muted-foreground"}
-                    >
-                      {p.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit policy", description: p.name })}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
+      </form>
     </div>
   );
 }
 
-/* ---------------- Bandwidth ---------------- */
-
-function BandwidthChild({ moduleId, childId }: ViewProps) {
-  const { mod, child } = useModuleHeader(moduleId, childId);
+function SurfManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
   const { toast } = useToast();
-  if (!mod) return null;
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title={child!.label}
-        description="Per-plan up/down bandwidth restrictions with optional schedules."
-        icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
-        actions={
-          <Button onClick={() => toast({ title: "Create bandwidth policy" })}>
-            <Plus className="mr-2 h-4 w-4" /> Create Policy
-          </Button>
-        }
-      />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Policies" value={String(BANDWIDTH_POLICIES.length)} icon={<Gauge className="h-4 w-4" />} accent />
-        <KpiCard label="Active" value={String(BANDWIDTH_POLICIES.filter((p) => p.status === "Active").length)} icon={<ShieldCheck className="h-4 w-4" />} />
-        <KpiCard label="Max Down" value={`${Math.max(...BANDWIDTH_POLICIES.map((p) => p.downMbps))} Mbps`} icon={<ArrowDown className="h-4 w-4" />} />
-        <KpiCard label="Max Up" value={`${Math.max(...BANDWIDTH_POLICIES.map((p) => p.upMbps))} Mbps`} icon={<ArrowUp className="h-4 w-4" />} />
-      </div>
-      <SectionCard title="Bandwidth Policies" description={`${BANDWIDTH_POLICIES.length} policies`}>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Up (Mbps)</TableHead>
-                <TableHead>Down (Mbps)</TableHead>
-                <TableHead>Applies To</TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {BANDWIDTH_POLICIES.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    <span className="inline-flex items-center gap-1"><ArrowUp className="h-3 w-3 text-emerald-600" />{p.upMbps}</span>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    <span className="inline-flex items-center gap-1"><ArrowDown className="h-3 w-3 text-primary" />{p.downMbps}</span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{p.appliesTo}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.schedule}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={p.status === "Active"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-border bg-muted text-muted-foreground"}
-                    >
-                      {p.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit policy", description: p.name })}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
-      <CreateBandwidthForm />
-    </div>
-  );
-}
+  const setActive = useAppStore((s) => s.setActive);
+  const [rows, setRows] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [selected, setSelected] = React.useState<Set<number>>(new Set());
 
-function CreateBandwidthForm() {
-  const { toast } = useToast();
-  return (
-    <SectionCard title="Create Bandwidth Policy">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="space-y-1.5">
-          <Label>Policy Name</Label>
-          <Input placeholder="e.g. Peak Hour Cap" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Upload (Mbps)</Label>
-          <Input type="number" defaultValue={5} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Download (Mbps)</Label>
-          <Input type="number" defaultValue={50} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Applies To</Label>
-          <Select defaultValue="all">
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Users</SelectItem>
-              <SelectItem value="prepaid">All Prepaid</SelectItem>
-              <SelectItem value="ll">Leased Line</SelectItem>
-              <SelectItem value="fap">FAP-triggered</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Schedule</Label>
-          <Select defaultValue="always">
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="always">Always</SelectItem>
-              <SelectItem value="peak">Peak hours 19-23</SelectItem>
-              <SelectItem value="weekend">Weekend all day</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-end">
-          <Button className="w-full" onClick={() => toast({ title: "Bandwidth policy created" })}>
-            <Save className="mr-2 h-4 w-4" /> Save
-          </Button>
-        </div>
-      </div>
-    </SectionCard>
-  );
-}
+  const load = React.useCallback(() => {
+    setLoading(true);
+    policyApi.list("surfingPolicies").then((res) => { setRows(res.data ?? []); setLoading(false); });
+  }, []);
+  React.useEffect(() => { load(); }, [load]);
 
-/* ---------------- Data Transfer ---------------- */
-
-function DataTransferChild({ moduleId, childId }: ViewProps) {
-  const { mod, child } = useModuleHeader(moduleId, childId);
-  const { toast } = useToast();
-  if (!mod) return null;
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title={child!.label}
-        description="Monthly/weekly data transfer quotas applied to subscriber plans."
-        icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
-        actions={
-          <Button onClick={() => toast({ title: "Create data transfer policy" })}>
-            <Plus className="mr-2 h-4 w-4" /> Create Policy
-          </Button>
-        }
-      />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Policies" value={String(DATA_TRANSFER_POLICIES.length)} icon={<Database className="h-4 w-4" />} accent />
-        <KpiCard label="Active" value={String(DATA_TRANSFER_POLICIES.filter((p) => p.status === "Active").length)} icon={<ShieldCheck className="h-4 w-4" />} />
-        <KpiCard label="Uncapped" value={String(DATA_TRANSFER_POLICIES.filter((p) => p.quotaGb === 0).length)} icon={<Database className="h-4 w-4" />} />
-        <KpiCard label="Max Quota" value={`${Math.max(...DATA_TRANSFER_POLICIES.filter((p) => p.quotaGb > 0).map((p) => p.quotaGb), 0)} GB`} icon={<Database className="h-4 w-4" />} />
-      </div>
-      <SectionCard title="Data Transfer Policies" description={`${DATA_TRANSFER_POLICIES.length} policies`}>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Quota (GB)</TableHead>
-                <TableHead>Reset Period</TableHead>
-                <TableHead>Applies To</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {DATA_TRANSFER_POLICIES.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {p.quotaGb === 0 ? <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">Uncapped</Badge> : p.quotaGb.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{p.resetPeriod}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.appliesTo}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={p.status === "Active"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-border bg-muted text-muted-foreground"}
-                    >
-                      {p.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit policy", description: p.name })}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
-    </div>
-  );
-}
-
-/* ---------------- FAP ---------------- */
-
-function FapChild({ moduleId, childId }: ViewProps) {
-  const { mod, child } = useModuleHeader(moduleId, childId);
-  const { toast } = useToast();
-  if (!mod) return null;
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title={child!.label}
-        description="Fair Access Policy — throttle heavy users after threshold GB, reset on a schedule."
-        icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
-        actions={
-          <Button onClick={() => toast({ title: "Create FAP rule" })}>
-            <Plus className="mr-2 h-4 w-4" /> Create FAP
-          </Button>
-        }
-      />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="FAP Rules" value={String(FAP_POLICIES.length)} icon={<Scale className="h-4 w-4" />} accent />
-        <KpiCard label="Active" value={String(FAP_POLICIES.filter((p) => p.status === "Active").length)} icon={<ShieldCheck className="h-4 w-4" />} />
-        <KpiCard label="Max Threshold" value={`${Math.max(...FAP_POLICIES.filter((p) => p.thresholdGb > 0).map((p) => p.thresholdGb), 0)} GB`} icon={<Database className="h-4 w-4" />} />
-        <KpiCard label="Exempt Plans" value={String(FAP_POLICIES.filter((p) => p.thresholdGb === 0).length)} icon={<ShieldCheck className="h-4 w-4" />} />
-      </div>
-      <SectionCard title="Fair Access Policies" description={`${FAP_POLICIES.length} rules`}>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Threshold (GB)</TableHead>
-                <TableHead>Reset Period</TableHead>
-                <TableHead>Throttle Down</TableHead>
-                <TableHead>Applies To</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {FAP_POLICIES.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {p.thresholdGb === 0 ? <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">Exempt</Badge> : p.thresholdGb.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{p.resetPeriod}</TableCell>
-                  <TableCell className="font-mono text-xs text-amber-700 dark:text-amber-400">{p.throttleDown}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.appliesTo}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={p.status === "Active"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-border bg-muted text-muted-foreground"}
-                    >
-                      {p.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit FAP", description: p.name })}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
-    </div>
-  );
-}
-
-/* ---------------- QoS ---------------- */
-
-function QosChild({ moduleId, childId }: ViewProps) {
-  const { mod, child } = useModuleHeader(moduleId, childId);
-  const { toast } = useToast();
-  if (!mod) return null;
-  const priorityBadge = (p: "High" | "Medium" | "Low") => {
-    if (p === "High") return <Badge className="bg-primary/10 text-primary hover:bg-primary/10">High</Badge>;
-    if (p === "Medium") return <Badge className="bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400">Medium</Badge>;
-    return <Badge className="bg-muted text-muted-foreground hover:bg-muted">Low</Badge>;
+  const handleDelete = async () => {
+    for (const id of selected) await policyApi.delete("surfingPolicies", id);
+    toast({ title: "Policies deleted", description: `${selected.size} policy(s) deleted.` });
+    setSelected(new Set());
+    load();
   };
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={child!.label}
-        description="Quality-of-service and cache policies with optional scheduling."
-        icon={<mod.icon className="h-5 w-5" />}
-        breadcrumb={[{ label: "Cryptsk" }, { label: mod.label }, { label: child!.label }]}
-        actions={
-          <Button onClick={() => toast({ title: "Create QoS / cache policy" })}>
-            <Plus className="mr-2 h-4 w-4" /> Create Policy
-          </Button>
-        }
-      />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Policies" value={String(QOS_POLICIES.length)} icon={<Zap className="h-4 w-4" />} accent />
-        <KpiCard label="QoS Rules" value={String(QOS_POLICIES.filter((p) => p.type === "QoS").length)} icon={<Gauge className="h-4 w-4" />} />
-        <KpiCard label="Cache Rules" value={String(QOS_POLICIES.filter((p) => p.type === "Cache").length)} icon={<Database className="h-4 w-4" />} />
-        <KpiCard label="Active" value={String(QOS_POLICIES.filter((p) => p.status === "Active").length)} icon={<ShieldCheck className="h-4 w-4" />} />
-      </div>
-      <SectionCard title="QoS / Cache Policies" description={`${QOS_POLICIES.length} policies`}>
+      <PageHeader title="Manage Surfing Quota Policy" description="View, and delete surfing quota policies." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+        actions={<Button onClick={() => setActive(moduleId, "surfing-quota", "create")}><Plus className="mr-2 h-4 w-4" /> Create</Button>} />
+      {loading ? <PageLoader /> : (
+        <SectionCard title="Surfing Quota Policies" description={`${rows.length} policies`}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Policy Name</TableHead><TableHead>Policy Type</TableHead><TableHead>Time Allowed (HH:mm)</TableHead>
+                <TableHead>Expiration Duration (days)</TableHead><TableHead>Session Pulse (minutes)</TableHead><TableHead>Description</TableHead><TableHead>Del</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.policyName}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px]">{r.policyType}</Badge></TableCell>
+                    <TableCell className="font-mono text-xs">{r.timeAllowed}</TableCell>
+                    <TableCell>{r.expirationDuration}</TableCell>
+                    <TableCell>{r.sessionPulse}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{r.description || "—"}</TableCell>
+                    <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => { const n = new Set(selected); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); setSelected(n); }} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {selected.size > 0 && <div className="mt-3 flex justify-end"><Button variant="destructive" size="sm" onClick={handleDelete}><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Policy ({selected.size})</Button></div>}
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
+/* ================ ACCESS TIME ================ */
+
+function AccessCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const setActive = useAppStore((s) => s.setActive);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({ policyName: "", defaultStrategy: "Allow", description: "" });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.policyName.trim()) { toast({ title: "Policy name required", variant: "destructive" }); return; }
+    setSaving(true);
+    await policyApi.create("accessPolicies", { ...form, status: "Active" });
+    setSaving(false);
+    toast({ title: "Access policy created", description: form.policyName });
+    setActive(moduleId, "access-time", "manage");
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Create Access Time Policy" description="Create a new access time policy (PolicyManager servlet)." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+        actions={<Button variant="outline" onClick={() => setActive(moduleId, "access-time", "manage")}><X className="mr-2 h-4 w-4" /> Cancel</Button>} />
+      <form onSubmit={handleSubmit}>
+        <SectionCard title="Access Time Policy Details" description="Configure access time policy">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Name <span className="text-primary">*</span></Label>
+              <Input value={form.policyName} onChange={(e) => setForm({ ...form, policyName: e.target.value })} placeholder="e.g. Business Hours" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Default Strategy <span className="text-primary">*</span></Label>
+              <Select value={form.defaultStrategy} onValueChange={(v) => setForm({ ...form, defaultStrategy: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="Allow">Allow</SelectItem><SelectItem value="Deny">Deny</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Description</Label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Policy description…" />
+            </div>
+          </div>
+        </SectionCard>
+        <div className="mt-4 flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "access-time", "manage")}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function AccessManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const setActive = useAppStore((s) => s.setActive);
+  const [rows, setRows] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+
+  const load = React.useCallback(() => { setLoading(true); policyApi.list("accessPolicies").then((res) => { setRows(res.data ?? []); setLoading(false); }); }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async () => { for (const id of selected) await policyApi.delete("accessPolicies", id); toast({ title: "Policies deleted" }); setSelected(new Set()); load(); };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Manage Access Time Policy" description="View and delete access time policies." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+        actions={<Button onClick={() => setActive(moduleId, "access-time", "create")}><Plus className="mr-2 h-4 w-4" /> Create</Button>} />
+      {loading ? <PageLoader /> : (
+        <SectionCard title="Access Time Policies" description={`${rows.length} policies`}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Access Time Policy Name</TableHead><TableHead>Default Strategy</TableHead><TableHead>Description</TableHead><TableHead>Del</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.policyName}</TableCell>
+                    <TableCell><Badge variant={r.defaultStrategy === "Allow" ? "default" : "destructive"} className={r.defaultStrategy === "Allow" ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" : ""}>{r.defaultStrategy}</Badge></TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{r.description || "—"}</TableCell>
+                    <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => { const n = new Set(selected); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); setSelected(n); }} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {selected.size > 0 && <div className="mt-3 flex justify-end"><Button variant="destructive" size="sm" onClick={handleDelete}><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Policy ({selected.size})</Button></div>}
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
+/* ================ BANDWIDTH ================ */
+
+function BwCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const setActive = useAppStore((s) => s.setActive);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({
+    policyName: "", polbase: "User", policytype: "Strict", implementationtype: "Individual",
+    sttotbandwidth: "1024", stexclupbandwidth: "512", stexcldownbandwidth: "512",
+    comtotgrntdbandwidth: "", comtotburstbandwidth: "", comexclgrntdupbandwidth: "",
+    selectpriority: "3", scheduleType: "Always",
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.policyName.trim()) { toast({ title: "Policy name required", variant: "destructive" }); return; }
+    setSaving(true);
+    await policyApi.create("bandwidthPolicies", {
+      policyName: form.policyName, policyBasedOn: form.polbase,
+      totalBandwidth: form.sttotbandwidth, uploadBandwidth: form.stexclupbandwidth,
+      downloadBandwidth: form.stexcldownbandwidth, priority: Number(form.selectpriority),
+      scheduleType: form.scheduleType, status: "Active",
+    });
+    setSaving(false);
+    toast({ title: "Bandwidth policy created", description: form.policyName });
+    setActive(moduleId, "bandwidth", "manage");
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Create Bandwidth Policy" description="Create a new bandwidth restriction policy (BandwidthPolicyManager servlet)." icon={<Gauge className="h-5 w-5" />} breadcrumb={breadcrumb}
+        actions={<Button variant="outline" onClick={() => setActive(moduleId, "bandwidth", "manage")}><X className="mr-2 h-4 w-4" /> Cancel</Button>} />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <SectionCard title="Bandwidth Policy Details" description="Basic policy configuration">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Policy Name <span className="text-primary">*</span></Label><Input value={form.policyName} onChange={(e) => set("policyName", e.target.value)} placeholder="e.g. 10MBPS Plan" required /></div>
+            <div className="space-y-2"><Label>Policy For</Label><Select value={form.polbase} onValueChange={(v) => set("polbase", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="User">User Based</SelectItem><SelectItem value="Pool">Pool Based</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Policy Type</Label><Select value={form.policytype} onValueChange={(v) => set("policytype", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Strict">Strict</SelectItem><SelectItem value="Shared">Shared</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Implementation Type</Label><Select value={form.implementationtype} onValueChange={(v) => set("implementationtype", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Individual">Individual</SelectItem><SelectItem value="Pool">Pool</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Priority</Label><Select value={form.selectpriority} onValueChange={(v) => set("selectpriority", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[0,1,2,3,4,5,6,7].map((p) => <SelectItem key={p} value={String(p)}>{p}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-2"><Label>Schedule Type</Label><Select value={form.scheduleType} onValueChange={(v) => set("scheduleType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Always">Always</SelectItem><SelectItem value="All Days 9:00 AM to 21:00 PM">All Days 9:00 AM to 21:00 PM</SelectItem><SelectItem value="All Days 21:00 PM to 9:00 AM">All Days 21:00 PM to 9:00 AM</SelectItem><SelectItem value="Weekend Only">Weekend Only</SelectItem></SelectContent></Select></div>
+          </div>
+        </SectionCard>
+        <SectionCard title="Bandwidth Limits (Kbit/s)" description="Upload, Download and Total bandwidth limits">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2"><Label>Total Bandwidth (Kbit/s)</Label><Input type="number" value={form.sttotbandwidth} onChange={(e) => set("sttotbandwidth", e.target.value)} /></div>
+            <div className="space-y-2"><Label>Upload Bandwidth (Kbit/s)</Label><Input type="number" value={form.stexclupbandwidth} onChange={(e) => set("stexclupbandwidth", e.target.value)} /></div>
+            <div className="space-y-2"><Label>Download Bandwidth (Kbit/s)</Label><Input type="number" value={form.stexcldownbandwidth} onChange={(e) => set("stexcldownbandwidth", e.target.value)} /></div>
+          </div>
+        </SectionCard>
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "bandwidth", "manage")}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function BwManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const setActive = useAppStore((s) => s.setActive);
+  const [rows, setRows] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+
+  const load = React.useCallback(() => { setLoading(true); policyApi.list("bandwidthPolicies").then((res) => { setRows(res.data ?? []); setLoading(false); }); }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async () => { for (const id of selected) await policyApi.delete("bandwidthPolicies", id); toast({ title: "Policies deleted" }); setSelected(new Set()); load(); };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Manage Bandwidth Policy" description="View and delete bandwidth policies." icon={<Gauge className="h-5 w-5" />} breadcrumb={breadcrumb}
+        actions={<Button onClick={() => setActive(moduleId, "bandwidth", "create")}><Plus className="mr-2 h-4 w-4" /> Create</Button>} />
+      {loading ? <PageLoader /> : (
+        <SectionCard title="Bandwidth Policies" description={`${rows.length} policies`}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Policy Name</TableHead><TableHead>Policy Based on</TableHead>
+                <TableHead>Total Bandwidth (Kbit/s)(Min/Max)</TableHead><TableHead>Upload Bandwidth (Kbit/s)(Min/Max)</TableHead>
+                <TableHead>Download Bandwidth (Kbit/s)(Min/Max)</TableHead><TableHead>Priority</TableHead><TableHead>Schedule Type</TableHead><TableHead>Del</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.policyName}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px]">{r.policyBasedOn}</Badge></TableCell>
+                    <TableCell className="font-mono text-xs">{r.totalBandwidth}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.uploadBandwidth}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.downloadBandwidth}</TableCell>
+                    <TableCell>{r.priority}</TableCell>
+                    <TableCell className="text-xs">{r.scheduleType}</TableCell>
+                    <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => { const n = new Set(selected); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); setSelected(n); }} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {selected.size > 0 && <div className="mt-3 flex justify-end"><Button variant="destructive" size="sm" onClick={handleDelete}><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete ({selected.size})</Button></div>}
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
+function BwSchedulePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [rows, setRows] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showForm, setShowForm] = React.useState(false);
+  const [form, setForm] = React.useState({ scheduleName: "", description: "" });
+
+  const load = React.useCallback(() => { setLoading(true); policyApi.list("schedules").then((res) => { setRows(res.data ?? []); setLoading(false); }); }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  const handleCreate = async () => {
+    if (!form.scheduleName.trim()) return;
+    await policyApi.create("schedules", form);
+    toast({ title: "Schedule created", description: form.scheduleName });
+    setForm({ scheduleName: "", description: "" }); setShowForm(false); load();
+  };
+  const handleDelete = async (r: any) => { await policyApi.delete("schedules", r.id); toast({ title: "Schedule deleted", description: r.scheduleName }); load(); };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Manage Schedule" description="Create and manage bandwidth schedules (ScheduleManager servlet)." icon={<Clock className="h-5 w-5" />} breadcrumb={breadcrumb} />
+      <ActionBar>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="mr-2 h-3.5 w-3.5" /> {showForm ? "Cancel" : "Create Schedule"}</Button>
+      </ActionBar>
+      {showForm && (
+        <SectionCard title="Create Schedule" description="Define a new bandwidth schedule">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Schedule Name <span className="text-primary">*</span></Label><Input value={form.scheduleName} onChange={(e) => setForm({ ...form, scheduleName: e.target.value })} placeholder="e.g. All Days 9:00 AM to 21:00 PM" /></div>
+            <div className="space-y-2"><Label>Description</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Schedule description" /></div>
+          </div>
+          <div className="mt-4 flex justify-end"><Button onClick={handleCreate}><Save className="mr-2 h-4 w-4" /> Create</Button></div>
+        </SectionCard>
+      )}
+      {loading ? <PageLoader /> : (
+        <SectionCard title="Schedules" description={`${rows.length} schedules`}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Schedule Name</TableHead><TableHead>Description</TableHead><TableHead>Del</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.scheduleName}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{r.description || "—"}</TableCell>
+                    <TableCell><Button variant="ghost" size="sm" className="text-primary" onClick={() => handleDelete(r)}><Trash2 className="h-3.5 w-3.5" /></Button></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
+/* ================ DATA TRANSFER ================ */
+
+function DtCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const setActive = useAppStore((s) => s.setActive);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({
+    policyName: "", scheme: "Absolute", restriction: "Both", cycletype: "Monthly",
+    cycletotallimit: "", cycleuploadlimit: "", chk_cycleuploadlimit: false,
+    cycledownloadlimit: "", chk_cycledownloadlimit: false,
+    uploadlimit: "", chk_uploadlimit: false, downloadlimit: "", chk_downloadlimit: false,
+    description: "",
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.policyName.trim()) { toast({ title: "Policy name required", variant: "destructive" }); return; }
+    setSaving(true);
+    await policyApi.create("dataTransferPolicies", {
+      policyName: form.policyName, scheme: form.scheme,
+      uploadLimit: form.chk_uploadlimit ? "Unlimited" : `${form.uploadlimit} MB`,
+      downloadLimit: form.chk_downloadlimit ? "Unlimited" : `${form.downloadlimit} MB`,
+      totalLimit: form.cycletotallimit ? `${form.cycletotallimit} MB` : "Unlimited",
+      description: form.description, status: "Active",
+    });
+    setSaving(false);
+    toast({ title: "Data transfer policy created", description: form.policyName });
+    setActive(moduleId, "data-transfer", "manage");
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Create Data Transfer Policy" description="Create a new data transfer policy (DataTransferPolicyManager servlet)." icon={<Database className="h-5 w-5" />} breadcrumb={breadcrumb}
+        actions={<Button variant="outline" onClick={() => setActive(moduleId, "data-transfer", "manage")}><X className="mr-2 h-4 w-4" /> Cancel</Button>} />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <SectionCard title="Data Transfer Policy Details" description="Basic policy configuration">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Policy Name <span className="text-primary">*</span></Label><Input value={form.policyName} onChange={(e) => set("policyName", e.target.value)} placeholder="e.g. 100MB Policy" required /></div>
+            <div className="space-y-2"><Label>Scheme <span className="text-primary">*</span></Label><Select value={form.scheme} onValueChange={(v) => set("scheme", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Absolute">Absolute</SelectItem><SelectItem value="Ratebased">Rate based</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Restriction</Label><Select value={form.restriction} onValueChange={(v) => set("restriction", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Both">Both (Upload + Download)</SelectItem><SelectItem value="Upload">Upload Only</SelectItem><SelectItem value="Download">Download Only</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Cycle Type <span className="text-primary">*</span></Label><Select value={form.cycletype} onValueChange={(v) => set("cycletype", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Daily">Daily</SelectItem><SelectItem value="Weekly">Weekly</SelectItem><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="Never">Never</SelectItem></SelectContent></Select></div>
+          </div>
+        </SectionCard>
+        <SectionCard title="Cycle Limits" description="Data transfer limits per cycle">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2"><Label>Cycle Total Data Limit (MB) <span className="text-primary">*</span></Label><Input type="number" value={form.cycletotallimit} onChange={(e) => set("cycletotallimit", e.target.value)} placeholder="100" /></div>
+            <div className="space-y-2"><Label>Cycle Upload Data Limit (MB)</Label><Input type="number" value={form.cycleuploadlimit} onChange={(e) => set("cycleuploadlimit", e.target.value)} disabled={form.chk_cycleuploadlimit} /></div>
+            <div className="flex items-center gap-3"><Switch checked={form.chk_cycleuploadlimit} onCheckedChange={(v) => set("chk_cycleuploadlimit", v)} /><Label>Unlimited Cycle Upload</Label></div>
+            <div className="space-y-2"><Label>Cycle Download Data Limit (MB)</Label><Input type="number" value={form.cycledownloadlimit} onChange={(e) => set("cycledownloadlimit", e.target.value)} disabled={form.chk_cycledownloadlimit} /></div>
+            <div className="flex items-center gap-3"><Switch checked={form.chk_cycledownloadlimit} onCheckedChange={(v) => set("chk_cycledownloadlimit", v)} /><Label>Unlimited Cycle Download</Label></div>
+          </div>
+        </SectionCard>
+        <SectionCard title="Restriction Details" description="Upload and download limits">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Upload Limit (MB)</Label><Input type="number" value={form.uploadlimit} onChange={(e) => set("uploadlimit", e.target.value)} disabled={form.chk_uploadlimit} /></div>
+            <div className="flex items-center gap-3"><Switch checked={form.chk_uploadlimit} onCheckedChange={(v) => set("chk_uploadlimit", v)} /><Label>Unlimited Upload</Label></div>
+            <div className="space-y-2"><Label>Download Limit (MB)</Label><Input type="number" value={form.downloadlimit} onChange={(e) => set("downloadlimit", e.target.value)} disabled={form.chk_downloadlimit} /></div>
+            <div className="flex items-center gap-3"><Switch checked={form.chk_downloadlimit} onCheckedChange={(v) => set("chk_downloadlimit", v)} /><Label>Unlimited Download</Label></div>
+            <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={2} placeholder="Policy description…" /></div>
+          </div>
+        </SectionCard>
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "data-transfer", "manage")}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function DtManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const setActive = useAppStore((s) => s.setActive);
+  const [rows, setRows] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+
+  const load = React.useCallback(() => { setLoading(true); policyApi.list("dataTransferPolicies").then((res) => { setRows(res.data ?? []); setLoading(false); }); }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async () => { for (const id of selected) await policyApi.delete("dataTransferPolicies", id); toast({ title: "Policies deleted" }); setSelected(new Set()); load(); };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Manage Data Transfer Policy" description="View and delete data transfer policies." icon={<Database className="h-5 w-5" />} breadcrumb={breadcrumb}
+        actions={<Button onClick={() => setActive(moduleId, "data-transfer", "create")}><Plus className="mr-2 h-4 w-4" /> Create</Button>} />
+      {loading ? <PageLoader /> : (
+        <SectionCard title="Data Transfer Policies" description={`${rows.length} policies`}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Policy Name</TableHead><TableHead>Scheme</TableHead><TableHead>Upload Limit</TableHead><TableHead>Download Limit</TableHead><TableHead>Total Limit</TableHead><TableHead>Description</TableHead><TableHead>Del</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.policyName}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px]">{r.scheme}</Badge></TableCell>
+                    <TableCell className="font-mono text-xs">{r.uploadLimit}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.downloadLimit}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.totalLimit}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{r.description || "—"}</TableCell>
+                    <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => { const n = new Set(selected); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); setSelected(n); }} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {selected.size > 0 && <div className="mt-3 flex justify-end"><Button variant="destructive" size="sm" onClick={handleDelete}><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete ({selected.size})</Button></div>}
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
+/* ================ FAP (Fair Access Policy) ================ */
+
+function FapCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const setActive = useAppStore((s) => s.setActive);
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({
+    fapName: "", fapType: "Time", cycletype: "Monthly", multiplier: "1",
+    hours: "00", minutes: "00", seconds: "00",
+    dataTransferType: "Total", dataTransferLimit: "", limittype: "GB",
+    switchoverbwpolicyid: "512KBPS",
+  });
+  const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.fapName.trim()) { toast({ title: "FAP name required", variant: "destructive" }); return; }
+    setSaving(true);
+    await policyApi.create("fapDetails", {
+      fapName: form.fapName, resetType: form.fapType === "Time" ? form.cycletype : "Data",
+      resetCycleMultiplier: form.multiplier, dataTransferType: form.dataTransferType,
+      dataTransferLimit: `${form.dataTransferLimit} ${form.limittype}`,
+      switchoverBwPolicy: form.switchoverbwpolicyid,
+      resetTime: `${form.hours}:${form.minutes}:${form.seconds}`, status: "Active",
+    });
+    setSaving(false);
+    toast({ title: "FAP created", description: form.fapName });
+    setActive(moduleId, "fap", "manage-fap");
+  };
+
+  const bwPolicies = ["Select Here", "User based Strict Individual Policy", "Default", "512KBPS", "20MBPS", "15MBPS", "10MBPS", "256KBPS", "128KBPS"];
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Create FAP Details" description="Create a new Fair Access Policy (FAPDetailsManager servlet)." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+        actions={<Button variant="outline" onClick={() => setActive(moduleId, "fap", "manage-fap")}><X className="mr-2 h-4 w-4" /> Cancel</Button>} />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <SectionCard title="Create FAP Details" description="FAP configuration">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>FAP Name <span className="text-primary">*</span></Label><Input value={form.fapName} onChange={(e) => set("fapName", e.target.value)} placeholder="e.g. Default FAP" required /></div>
+            <div className="space-y-2"><Label>FAP Type <span className="text-primary">*</span></Label><Select value={form.fapType} onValueChange={(v) => set("fapType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Time">Time Based</SelectItem><SelectItem value="Data">Data Based</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Reset Cycle Multiplier <span className="text-primary">*</span></Label><Input type="number" min="1" value={form.multiplier} onChange={(e) => set("multiplier", e.target.value)} /></div>
+            <div className="space-y-2"><Label>Cycle Type</Label><Select value={form.cycletype} onValueChange={(v) => set("cycletype", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Daily">Daily</SelectItem><SelectItem value="Weekly">Weekly</SelectItem><SelectItem value="Monthly">Monthly</SelectItem></SelectContent></Select></div>
+          </div>
+        </SectionCard>
+        <SectionCard title="Reset Time" description="When the FAP counter resets">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2"><Label>Hours</Label><Select value={form.hours} onValueChange={(v) => set("hours", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 24 }, (_, i) => <SelectItem key={i} value={String(i).padStart(2, "0")}>{String(i).padStart(2, "0")}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-2"><Label>Minutes</Label><Select value={form.minutes} onValueChange={(v) => set("minutes", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 60 }, (_, i) => <SelectItem key={i} value={String(i).padStart(2, "0")}>{String(i).padStart(2, "0")}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-2"><Label>Seconds</Label><Select value={form.seconds} onValueChange={(v) => set("seconds", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 60 }, (_, i) => <SelectItem key={i} value={String(i).padStart(2, "0")}>{String(i).padStart(2, "0")}</SelectItem>)}</SelectContent></Select></div>
+          </div>
+        </SectionCard>
+        <SectionCard title="Data Transfer Limit" description="When data transfer exceeds this limit, switch to lower bandwidth">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2"><Label>Data Transfer Type</Label><Select value={form.dataTransferType} onValueChange={(v) => set("dataTransferType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Total">Total</SelectItem><SelectItem value="Upload">Upload</SelectItem><SelectItem value="Download">Download</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Data Transfer Limit <span className="text-primary">*</span></Label><Input type="number" value={form.dataTransferLimit} onChange={(e) => set("dataTransferLimit", e.target.value)} placeholder="100" required /></div>
+            <div className="space-y-2"><Label>Limit Type</Label><Select value={form.limittype} onValueChange={(v) => set("limittype", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MB">MB</SelectItem><SelectItem value="GB">GB</SelectItem><SelectItem value="TB">TB</SelectItem></SelectContent></Select></div>
+          </div>
+        </SectionCard>
+        <SectionCard title="Switch Over Bandwidth Policy" description="The bandwidth policy applied when FAP limit is reached">
+          <div className="space-y-2">
+            <Label>Switch Over Bandwidth Policy <span className="text-primary">*</span></Label>
+            <Select value={form.switchoverbwpolicyid} onValueChange={(v) => set("switchoverbwpolicyid", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{bwPolicies.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        </SectionCard>
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => setActive(moduleId, "fap", "manage-fap")}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function FapManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const setActive = useAppStore((s) => s.setActive);
+  const [rows, setRows] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+
+  const load = React.useCallback(() => { setLoading(true); policyApi.list("fapDetails").then((res) => { setRows(res.data ?? []); setLoading(false); }); }, []);
+  React.useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async () => { for (const id of selected) await policyApi.delete("fapDetails", id); toast({ title: "FAP deleted" }); setSelected(new Set()); load(); };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Manage FAP Details" description="View and delete Fair Access Policy details." icon={<ShieldCheck className="h-5 w-5" />} breadcrumb={breadcrumb}
+        actions={<Button onClick={() => setActive(moduleId, "fap", "create-fap")}><Plus className="mr-2 h-4 w-4" /> Create FAP</Button>} />
+      {loading ? <PageLoader /> : (
+        <SectionCard title="FAP Details" description={`${rows.length} entries`}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>FAP Name</TableHead><TableHead>Reset Type</TableHead><TableHead>Reset Cycle Multiplier</TableHead>
+                <TableHead>Data Transfer Type</TableHead><TableHead>Data Transfer Limit</TableHead><TableHead>Switch Over Bandwidth Policy</TableHead>
+                <TableHead>Reset Time (HH:MM:SS)</TableHead><TableHead>Del</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.fapName}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px]">{r.resetType}</Badge></TableCell>
+                    <TableCell>{r.resetCycleMultiplier}</TableCell>
+                    <TableCell className="text-xs">{r.dataTransferType}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.dataTransferLimit}</TableCell>
+                    <TableCell className="text-xs">{r.switchoverBwPolicy}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.resetTime}</TableCell>
+                    <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => { const n = new Set(selected); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); setSelected(n); }} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {selected.size > 0 && <div className="mt-3 flex justify-end"><Button variant="destructive" size="sm" onClick={handleDelete}><Trash2 className="mr-2 h-3.5 w-3.5" /> Delete ({selected.size})</Button></div>}
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
+/* ================ QoS POLICY ================ */
+
+function QosCreatePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [saving, setSaving] = React.useState(false);
+  const [form, setForm] = React.useState({ policyName: "", cacheType: "Enable", description: "" });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.policyName.trim()) { toast({ title: "Policy name required", variant: "destructive" }); return; }
+    setSaving(true);
+    await policyApi.create("qosPolicies", { ...form, status: "Active" });
+    setSaving(false);
+    toast({ title: "Cache policy created", description: form.policyName });
+    setForm({ policyName: "", cacheType: "Enable", description: "" });
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Create Cache Policy" description="Create a new QoS cache policy." icon={<Zap className="h-5 w-5" />} breadcrumb={breadcrumb} />
+      <form onSubmit={handleSubmit}>
+        <SectionCard title="Cache Policy Details">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label>Policy Name <span className="text-primary">*</span></Label><Input value={form.policyName} onChange={(e) => setForm({ ...form, policyName: e.target.value })} required /></div>
+            <div className="space-y-2"><Label>Cache Type</Label><Select value={form.cacheType} onValueChange={(v) => setForm({ ...form, cacheType: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Enable">Enable</SelectItem><SelectItem value="Disable">Disable</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></div>
+          </div>
+        </SectionCard>
+        <div className="mt-4 flex justify-end"><Button type="submit" disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Create</Button></div>
+      </form>
+    </div>
+  );
+}
+
+function QosManagePage({ moduleId, childId, grandchildId }: ViewProps) {
+  const breadcrumb = useBreadcrumb(moduleId, childId, grandchildId);
+  const { toast } = useToast();
+  const [rows, setRows] = React.useState<any[]>([
+    { id: 1, policyName: "Default Cache", cacheType: "Enable", description: "Default caching policy", status: "Active" },
+    { id: 2, policyName: "No Cache", cacheType: "Disable", description: "Caching disabled", status: "Active" },
+  ]);
+
+  const handleDelete = (r: any) => { setRows(rows.filter((x) => x.id !== r.id)); toast({ title: "Policy deleted", description: r.policyName }); };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Manage Cache Policy" description="View and delete QoS cache policies." icon={<Zap className="h-5 w-5" />} breadcrumb={breadcrumb} />
+      <SectionCard title="Cache Policies" description={`${rows.length} policies`}>
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Applies To</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow><TableHead>Policy Name</TableHead><TableHead>Cache Type</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Delete</TableHead></TableRow></TableHeader>
             <TableBody>
-              {QOS_POLICIES.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={p.type === "QoS"
-                      ? "border-primary/30 bg-primary/10 text-primary"
-                      : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"}
-                    >
-                      {p.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{priorityBadge(p.priority)}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.schedule}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.appliesTo}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={p.status === "Active"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-border bg-muted text-muted-foreground"}
-                    >
-                      {p.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => toast({ title: "Edit policy", description: p.name })}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </TableCell>
+              {rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.policyName}</TableCell>
+                  <TableCell><Badge variant={r.cacheType === "Enable" ? "default" : "secondary"} className={r.cacheType === "Enable" ? "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" : ""}>{r.cacheType}</Badge></TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{r.description || "—"}</TableCell>
+                  <TableCell className="text-right"><Button variant="ghost" size="sm" className="text-primary" onClick={() => handleDelete(r)}><Trash2 className="h-3.5 w-3.5" /></Button></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
-      </SectionCard>
-      <SectionCard title="Manage Schedule" description="Define cache warm-up and QoS time windows">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label>Schedule Name</Label>
-            <Input defaultValue="Peak Cache Warmup" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>From</Label>
-            <Input type="time" defaultValue="03:00" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>To</Label>
-            <Input type="time" defaultValue="06:00" />
-          </div>
-        </div>
-        <div className="mt-3 flex items-center gap-2">
-          <Button onClick={() => toast({ title: "Schedule saved" })}>
-            <Save className="mr-2 h-4 w-4" /> Save Schedule
-          </Button>
-          <Button variant="outline" onClick={() => toast({ title: "Schedule deleted", variant: "destructive" })}>
-            <Trash2 className="mr-2 h-4 w-4" /> Delete
-          </Button>
         </div>
       </SectionCard>
     </div>
